@@ -1,0 +1,681 @@
+--Oblivion Lost Remake (2014)
+--(c) proger_Dencheek
+--Раскачка оружия
+
+local weapon_classes = {
+	[clsid.wpn_vintorez_s] = true,
+	[clsid.wpn_ak74_s] = true,
+	[clsid.wpn_ak74] = true,
+	[clsid.wpn_binocular] = true,
+	[clsid.wpn_binocular_s] = true,
+	[clsid.wpn_lr300_s] = true,
+	[clsid.wpn_hpsa_s] = true,
+	[clsid.wpn_pm_s] = true,
+	[clsid.wpn_shotgun_s] = true,
+	[clsid.wpn_bm16_s] = true,
+	[clsid.wpn_bm16] = true,
+	[clsid.wpn_svd_s] = true,
+	[clsid.wpn_rpg7_s] = true,
+	[clsid.wpn_groza_s] = true,
+	[clsid.wpn_knife_s] = true,
+	[clsid.wpn_grenade_launcher] = true,
+	[clsid.wpn_grenade_f1] = true,
+	[clsid.wpn_grenade_rpg7] = true,
+	[clsid.wpn_grenade_rgd5] = true,
+	[clsid.wpn_grenade_fake] = true,
+	[clsid.wpn_fort] = true,
+	[clsid.wpn_fn2000] = true,
+	[clsid.wpn_groza] = true,
+    [clsid.wpn_hpsa] = true,
+    [clsid.wpn_knife] = true,
+    [clsid.wpn_lr300] = true,
+    -- W_MOUNTD is absent from the Android object factory.
+    [clsid.wpn_pm] = true,
+    [clsid.obj_bolt] = true,
+    [clsid.wpn_rg6] = true,
+    [clsid.wpn_rg6_s] = true,
+    [clsid.wpn_rpg7] = true,
+    [clsid.wpn_shotgun] = true,
+    [clsid.wpn_stat_mgun] = true,
+    [clsid.wpn_svd] = true,
+    [clsid.wpn_svd_s] = true,
+    [clsid.wpn_svu] = true,
+    [clsid.wpn_svu_s] = true,
+    [clsid.wpn_usp45] = true,
+    [clsid.wpn_usp45_s] = true,
+    [clsid.wpn_val] = true,
+    [clsid.wpn_val_s] = true,
+    [clsid.wpn_vintorez] = true,
+    [clsid.wpn_walther] = true,
+    [clsid.wpn_walther_s] = true,
+    [clsid.wpn_wmagaz] = true,
+    [clsid.wpn_wmaggl] = true
+}
+
+local table_DIK_keys = {
+    DIK_0 = 11;
+    DIK_1 = 2;
+    DIK_2 = 3;
+    DIK_3 = 4;
+    DIK_4 = 5;
+    DIK_5 = 6;
+    DIK_6 = 7;
+    DIK_7 = 8;
+    DIK_8 = 9;
+    DIK_9 = 10;
+    DIK_A = 30;
+    DIK_ADD = 78;
+    DIK_APOSTROPHE = 40;
+    DIK_APPS = 221;
+    DIK_AT = 145;
+    DIK_AX = 150;
+    DIK_B = 48;
+    DIK_BACK = 14;
+    DIK_BACKSLASH = 43;
+    DIK_C = 46;
+    DIK_CAPITAL = 58;
+    DIK_CIRCUMFLEX = 144;
+    DIK_COLON = 146;
+    DIK_COMMA = 51;
+    DIK_CONVERT = 121;
+    DIK_D = 32;
+    DIK_DECIMAL = 83;
+    DIK_DELETE = 211;
+    DIK_DIVIDE = 181;
+    DIK_DOWN = 208;
+    DIK_E = 18;
+    DIK_END = 207;
+    DIK_EQUALS = 13;
+    DIK_ESCAPE = 1;
+    DIK_F = 33;
+    DIK_F1 = 59;
+    DIK_F10 = 68;
+    DIK_F11 = 87;
+    DIK_F12 = 88;
+    DIK_F13 = 100;
+    DIK_F14 = 101;
+    DIK_F15 = 102;
+    DIK_F2 = 60;
+    DIK_F3 = 61;
+    DIK_F4 = 62;
+    DIK_F5 = 63;
+    DIK_F6 = 64;
+    DIK_F7 = 65;
+    DIK_F8 = 66;
+    DIK_F9 = 67;
+    DIK_G = 34;
+    DIK_GRAVE = 41;
+    DIK_H = 35;
+    DIK_HOME = 199;
+    DIK_I = 23;
+    DIK_INSERT = 210;
+    DIK_J = 36;
+    DIK_K = 37;
+    DIK_KANA = 112;
+    DIK_KANJI = 148;
+    DIK_L = 38;
+    DIK_LBRACKET = 26;
+    DIK_LCONTROL = 29;
+    DIK_LEFT = 203;
+    DIK_LMENU = 56;
+    DIK_LSHIFT = 42;
+    DIK_LWIN = 219;
+    DIK_M = 50;
+    DIK_MINUS = 12;
+    DIK_MULTIPLY = 55;
+    DIK_N = 49;
+    DIK_NEXT = 209;
+    DIK_NOCONVERT = 123;
+    DIK_NUMLOCK = 69;
+    DIK_NUMPAD0 = 82;
+    DIK_NUMPAD1 = 79;
+    DIK_NUMPAD2 = 80;
+    DIK_NUMPAD3 = 81;
+    DIK_NUMPAD4 = 75;
+    DIK_NUMPAD5 = 76;
+    DIK_NUMPAD6 = 77;
+    DIK_NUMPAD7 = 71;
+    DIK_NUMPAD8 = 72;
+    DIK_NUMPAD9 = 73;
+    DIK_NUMPADCOMMA = 179;
+    DIK_NUMPADENTER = 156;
+    DIK_NUMPADEQUALS = 141;
+    DIK_O = 24;
+    DIK_P = 25;
+    DIK_PAUSE = 197;
+    DIK_PERIOD = 52;
+    DIK_PRIOR = 201;
+    DIK_Q = 16;
+    DIK_R = 19;
+    DIK_RBRACKET = 27;
+    DIK_RCONTROL = 157;
+    DIK_RETURN = 28;
+    DIK_RIGHT = 205;
+    DIK_RMENU = 184;
+    DIK_RSHIFT = 54;
+    DIK_RWIN = 220;
+    DIK_S = 31;
+    DIK_SCROLL = 70;
+    DIK_SEMICOLON = 39;
+    DIK_SLASH = 53;
+    DIK_SPACE = 57;
+    DIK_STOP = 149;
+    DIK_SUBTRACT = 74;
+    DIK_SYSRQ = 183;
+    DIK_T = 20;
+    DIK_TAB = 15;
+    DIK_U = 22;
+    DIK_UNDERLINE = 147;
+    DIK_UNLABELED = 151;
+    DIK_UP = 200;
+    DIK_V = 47;
+    DIK_W = 17;
+    DIK_X = 45;
+    DIK_Y = 21;
+    DIK_YEN = 125;
+    DIK_Z = 44;
+    MOUSE_1 = 256;
+    MOUSE_2 = 512;
+    MOUSE_3 = 1024
+}
+
+local walk_states = {
+	[1] = true,
+	[17] = true,
+	[33] = true,
+	[4] = true,
+	[8] = true,
+	[20] = true,
+	[24] = true,
+	[49] = true,
+	[52] = true,
+	[56] = true,
+	[5] = true,
+	[9] = true,
+	[2] = true,
+	[18] = true,
+	[50] = true,
+	[10] = true,
+	[6] = true,
+	[21] = true,
+	[25] = true,
+	[26] = true,
+	[22] = true,
+	[57] = true,
+	[58] = true,
+	[53] = true,
+	[37] = true,
+	[41] = true,
+	[34] = true,
+	[38] = true,
+	[42] = true,
+	[54] = true
+}
+
+local walk_shift_states = {
+	[33] = true,
+	[37] = true,
+	[41] = true,
+	[34] = true,
+	[38] = true,
+	[42] = true,
+	[49] = true,
+	[53] = true,
+	[57] = true,
+	[50] = true,
+	[54] = true,
+	[58] = true
+}
+
+local sprint_states = {
+	[4225] = true,
+	[4097] = true,
+	[4353] = true,
+	[4608] = true,
+	[4609] = true
+}
+
+local hud_grenade_states = {
+	[2] = true,
+	[3] = true,
+	[6] = true,
+	[7] = true
+}
+
+local ini = system_ini()
+
+local sprint_state = false
+local sprint_state_shift = false
+local sprint_state_accuracy = false
+local is_sprint = false
+local bolt_sprint_state = false
+
+local reload_key = -1
+
+local lai = -1
+
+local sobj = nil
+local data = {}
+
+-- Native CHudItem::eIdle and CWeapon::eReload.
+local hud_idle = 1
+local weapon_reloading = 7
+
+local function IsNoneAnimsForWpn(obj)
+    return obj:get_state() == hud_idle
+end
+
+local function play_anim_idle(obj, data)
+                      local slot = db.actor:active_slot()
+                        if slot == nil then
+		return nil
+                        end
+                     local weapon_in_hands = db.actor:item_in_slot(slot)
+                     local section =  weapon_in_hands:section()
+                     local iAmmoCntA =  weapon_in_hands:get_ammo_in_magazine()
+                     local iCharge = iAmmoCntA
+	if obj:get_state() == weapon_reloading then
+		return nil
+	end
+	
+        --by macron отключаем, а то в спринте после пыжков с резкой остановкой анимка спринта у ножа/болта/грен не останавливалась
+        --но если отключить, то оружие во время спринта меняется очень резко
+	if sprint_states[level.get_actor_body_state()] == true then
+		return nil
+	end
+	
+            if section ~= "wpn_groza_m1" and section ~= "wpn_groza" and section ~= "wpn_fn2000" and section ~= "wpn_groza_old" then
+	if ini ~= nil and (
+		(not ini:line_exist(obj:section(), "grenade_launcher_status")) or
+		(ini:line_exist(obj:section(), "grenade_launcher_status") and
+		ini:r_float(obj:section(), "grenade_launcher_status") == 1)
+	) then
+			            if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation("idle", true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation("empty", true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation("idle", true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation("idle", true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation("idle_cock", true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation("idle_cocks", true)
+                                                end       
+                                                end     
+	elseif data == nil then
+	            if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation("idle", true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation("empty", true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation("idle", true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation("idle", true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation("idle_cock", true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation("idle_cocks", true)
+                                                end       
+                                                end     
+	elseif hud_grenade_states[data.addon_flags] ~= true then
+	            if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation("idle", true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation("empty", true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation("idle", true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation("idle", true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation("idle_cock", true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation("idle_cocks", true)
+                                                end       
+                                                end        
+	elseif data.updgrenade_mode == 1 then
+		obj:play_hud_animation("idle_g", true) 
+	else
+		obj:play_hud_animation("idle_w_gl", true)
+	end
+            else
+            if data.updgrenade_mode == 1 then
+                                                obj:play_hud_animation("idle_g", true)
+                                                else
+                                                obj:play_hud_animation("idle", true)
+                                                end
+            end
+end
+
+local function play_anim_raskachka(obj, state, s1, s2)
+                        local slot = db.actor:active_slot()
+                        if slot == nil then
+		return nil
+	            end
+                        local weapon_in_hands = db.actor:item_in_slot(slot)
+                        local section =  weapon_in_hands:section()
+                        local iAmmoCntA =  weapon_in_hands:get_ammo_in_magazine()
+                        local iCharge = iAmmoCntA
+	if s1 == nil then
+		s1 = ""
+	end
+	if s2 == nil then
+		s2 = s1
+	end
+	
+	if walk_shift_states[state] ~= true and not (db.actor:accuracy()*1000 < 1) then
+                        if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation(("raskachka%s"):format(s1), true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation(("raskachka_empty%s"):format(s1), true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation(("raskachka%s"):format(s1), true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation(("raskachka%s"):format(s1), true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation(("raskachka_cock%s"):format(s1), true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation(("raskachka_cocks%s"):format(s1), true)
+                                                end       
+                                                end                                                                     
+		if sprint_state_shift == true then
+			sprint_state_shift = false
+		end
+	else
+                        if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation(("raskachka_walk%s"):format(s2), true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation(("raskachka_walk_empty%s"):format(s2), true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation(("raskachka_walk%s"):format(s2), true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation(("raskachka_walk%s"):format(s2), true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation(("raskachka_walk_cock%s"):format(s2), true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation(("raskachka_walk_cocks%s"):format(s2), true)
+                                                end       
+                                                end                                                                     
+		sprint_state_shift = true
+	end
+end
+
+       local function play_anim_idle_aim(obj, data)
+                     local slot = db.actor:active_slot()
+                        if slot == nil then
+		return nil
+                        end
+                     local weapon_in_hands = db.actor:item_in_slot(slot)
+                     local section =  weapon_in_hands:section()
+                     local iAmmoCntA =  weapon_in_hands:get_ammo_in_magazine()
+                     local iCharge = iAmmoCntA
+                     local state = level.get_actor_body_state()
+	         local is_accuracy = db.actor:accuracy()*1000 < 1
+
+	if obj:get_state() == weapon_reloading then
+		return nil
+	end
+	
+	if sprint_states[level.get_actor_body_state()] == true then
+		return nil
+	end
+	
+            if section ~= "wpn_groza_m1" and section ~= "wpn_groza" and section ~= "wpn_fn2000" and section ~= "wpn_groza_old" then
+	if ini ~= nil and (
+		(not ini:line_exist(obj:section(), "grenade_launcher_status")) or
+		(ini:line_exist(obj:section(), "grenade_launcher_status") and
+		ini:r_float(obj:section(), "grenade_launcher_status") == 1)
+	) then
+                          if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther"  and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation("idle_aim", true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation("empty", true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation("idle_aim", true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation("idle_aim", true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation("idle_cock_aim", true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation("idle_cocks_aim", true)
+                                                end       
+                                                end     
+	elseif data == nil then
+			            if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation("idle_aim", true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation("empty", true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation("idle_aim", true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation("idle_aim", true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation("idle_cock_aim", true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation("idle_cocks_aim", true)
+                                                end       
+                                                end     
+	elseif hud_grenade_states[data.addon_flags] ~= true then
+	            if section ~= "wpn_pm" and section ~= "wpn_pb" and section ~= "wpn_colt1911" and section ~= "wpn_desert_eagle" and section ~= "wpn_fort" and section ~= "wpn_gsh18" and section ~= "wpn_hpsa" and section ~= "wpn_sig220" and section ~= "wpn_usp" and section ~= "wpn_walther" and section ~= "wpn_beretta" and section ~= "hunters_toz" and section ~= "wpn_bm16" then
+		obj:play_hud_animation("idle_aim", true)
+                        end
+                        if section == "wpn_pm" or section == "wpn_pb" or section == "wpn_colt1911" or section == "wpn_desert_eagle" or section == "wpn_fort" or section == "wpn_gsh18" or section == "wpn_hpsa" or section == "wpn_sig220" or section == "wpn_usp" or section == "wpn_walther" or section == "wpn_beretta" then
+                        if iCharge == 0 then 
+		obj:play_hud_animation("empty", true)
+                        end
+                        if iCharge ~= 0 then 
+		obj:play_hud_animation("idle_aim", true)
+                        end   
+                        end
+                        if section == "hunters_toz" or section == "wpn_bm16" then
+			            if iCharge == 0 then 
+				obj:play_hud_animation("idle_aim", true)
+                                                end                                                         
+                                                if iCharge == 1 then 
+				obj:play_hud_animation("idle_cock_aim", true)
+                                                end       
+                                                if iCharge == 2 then 
+				obj:play_hud_animation("idle_cocks_aim", true)
+                                                end       
+                                                end        
+	elseif data.updgrenade_mode == 1 then
+		obj:play_hud_animation("idle_g_aim", true)
+	else
+		obj:play_hud_animation("idle_w_gl_aim", true)
+	end
+            else
+            if data.updgrenade_mode == 1 then
+                                                obj:play_hud_animation("idle_g_aim", true)
+                                                else
+                                                obj:play_hud_animation("idle_aim", true)
+                                                end
+            end
+            end
+
+function Update()
+local active_item = db.actor:active_item()
+	if active_item ~= nil and weapon_classes[active_item:clsid()] == true then
+		local state = level.get_actor_body_state()
+		local is_accuracy = db.actor:accuracy()*1000 < 1
+		--den.cout(state)
+		if active_item:id() ~= lai then
+			lai = active_item:id()
+			sprint_state = false
+			sobj = alife():object(lai)
+		end
+		
+		if walk_shift_states[state] == true or is_accuracy == true then
+			if sprint_state == true and sprint_state_shift == false then
+				sprint_state = false
+			end
+		elseif sprint_state_shift == true then
+			sprint_state_shift = false
+			sprint_state = false
+			play_anim_idle(active_item, data)
+		end
+		
+		if is_accuracy == true and sprint_state_accuracy == false then
+			sprint_state_accuracy = true
+			sprint_state = false
+		elseif is_accuracy == false and sprint_state_accuracy == true then
+			sprint_state_accuracy = false
+			sprint_state = false
+		end
+		
+		if sobj ~= nil then
+			data = m_net_utils.get_weapon_w_gl_full_data(sobj)
+		end
+		
+		if active_item:clsid() == clsid.obj_bolt or
+		active_item:clsid() == clsid.wpn_knife or
+		active_item:clsid() == clsid.wpn_binocular or
+		active_item:clsid() == clsid.wpn_binocular_s or
+		active_item:clsid() == clsid.wpn_grenade_f1 or
+		active_item:clsid() == clsid.wpn_grenade_rgd5 or
+		active_item:clsid() == clsid.wpn_knife_s then
+			if IsNoneAnimsForWpn(active_item) and state == 4097 then
+				if bolt_sprint_state == false then
+					bolt_sprint_state = true
+					active_item:play_hud_animation("idle_sprint", true)
+				end
+			elseif bolt_sprint_state == true then
+				bolt_sprint_state = false
+				play_anim_idle(active_item, data)
+			end
+		elseif bolt_sprint_state == true then
+			bolt_sprint_state = false
+		end
+		
+		--if is_accuracy == true and sprint_state == true then
+		--	--den.cout("2active_item:play_hud_animation(idle, true)")
+		--	play_anim_idle(active_item, data)
+		--	sprint_state = false
+		--	return nil
+		--end
+		
+		if sprint_states[state] == true or (
+			(not IsNoneAnimsForWpn(active_item)) and
+			sprint_state == true
+		) then
+			sprint_state = false
+
+                        --by macron блокируем, а то во время бега с греной, рандомно ее не подбрасывает (анимка скипается, это заметно)
+			--if active_item:clsid() == clsid.wpn_grenade_f1 or
+			--	active_item:clsid() == clsid.wpn_grenade_rpg7 or
+			--	active_item:clsid() == clsid.wpn_grenade_rgd5 then
+			--	play_anim_idle(active_item, data)
+			--end
+
+			return nil
+		elseif walk_states[state] == true then
+			if sprint_state == false and (
+				IsNoneAnimsForWpn(active_item)
+			) then
+				sprint_state = true
+                                                local slot = db.actor:active_slot()
+                                                if slot == nil then
+		                        return nil
+                                                end
+                     local weapon_in_hands = db.actor:item_in_slot(slot)
+                     local section =  weapon_in_hands:section()
+                                                if section ~= "wpn_groza_m1" and section ~= "wpn_groza" and section ~= "wpn_fn2000" and section ~= "wpn_groza_old" then
+				local ini = system_ini()
+				if ini ~= nil and (
+					(not ini:line_exist(active_item:section(), "grenade_launcher_status")) or (
+						ini:line_exist(active_item:section(), "grenade_launcher_status") and
+						ini:r_float(active_item:section(), "grenade_launcher_status") == 1
+					)
+				) then
+					play_anim_raskachka(active_item, state)
+				elseif data == nil then
+					play_anim_raskachka(active_item, state)
+				elseif hud_grenade_states[data.addon_flags] ~= true then
+					play_anim_raskachka(active_item, state)
+				elseif data.updgrenade_mode == 1 then
+					play_anim_raskachka(active_item, state, "_g")
+				else
+					play_anim_raskachka(active_item, state, "_w_gl")
+				end
+                                                else
+                                                if data.updgrenade_mode == 1 then
+                                                play_anim_raskachka(active_item, state, "_g")
+                                                else
+                                                play_anim_raskachka(active_item, state)
+                                                end
+                                                end
+			end
+		elseif sprint_state == true then
+			sprint_state = false	
+                                    if is_accuracy == true then
+			play_anim_idle_aim(active_item, data)
+                                    end
+                                    if is_accuracy == false then
+                                    play_anim_idle(active_item, data)
+                                    end
+		end
+	elseif sprint_state == true then
+		sprint_state = false
+	end
+end
+
+function OnInitMainMenu()
+end
+
+

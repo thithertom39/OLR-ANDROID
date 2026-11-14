@@ -1,0 +1,155 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.openxray'
+    compileSdk 34
+    ndkVersion "27.0.12077973"
+
+    defaultConfig {
+        manifestPlaceholders = [appLabel: 'OLR 2.5 Android']
+        applicationId "org.openxray.olr"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0-olr25"
+
+        // Crash reporting to GitHub issues. Everything is opt-in at build time
+        // so a plain checkout ships a binary with no credentials in it:
+        //   ./gradlew assembleRelease -POXR_GITHUB_TOKEN=github_pat_...
+        // The token should be a fine-grained PAT limited to this repo with
+        // "Issues: Read and write" only — anything wider can be abused if the
+        // APK is unpacked. Never commit a real token here.
+        buildConfigField "String", "GITHUB_TOKEN",
+                "\"${(project.findProperty('OXR_GITHUB_TOKEN') ?: '').toString().replace('"', '\\"')}\""
+        buildConfigField "String", "GITHUB_REPO",
+                "\"${(project.findProperty('OXR_GITHUB_REPO') ?: 'Eternal-Entropia/openxray-android').toString()}\""
+        // Point this at a Cloudflare Worker to keep the token off the device
+        // entirely; the reporter then needs no Authorization header of its own
+        // beyond whatever the relay expects.
+        buildConfigField "String", "GITHUB_API_BASE",
+                "\"${(project.findProperty('OXR_GITHUB_API_BASE') ?: 'https://api.github.com').toString()}\""
+
+        ndk {
+            // arm64 only. A 32-bit armeabi-v7a build doubles the native build
+            // time and the .so payload for devices that are effectively gone:
+            // minSdk is 24, and essentially every API 24+ device is 64-bit.
+            // Trade-off: the app no longer installs on 32-bit-only devices.
+            abiFilters 'arm64-v8a'
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DBUILD_SHARED_LIBS=ON",
+                          "-DXRAY_USE_LUAJIT=ON",
+                          "-DXRAY_GPU_PROFILE_DIAGNOSTICS=${project.hasProperty('OXRAY_GPU_PROFILE') ? 'ON' : 'OFF'}"
+                cppFlags "-std=c++17 -frtti -fexceptions"
+            }
+        }
+    }
+
+    signingConfigs {
+        debug {
+            if (System.getenv('ANDROID_USER_HOME')) {
+                storeFile file("${System.getenv('ANDROID_USER_HOME')}/debug.keystore")
+            }
+        }
+        release {
+            // Defaults to the well-known debug key so a release build can be
+            // installed over an existing debug install without uninstalling.
+            // Override for a real release key, e.g.
+            //   ./gradlew assembleRelease -POXRAY_KEYSTORE=/path/key.jks \
+            //       -POXRAY_KEYSTORE_PASS=... -POXRAY_KEY_ALIAS=... -POXRAY_KEY_PASS=...
+            def storePath = project.findProperty("OXRAY_KEYSTORE")
+                    ?: "${System.getProperty('user.home')}/.android/debug.keystore"
+            storeFile file(storePath)
+            storePassword project.findProperty("OXRAY_KEYSTORE_PASS") ?: "android"
+            keyAlias project.findProperty("OXRAY_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword project.findProperty("OXRAY_KEY_PASS") ?: "android"
+        }
+    }
+
+    buildTypes {
+        release {
+            if (project.hasProperty('OXRAY_TEST_BUILD')) {
+                applicationIdSuffix '.dev'
+                versionNameSuffix "-${project.findProperty('OXRAY_TEST_VARIANT') ?: 'baseline'}"
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            externalNativeBuild {
+                cmake {
+                    // The NDK toolchain already compiles Release with -O3 and
+                    // -flto=thin, but it does not add -flto to the link line, so
+                    // no LTO was ever performed. Keep 16k page alignment and
+                    // pass -flto through to the linker to make LTO real.
+                    arguments "-DCMAKE_BUILD_TYPE=Release",
+                              "-DCMAKE_SHARED_LINKER_FLAGS=-flto=thin",
+                              "-DCMAKE_EXE_LINKER_FLAGS=-flto=thin"
+                }
+            }
+        }
+        debug {
+            applicationIdSuffix '.dev'
+            debuggable true
+            jniDebuggable true
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Debug"
+                }
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file("../../CMakeLists.txt")
+            version "3.22.1"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        // BuildConfig is off by default in AGP 8; the GitHub reporter reads
+        // the token/repo from it.
+        buildConfig true
+    }
+
+    sourceSets {
+        main {
+            // res/ ships inside the APK, split per game: res/soc/* for
+            // Shadow of Chernobyl, res/cop/* for Clear Sky / CoP.
+            // OpenXRayActivity auto-extracts the matching folder into
+            // <game>/<mode>/ on launch.
+            assets.srcDirs = ['../../res']
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+    }
+}
+
+dependencies {
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core:1.12.0'
+}

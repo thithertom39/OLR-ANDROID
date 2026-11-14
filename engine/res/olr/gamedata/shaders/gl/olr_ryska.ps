@@ -1,0 +1,25 @@
+#include "common.h"
+#include "iostructs\p_water.h"
+
+Texture2D s_nmap;
+TextureCube s_env0;
+TextureCube s_env1;
+
+#ifdef GBUFFER_OPTIMIZATION
+float4 _main(v2p I, float4 pos2d)
+#else
+float4 _main(v2p I)
+#endif
+{
+    float4 base = tex2D(s_base, I.tbase);
+    float3 normal = tex2D(s_nmap, I.tnorm0).xyz + tex2D(s_nmap, I.tnorm1).xyz - 1.0;
+    float3 world_normal = normalize(mul(float3x3(I.M1, I.M2, I.M3), normal));
+    float3 to_surface = normalize(I.v2point);
+    float3 reflection = reflect(to_surface, world_normal);
+    reflection.y = reflection.y * 2.0 - 1.0;
+
+    float3 sky = lerp(texCUBE(s_env0, reflection).rgb, texCUBE(s_env1, reflection).rgb, L_ambient.w);
+    float fresnel = pow(saturate(dot(reflection, to_surface)), 9.0);
+    float3 reflected = sky * sky * 2.7 * (0.15 + 0.20 * fresnel);
+    return float4(lerp(reflected, base.rgb, base.a) * I.c0.rgb * 2.0, 1.0);
+}

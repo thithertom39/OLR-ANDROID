@@ -1,0 +1,1181 @@
+{
+  "timestamp_utc": "2026-10-14T20:39:35.763704+00:00",
+  "repository": "C:/Users/User/Documents/Codex/2026-10-11/gjvyb/work/openxray-build",
+  "workspace": "C:/Users/User/Documents/Codex/2026-10-11/gjvyb",
+  "base_commit": "4223fa91aaf443e6c71cba2edeb3ac84fb74177e",
+  "installed_apk_version": "1.6.02-nightpolish",
+  "new_full_apk_built": true,
+  "device_tests_for_new_changes": "Questlife/daypolish offline only; no ADB while user away.",
+  "source_changes": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "1045b3dab923d44be8c2d203274ea7ccfb6e7d7a03e74c16c73716700925a109",
+      "bytes": 2189
+    },
+    {
+      "path": "Externals/LuaJIT-proj/CMakeLists.txt",
+      "sha256": "9026740bb7d448c56d98deb59386a39a0d9b802f637c7562c95962d16e5ef204",
+      "bytes": 24857
+    },
+    {
+      "path": "android/app/build.gradle",
+      "sha256": "dbfc2031034d425647fc2ce4331414a32f184236a088b85021756dbda8d1074e",
+      "bytes": 6075
+    },
+    {
+      "path": "android/app/src/main/AndroidManifest.xml",
+      "sha256": "2580122fd27fa609aee37f967886eff327ec60a395cf83ad67e3e29d6425c770",
+      "bytes": 3128
+    },
+    {
+      "path": "android/app/src/main/java/org/openxray/LauncherActivity.java",
+      "sha256": "2459ce3a70d984037b3f99d3959aff3da6b01664ca072fcc1df952a019f998ea",
+      "bytes": 85343
+    },
+    {
+      "path": "android/app/src/main/java/org/openxray/LauncherBackdropView.java",
+      "sha256": "25fe7683d6ff4bbd13235b742cfb0856771a349b922ee221be56166be63dbf59",
+      "bytes": 1310
+    },
+    {
+      "path": "android/app/src/main/java/org/openxray/LauncherSkin.java",
+      "sha256": "7f1c8a5d564a6f7c8610653e3cedb6f429b7906c2d4c6077161e65cc73badbe4",
+      "bytes": 14121
+    },
+    {
+      "path": "android/app/src/main/java/org/openxray/OpenXRayActivity.java",
+      "sha256": "410dea5a93b1b21c45dd720b40a498b672b0bd1de68c15e5cbe1cced55463ec0",
+      "bytes": 40143
+    },
+    {
+      "path": "android/app/src/main/res/drawable-nodpi/launcher_metal_plate.webp",
+      "sha256": "c896ea346d62dd3d5751707ebfc842c4257ff28c92786a74a5b47d99e054c439",
+      "bytes": 2264520
+    },
+    {
+      "path": "android/app/src/main/res/drawable-nodpi/launcher_monitor_button.webp",
+      "sha256": "54fc89e1ed9f14263493422db861c24102145066fb91dd22ee7b1516cef5fa5f",
+      "bytes": 1942152
+    },
+    {
+      "path": "android/app/src/main/res/drawable-nodpi/launcher_monitor_panel.webp",
+      "sha256": "a36575b99449b3bc15888d109fff3c2e406f716c08b7e9065db78f79511bebd1",
+      "bytes": 2266320
+    },
+    {
+      "path": "android/app/src/main/res/drawable-nodpi/launcher_zone_background.webp",
+      "sha256": "2eef856100d4a671c13ba99c0730bdd754b305e9d9889678bd55df47243c5353",
+      "bytes": 1862956
+    },
+    {
+      "path": "android/app/src/main/res/drawable/launcher_chevron.xml",
+      "sha256": "a25478486a41d832c1491f64364f1b1e56173d8fda2dc37e8db8e3370e2af309",
+      "bytes": 298
+    },
+    {
+      "path": "android/app/src/main/res/drawable/launcher_input_bg.xml",
+      "sha256": "c47a6f69c605ec0a41d8200f9ef008018ab77373b479a5e372b6aefd97ba2843",
+      "bytes": 306
+    },
+    {
+      "path": "android/app/src/main/res/font/launcher_body.xml",
+      "sha256": "ab11d9179567cef37bec764ab839c77dc577ce09707ab91f70275fdb5179de07",
+      "bytes": 451
+    },
+    {
+      "path": "android/app/src/main/res/font/launcher_oswald_variable.ttf",
+      "sha256": "5b38c246e255a12f5712d640d56bcced0472466fc68983d2d0410ec0457c2817",
+      "bytes": 172088
+    },
+    {
+      "path": "android/app/src/main/res/font/launcher_stencil.ttf",
+      "sha256": "781496fdaf8e04cf6741b31025f6b4ba84f66021b097a8e0d85cbea2180cf223",
+      "bytes": 109944
+    },
+    {
+      "path": "android/app/src/main/res/layout/activity_launcher.xml",
+      "sha256": "d51702126f2a4e64aea07f3b1ec677dea2f6158a9a875f2db92761b9126cbf3a",
+      "bytes": 27455
+    },
+    {
+      "path": "android/app/src/main/res/layout/item_resolution_dropdown.xml",
+      "sha256": "adf75bbf925588b35ab2636343dde7ece12d20bc53928ebb01caea2e98f6df72",
+      "bytes": 554
+    },
+    {
+      "path": "android/app/src/main/res/layout/item_resolution_spinner.xml",
+      "sha256": "7b42b223eecd460c2ade0193d975ae8873644d32da7fd93081b54053c24a7db2",
+      "bytes": 567
+    },
+    {
+      "path": "android/app/src/main/res/raw/launcher_body_font_license.txt",
+      "sha256": "0fd731a904b729a4e02eaf5e8ebd06783edd9abe400e8882760160230675b652",
+      "bytes": 4483
+    },
+    {
+      "path": "android/app/src/main/res/raw/launcher_font_license.txt",
+      "sha256": "fc7c16a0d286a351a7de245a0bd661275e9d393de8955c7fa37ef3c8b85b7e3e",
+      "bytes": 4405
+    },
+    {
+      "path": "android/app/src/main/res/values-sw600dp/launcher_skin_dimens.xml",
+      "sha256": "3924fac580b44dbd60608e7e69e09017faf86f6296f63e4d4d8de1ed6b7749be",
+      "bytes": 70
+    },
+    {
+      "path": "android/app/src/main/res/values/launcher_skin_dimens.xml",
+      "sha256": "9e98758ff994ea56cbe26838da78f0a25ac799d5c4a1055737aea92be4a7ef6c",
+      "bytes": 70
+    },
+    {
+      "path": "android/app/src/main/res/values/launcher_skin_styles.xml",
+      "sha256": "e5acf8e101aabdab27c484814c07eb963427d7c437047fd1f13adfdf23ab801f",
+      "bytes": 566
+    },
+    {
+      "path": "android/app/src/main/res/values/strings.xml",
+      "sha256": "719ff1018a3891352151fe473536a8d44ef29228db47ff03f8ecc444fdb5e17d",
+      "bytes": 323
+    },
+    {
+      "path": "cmake/XRay.Android.cmake",
+      "sha256": "6363469c9a2e60557c7a44bd821c65f63d7763903018b4c388e5fbda3e5aa5c4",
+      "bytes": 4090
+    },
+    {
+      "path": "res/cop/gamedata/shaders/gl/common_samplers.h",
+      "sha256": "38caf0b5be995f8a9e2fce075907cb58712ef00719802b5ab52d35035aa63030",
+      "bytes": 3064
+    },
+    {
+      "path": "res/soc/gamedata/shaders/gl/combine_2_aa.ps",
+      "sha256": "2044cbc9548f68bfe324877d5a9b41720856b991b4297d02f4bd9ccfed556c05",
+      "bytes": 4344
+    },
+    {
+      "path": "res/soc/gamedata/shaders/gl/combine_2_naa.ps",
+      "sha256": "bc1c869c92c1d02b6bbf691537b7cfeb23cb381577ba696bcacd42bb54d94708",
+      "bytes": 4742
+    },
+    {
+      "path": "res/soc/gamedata/shaders/gl/common_samplers.h",
+      "sha256": "9a4222729aba08868e3b60615508d33be9f039d11b25e19db068bb15e225144f",
+      "bytes": 3161
+    },
+    {
+      "path": "res/soc/gamedata/shaders/gl/dof.h",
+      "sha256": "f121bcefca30b9d8e3cf5e78b6af360015110d3745c85a647e8c3b62c16be4b9",
+      "bytes": 2845
+    },
+    {
+      "path": "res/soc/gamedata/shaders/gl/fxaa.ps",
+      "sha256": "987d4576cbb668971bec2bd876e728bbfaefd1c6251afd6764246fa55751812f",
+      "bytes": 44772
+    },
+    {
+      "path": "res/soc/gamedata/shaders/gl/ssao.ps",
+      "sha256": "2c516d098dad355fbdd5dfd6e8ca0fd85977b947d787aafa4345796de2d89871",
+      "bytes": 6242
+    },
+    {
+      "path": "src/Layers/xrRender/BufferUtils.h",
+      "sha256": "874f986ed0f418fa174ed13ba51704cc29016f9009150dd600ed86557557bce8",
+      "bytes": 6826
+    },
+    {
+      "path": "src/Layers/xrRender/R_Backend.h",
+      "sha256": "b8d6d637244e8ed7cb8c6dc8f60f47d30d81e3a087bdb5c14bff5b8ae1dc9551",
+      "bytes": 19333
+    },
+    {
+      "path": "src/Layers/xrRender/R_Backend_Runtime.cpp",
+      "sha256": "7312e67a46908c00f7b349b5b0f7405e373a5dbac7ff20a86048071c7e329b74",
+      "bytes": 20176
+    },
+    {
+      "path": "src/Layers/xrRender/R_Backend_Runtime.h",
+      "sha256": "82bc0419ebc3458f3268195c26a93cc21e82106b65b38d77f57e34f0106c882c",
+      "bytes": 3445
+    },
+    {
+      "path": "src/Layers/xrRender/R_DStreams.cpp",
+      "sha256": "65a9cfeec7d04978d5f365c0748d3facc6463756058bb425b8fdbc24942a8595",
+      "bytes": 4017
+    },
+    {
+      "path": "src/Layers/xrRender/SH_Atomic.cpp",
+      "sha256": "a4e6e363c44575d3e07fa8e8350931f1c21fee6ad67e0b35bf0410db65a84851",
+      "bytes": 4749
+    },
+    {
+      "path": "src/Layers/xrRender/SkeletonX.cpp",
+      "sha256": "a452ac626074de2c7ea17bdfe5977a29257c520963608df18dfc5df7253bac7d",
+      "bytes": 24696
+    },
+    {
+      "path": "src/Layers/xrRender/blenders/Blender_BmmD_deferred.cpp",
+      "sha256": "bb22cf0ca972eb9f8dc4f13818717cd8a95fed5d97614a239d3c1ef31902e2b2",
+      "bytes": 10948
+    },
+    {
+      "path": "src/Layers/xrRender/blenders/Blender_Model_EbB_deferred.cpp",
+      "sha256": "c890f7e2b620fe6688d5d6993d81fc4a9a01dbc18132d42efbb8151b2894ed22",
+      "bytes": 6518
+    },
+    {
+      "path": "src/Layers/xrRender/blenders/Blender_tree_deferred.cpp",
+      "sha256": "12fe8c41013e64480a43cb9c2a839b85c9a1def10166ea2a9d49c0d6a1bd1887",
+      "bytes": 5100
+    },
+    {
+      "path": "src/Layers/xrRender/blenders/blender_deffer_flat.cpp",
+      "sha256": "2e87f0cd248f421942bae015394f1e49f7de171c1e7db7c55f01edd5f5c2bf0c",
+      "bytes": 4492
+    },
+    {
+      "path": "src/Layers/xrRender/blenders/blender_deffer_model.cpp",
+      "sha256": "32ffcde9083a2c0755250163a38881bd64d4a5dd922e382df5ed179967f36589",
+      "bytes": 12331
+    },
+    {
+      "path": "src/Layers/xrRender/r__sync_point.cpp",
+      "sha256": "90aba7bcc9ce0f1f03fd413ebec74526240956b896748a65850fd0c46924767f",
+      "bytes": 3290
+    },
+    {
+      "path": "src/Layers/xrRender/xrRender_console.cpp",
+      "sha256": "7bfc890af6a9c95c8b71241cef289333005a49545a3e59098e56913fccea46a0",
+      "bytes": 37116
+    },
+    {
+      "path": "src/Layers/xrRender/xrRender_console.h",
+      "sha256": "8832239dcd6c6c38d79b8b15f03ed5943de0036e2f154656fc3645f7e3e9c431",
+      "bytes": 8184
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glBackendStateCache.h",
+      "sha256": "f69d885621c34795dd5f726477d32e3b123f395ca3ae780bc84eaa05013eec5b",
+      "bytes": 2302
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glBufferUtils.cpp",
+      "sha256": "9a7d835f088b0e95f2d0802eb533c82ea253b270756b20ee7d4277d99d7e97bd",
+      "bytes": 18013
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glHW.cpp",
+      "sha256": "edcc5f8585c0209781f6c7256d98f2dda2deb2c4ae68581b0e222cdaf12d4ccc",
+      "bytes": 14599
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glR_Backend_Runtime.h",
+      "sha256": "ad41b0f6e44e070089aef6d017f946f8ac5b6785338050604cedef970c17718c",
+      "bytes": 18142
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glSH_RT.cpp",
+      "sha256": "fd353a03810f8ef1095b5be593c998591dbe7236978df5df13b6e316f703fa15",
+      "bytes": 3423
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glSH_Texture.cpp",
+      "sha256": "f5472da30965faca6f24e461f05bc195fa1c1a3a92f69193b8b35a23aef616bf",
+      "bytes": 13323
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glSpotShadowDump.h",
+      "sha256": "aa17d7fdf0ceabd273ef227bcdc8d90a80e30d4f04b688812e332820e4699ebf",
+      "bytes": 28532
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glSpotWriterAudit.h",
+      "sha256": "8b87023b712f849e61fd55295367aecd4b7ab7cb03756ee08628a91092670d71",
+      "bytes": 12044
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glState.cpp",
+      "sha256": "0a8b9bf0b40c25f2af3f1e3bdbb7f3139906737198150a6f47b5bb766a30e9f5",
+      "bytes": 11409
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glState.h",
+      "sha256": "e1168ef35ebe467ce6b36aa49b9a48d19ac74e6f5a9f263d19329715d732cf9f",
+      "bytes": 1282
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glStreamSync.h",
+      "sha256": "767dd8928469694ff915c344be87a47a97b4a21b07dc79aeb7f174e371a95bc8",
+      "bytes": 5169
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glTexture.cpp",
+      "sha256": "b37263e69e501d3249b7d0c2ac087226a006017407d9e01f872ed4f589f06ac1",
+      "bytes": 18935
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glTextureBindings.h",
+      "sha256": "a5f4ebb9c51d0943118bb9f23db9b26db68a322bd172c1d790df2faa506406e8",
+      "bytes": 9137
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glUniformBatch.h",
+      "sha256": "b24c89ce89f4d65b988af8ce0121978e469a5e4e16cefc3f9e912c0d65048e48",
+      "bytes": 1529
+    },
+    {
+      "path": "src/Layers/xrRenderGL/glr_constants_cache.h",
+      "sha256": "bda5c48e829c0723750561ac97929a38cfaaf78fc94783a2351c7cff241395f5",
+      "bytes": 9069
+    },
+    {
+      "path": "src/Layers/xrRenderPC_GL/gl_rendertarget_build_textures.cpp",
+      "sha256": "d5cef89b63d3552cf65901565f62e708264f0c52be6f7d2649b389f1cf9ee3cb",
+      "bytes": 8444
+    },
+    {
+      "path": "src/Layers/xrRenderPC_GL/gl_rendertarget_phase_combine.cpp",
+      "sha256": "83dc6a2a24d9d08db77a79e90e5d3aa56373e948d5c23b56150f91a08e6864a5",
+      "bytes": 21693
+    },
+    {
+      "path": "src/Layers/xrRenderPC_GL/rgl_shaders.cpp",
+      "sha256": "586e27acead533203a93f57bd2f744b8328fcad8023ccb5e9219f2604cfc6651",
+      "bytes": 26193
+    },
+    {
+      "path": "src/Layers/xrRender_R2/r2_R_lights.cpp",
+      "sha256": "1d0b512f163732431691ed70023c3b4eeba2b2ec34d878508a6d5c9da988d0ef",
+      "bytes": 14316
+    },
+    {
+      "path": "src/Layers/xrRender_R2/r2_R_render.cpp",
+      "sha256": "67b95e4b3745737543dc2a460cedf27f29c7a4a02453a596d28dd4e2fc25e168",
+      "bytes": 13762
+    },
+    {
+      "path": "src/Layers/xrRender_R2/r2_rendertarget.cpp",
+      "sha256": "c452893e6a20e9625d14ea43d7d3d9a964d09c780871b7fe7a4412e8d54b5f58",
+      "bytes": 29285
+    },
+    {
+      "path": "src/Layers/xrRender_R2/r2_rendertarget_phase_smap_S.cpp",
+      "sha256": "6cb7e9f685e6c7b3d7afbbfaf7c7a2292607c5afbe90a19186d223c50cadb02b",
+      "bytes": 10161
+    },
+    {
+      "path": "src/Layers/xrRender_R2/r3_rendertarget_accum_spot.cpp",
+      "sha256": "552d41574c09fc3d5d33017f45d957ea9591916b39e76ca2a6d50111b7a0e0e6",
+      "bytes": 34402
+    },
+    {
+      "path": "src/Layers/xrRender_R2/r3_rendertarget_phase_smap_D.cpp",
+      "sha256": "2608dec8f3dff479ca22c4b32a1990c732aae9581eb94d044cd2a38ffef6c432",
+      "bytes": 4890
+    },
+    {
+      "path": "src/xrEngine/AndroidAppLifecycle.h",
+      "sha256": "86483673fc0451b388c9ca2f45f39dea3fccc3b8b4dc75424c39223766cb0a06",
+      "bytes": 3295
+    },
+    {
+      "path": "src/xrEngine/device.cpp",
+      "sha256": "fcbdddefad0f0aa944abcfcd94eabba1f0ed21d647f0438ead1c6389be228255",
+      "bytes": 49185
+    },
+    {
+      "path": "src/xrEngine/frame_trace.h",
+      "sha256": "050340640e4f39503bd40779aa21cebd9163410028fc04f91ab2b01a2ea9c9f8",
+      "bytes": 854
+    },
+    {
+      "path": "src/xrEngine/x_ray.cpp",
+      "sha256": "8e94e34ad29cb28c90e7000d170a390ddfe6e80ba58da91ec82e032345a3679e",
+      "bytes": 17635
+    },
+    {
+      "path": "src/xrGame/GameTask.cpp",
+      "sha256": "9b5cb7572810f07b0a19b3c5b2805c01e2c06c9b80c53538c09d3f8c04f8a8ee",
+      "bytes": 27333
+    },
+    {
+      "path": "src/xrGame/PHDestroyable.cpp",
+      "sha256": "c11c82b2b60e65d0916cbb63dc2a10188976b5d08cefbedb560bee5c2bb6fbbf",
+      "bytes": 15102
+    },
+    {
+      "path": "src/xrGame/ai/monsters/states/monster_state_smart_terrain_task.h",
+      "sha256": "6d9f9f4a4a1001125359680fe478a3116fe7c0e13c7502f6b7a344fb06b75f21",
+      "bytes": 962
+    },
+    {
+      "path": "src/xrGame/ai/monsters/states/monster_state_smart_terrain_task_graph_walk.h",
+      "sha256": "312bd827315bd44af52b44c078215aeaf6c66c74b0ccd4a4065e170b9438a2a4",
+      "bytes": 927
+    },
+    {
+      "path": "src/xrGame/ai/monsters/states/monster_state_smart_terrain_task_graph_walk_inline.h",
+      "sha256": "dca7bd7bb7b5bef63f8bd2c93a1d2690f345724e0787aa8a1d6309b0b3f1e556",
+      "bytes": 3353
+    },
+    {
+      "path": "src/xrGame/ai/monsters/states/monster_state_smart_terrain_task_inline.h",
+      "sha256": "5792a68de4780a84876d133c4cb7786a2d955eaf71c4db60bc9a445058a00961",
+      "bytes": 6774
+    },
+    {
+      "path": "src/xrGame/alife_online_offline_group_brain.cpp",
+      "sha256": "142bde5f524b820f63045128273d8a3c762cefbb0543e643c9971a3b9e6249c7",
+      "bytes": 2317
+    },
+    {
+      "path": "src/xrGame/alife_smart_terrain_task.cpp",
+      "sha256": "5429c6568fec6ca2a347818df7e7d9db068383d55b19a0cd33a046101ffcf183",
+      "bytes": 21569
+    },
+    {
+      "path": "src/xrGame/alife_smart_terrain_task.h",
+      "sha256": "153d60a1c2c48f05e88343eb0a206f9495c1014b4a368f5e3f83855979189029",
+      "bytes": 2270
+    },
+    {
+      "path": "src/xrGame/alife_smart_terrain_task_inline.h",
+      "sha256": "1bb661c946040fe500dece13050872606ae3de7fab5dbd8338f915e40aebaaa2",
+      "bytes": 3285
+    },
+    {
+      "path": "src/xrGame/alife_smart_terrain_task_owner.h",
+      "sha256": "1a77af13166b5966b50174209ca2fece89321abb7bee7e84e779ac22ad120875",
+      "bytes": 1258
+    },
+    {
+      "path": "src/xrGame/inventory_item.cpp",
+      "sha256": "1048d07b1045011667f0fb5aa998fc4f66a78ea595091813951d3effde11655f",
+      "bytes": 49884
+    },
+    {
+      "path": "src/xrGame/stalker_alife_task_actions.cpp",
+      "sha256": "603e50e25a861b9f48b5b191a19c92c6f3679c1f73045b4775ec88aeec283145",
+      "bytes": 11054
+    },
+    {
+      "path": "src/xrGame/trade_audit.h",
+      "sha256": "6737968c0e4b6ef62b12c4ff89debe9d49c58e0dd956868986a78a1d57902e8a",
+      "bytes": 3908
+    },
+    {
+      "path": "src/xrGame/trade_parameters.h",
+      "sha256": "463a2f37e4646f27bd7760a57106bbc653f43b946334a80b4f2d579f5e492407",
+      "bytes": 2298
+    },
+    {
+      "path": "src/xrGame/trade_parameters_inline.h",
+      "sha256": "05b0249fd2c89d8eb66cce145b93a88244546aa2cedec7640cc685bed1ef1d88",
+      "bytes": 4078
+    },
+    {
+      "path": "src/xrGame/ui/UIActorMenuTrade.cpp",
+      "sha256": "8df6b6cfdc1808821b87ec9064244f5e630599e9cbde516e7e89bc4d9ebf082e",
+      "bytes": 19963
+    },
+    {
+      "path": "src/xrPhysics/PHWorld.cpp",
+      "sha256": "5057950e830ee47df3ac6d74057616e9ccbe754febdd57ea76f04d21f59b9573",
+      "bytes": 21624
+    },
+    {
+      "path": "src/xrPhysics/physics_audit.h",
+      "sha256": "00631852a2a7b832ac9eaf8abb42c69c86288de0b4f73ef80e64538b8360d71f",
+      "bytes": 1929
+    },
+    {
+      "path": "src/xrServerEntities/alife_monster_brain.cpp",
+      "sha256": "02eb3569c560138b4b1f979fa4a26be29d884a047d9ce3889cfa860fea08fcae",
+      "bytes": 4924
+    },
+    {
+      "path": "src/xrServerEntities/xrServer_Objects_ALife.cpp",
+      "sha256": "0e56a96e279e7d9ae336bc72547582d5867658ef1873b40cab8a8cf8a605f20c",
+      "bytes": 69308
+    },
+    {
+      "path": "src/xrServerEntities/xrServer_Objects_ALife.h",
+      "sha256": "c76448dd27ae042391c9e15d40a6987b2f961c30cdc0ef8b2f68e87e6661c39d",
+      "bytes": 27821
+    },
+    {
+      "path": "src/xrServerEntities/xrServer_Objects_ALife_Monsters.cpp",
+      "sha256": "8ebc31d27e929766a09141460684d4ea5bc0a6987cdc3138835b7c3ad9938e27",
+      "bytes": 68889
+    },
+    {
+      "path": "src/xrServerEntities/xrServer_Objects_ALife_Monsters.h",
+      "sha256": "c0340266afa4d51ee7f17a4f5aa2530aeb8d5fc4c50c3599a7caf65393164556",
+      "bytes": 28178
+    },
+    {
+      "path": "src/xrServerEntities/xrServer_script_macroses.h",
+      "sha256": "8ba09ec15f07e1980dc2d11ee42e5496f52999e20d2212f597a25e9f96fc7f82",
+      "bytes": 24567
+    }
+  ],
+  "dependency_heads": [
+    {
+      "path": "Externals/GameSpy",
+      "previous_index_commit": "3e434803d95c206c065c6172536b45c357bf3e21",
+      "current_head": "ea81cef2ba519c593d4eccdd414da243ef17b061"
+    },
+    {
+      "path": "Externals/LuaJIT",
+      "previous_index_commit": "5a5cd82e435a7b08d61b4e0af887493d24d9eca1",
+      "current_head": "5a5cd82e435a7b08d61b4e0af887493d24d9eca1"
+    },
+    {
+      "path": "Externals/gli",
+      "previous_index_commit": "3542f8830178061e0661f5df1e89d36ba7d7b0ab",
+      "current_head": "3542f8830178061e0661f5df1e89d36ba7d7b0ab"
+    },
+    {
+      "path": "Externals/imgui",
+      "previous_index_commit": "fd13a1e8923a0a7077b404fc36fd063b25a0c0b5",
+      "current_head": "fd13a1e8923a0a7077b404fc36fd063b25a0c0b5"
+    },
+    {
+      "path": "Externals/luabind",
+      "previous_index_commit": "8da131b830f2615115c65438d48ac52cb9b7fa00",
+      "current_head": "8da131b830f2615115c65438d48ac52cb9b7fa00"
+    },
+    {
+      "path": "Externals/sse2neon",
+      "previous_index_commit": "13a42df35dc7fcc94f987568e7274a998bb6cc86",
+      "current_head": "13a42df35dc7fcc94f987568e7274a998bb6cc86"
+    },
+    {
+      "path": "Externals/xrLuaFix",
+      "previous_index_commit": "0e89050f39fc1e6b21b856ed8b7a3d68ff486ccb",
+      "current_head": "0e89050f39fc1e6b21b856ed8b7a3d68ff486ccb"
+    }
+  ],
+  "preserved_evidence_files": [
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/android-syntax-results.json",
+      "sha256": "85f7e9d11293eb27291603fbf72751ee15760a4fc1b119bda949d77191c45124",
+      "bytes": 6575
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/check_android.py",
+      "sha256": "b9a5a6d6fb871cced37d744a626c74e48c5059abb390d2e04eeb2a9b3b97ce62",
+      "bytes": 1193
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/extract_and_run.py",
+      "sha256": "54590300d142b47ba1b9214a4ac6cb214a8c0bf1a2a0c4fac79f423fe040f489",
+      "bytes": 2537
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/final-summary.json",
+      "sha256": "10e511ab7d4167c016f84864fe15329ecf9cb038ef0de08126d0ae5784cb6432",
+      "bytes": 778
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/item-section-evidence.json",
+      "sha256": "b23fa27c45df651679841ee4562db24c0a9a89c54b99221117ee8dc461c57796",
+      "bytes": 8131
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/README.md",
+      "sha256": "dd6d30bd639341fe02ea16d79627bd0088a72f73e9ef7ba1bbe6d1b0bdbdfdcc",
+      "bytes": 6687
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/results.json",
+      "sha256": "aaad4c823455db59c9cbb6e043bc667b3f31dd955fef7a9e2fdbf977e94d6038",
+      "bytes": 3628
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/verify_item_sections.py",
+      "sha256": "3bd7218b435f718386b27f78331622acd0b095d0544b018dc0149299a34b11b5",
+      "bytes": 2800
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/check_tablet_fit.py",
+      "sha256": "c7e5c2595ea3bc1a8d9a6d0c8a9a6e603f4a54db545e275bc97c7787726eca67",
+      "bytes": 3155
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/README.md",
+      "sha256": "3e055f3cd8ca0179bd9bfffec643c76606db9165f66c585acc1a7dd0c9e141c6",
+      "bytes": 2882
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/run_source_checks.py",
+      "sha256": "171631312f1c8a9ad94a52fe08a2efda4794dc4bf813d0182565e1172bf02a9a",
+      "bytes": 17100
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/tablet-fit-estimate.json",
+      "sha256": "c32a895adf1b0c98bdbe9258f4b106f193a4b0d2836542b6c9b538bc50555026",
+      "bytes": 899
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/verification.json",
+      "sha256": "27dd51d71839f545bf620470278f4e7f2436848462c59741ca5ff570370c021c",
+      "bytes": 489
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/android-syntax-results.json",
+      "sha256": "a35fd43ec58d66d3066a716c132417e574ca8ebed3bdcc9748ba7840edbfb766",
+      "bytes": 9892
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/check_android.py",
+      "sha256": "c7694d43e71e240b73f9f57fcc200cd0cc231ec0761e3212fef7f01c91b37e4b",
+      "bytes": 1272
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/extract_and_run.py",
+      "sha256": "30310845da2f7689d92eca259d47285c2adedbbb537fe5d65801453fb7db8e2c",
+      "bytes": 2156
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/inspect_save.py",
+      "sha256": "3c96ff62b083a4b2f1ace9426e5eaacbad1b35043cabcca5ee4e6144b49e4890",
+      "bytes": 3546
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/README.md",
+      "sha256": "f07206f384715c47949213ffbc3aaa0cf9d60ca331a2b124c71599c32260565e",
+      "bytes": 5685
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/results.json",
+      "sha256": "9692729b442ed2b2e0f1a6312420e7a7e045cae694a452e4db0e7151693f5fc5",
+      "bytes": 1194
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/save-stock-evidence.json",
+      "sha256": "a7d0c0a58a377b89e03e6f1727a7c29b1973ce3038b1a3bc27ee8f388e2313fc",
+      "bytes": 3495
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/check_polarity.py",
+      "sha256": "274e2af424fdb7367ee367139511d0ce0f5b9bc9394dfa6b18d1f66274bbc9c6",
+      "bytes": 3567
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/checkpoint-preservation.json",
+      "sha256": "947f13741339adff68ac931dbf8baaa98bae7da9bb04faecdf2f15252b6ad106",
+      "bytes": 169
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/compare_dark_cutoff.py",
+      "sha256": "e3833af8f5136828fede15cac93b8a28e4366c24f6bb05af5c86d54965f1ecf2",
+      "bytes": 9190
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/compare_subpixel.py",
+      "sha256": "c4928d6146019e7e21c496b85d731bfa4bd9e6aa834160ce2bb457bd4aa36dd9",
+      "bytes": 8289
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/cutout-shadow-before.json",
+      "sha256": "07ed2c5f4655048edd209134fc2d8386a48b2266b199d7282d4d3dd12b696485",
+      "bytes": 26491
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/dark-cutoff-results.json",
+      "sha256": "9ca961058626446364aacbbca7859441e90ef77a3c3adc824107fbc7351199a4",
+      "bytes": 15116
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/foliage-audit.md",
+      "sha256": "74f9e98aa394dd7526d67dd3b90150c1a64b06fa4bfffddaeb382e1e6550db4b",
+      "bytes": 5537
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/foliage-dark-cutoff-handoff.md",
+      "sha256": "5a6a3a5d46b011dffcf241fde9f76e22f92312919f2bb39cdfb212f399b07e52",
+      "bytes": 6708
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/fxaa_host.cpp",
+      "sha256": "9657cbb449c6feb59269cff5889fd8a62b468820f569e0c316991d3724ad9744",
+      "bytes": 4328
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/polarity-results.json",
+      "sha256": "41b5a3d73289864aa889039d4d7baf4e622c541c4d434f40e77446bfb95caf9f",
+      "bytes": 3737
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/preservation-results.json",
+      "sha256": "cd19ed86c069a47e25a391db8d662a7fc5c0b52e65a0587ce0e632d012e1085d",
+      "bytes": 119
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/shader-results-candidate0.50.json",
+      "sha256": "074562ea69a8d8a75f41c11a9e02b654ac4b6250457a949f0d0e95275c6fd6dc",
+      "bytes": 8082
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/shader-results-candidate0.75.json",
+      "sha256": "262cc614767aa5bd49f358219988f1507361db13a7af3f7b20941b6da41219ae",
+      "bytes": 8082
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/shader-results.json",
+      "sha256": "893e70d7af5044422da176584a69b97c301dd6dedba717906ad9bf952793ac2d",
+      "bytes": 7153
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/subpixel-results-0.5.json",
+      "sha256": "ae97232c21e88b5b660a6849b1c9e1c02f605936bf9245904b836c88579d4bd0",
+      "bytes": 5603
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/subpixel-results-0.75.json",
+      "sha256": "fa978288a71434022a94719e20bb7d328f31938392d726f8d09ea6b6de42a5bf",
+      "bytes": 5605
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/validate_shaders.py",
+      "sha256": "01d24af4b211ead80d9241855361ede933f5ea9f2cc9e00d99566b7982d5c6e8",
+      "bytes": 4295
+    }
+  ],
+  "private_keys_logs_saves_build_products_included": false,
+  "foliage_fine_edges_implemented": true,
+  "latest_build": {
+    "created_at_utc": "2026-10-15T10:20:45.889276+00:00",
+    "source_commit": "84707f3d328eaad803556cc619a87a88690f5e2e",
+    "apk": "openxray-soc-daypolish-arm64.apk",
+    "apk_sha256": "a6a6bf1d36f87e76ed0bb61577f02f07b4a2da0adbe20819e04bf8fdd516016c",
+    "version": "1.6.02-daypolish",
+    "installed": false,
+    "runtime_verified": false,
+    "frozen_file_count": 11405
+  },
+  "launcher_runtime_verified": true,
+  "updated_at_utc": "2026-10-15T17:06:16.404701+00:00",
+  "current_source_variant": "questlife",
+  "daypolish_status": "apk_built_offline_device_pending",
+  "daypolish_device_tested": false,
+  "questlife_status": "source_ready_apk_pending",
+  "questlife_device_tested": false,
+  "portable_evidence": [
+    {
+      "path": "docs/development-checkpoint/evidence/dark-panel-tests/render_preview.cjs",
+      "sha256": "5ffdf4b124823bc6578f19b8bda27ac2898016084746c114ff75721d3f0e6043",
+      "bytes": 4994
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/dark-panel-tests/report.json",
+      "sha256": "1340556efc1a627a4c707212f2bab5ecdcc67bc4e0c65620ab3f9fa1a4c422b1",
+      "bytes": 1798
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/daypolish-launcher-tests/run_source_checks.py",
+      "sha256": "fc73b30096461a4eb009e0bde1e90c01c922cab916056401a0f964f80ef9263e",
+      "bytes": 19491
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/daypolish-launcher-tests/verification.json",
+      "sha256": "10329567934bcc2806ba56fe0dd79131ce4dad4e89092b07812b4658c86550cd",
+      "bytes": 490
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/daypolish-lint-audit/README.md",
+      "sha256": "208d654e6c81ca4f729bda0f824118796d181a39edad33a2d20b811b567a29aa",
+      "bytes": 4258
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/daypolish-lint-audit/summary.json",
+      "sha256": "33b85b28c426ce5fa88d4eadb838d986c81f138b893bd254d6fd0317b6fcc8b8",
+      "bytes": 11624
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/android-syntax-results.json",
+      "sha256": "3df93e8a797d71efb98674ce41dafeee96772a47bbdfc0e28e40b8c34265a4ff",
+      "bytes": 7117
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/check_android.py",
+      "sha256": "a50490b84b7c99674a74b83f5ea1c084b6465a49fce6f5bd74e55969dcd57708",
+      "bytes": 1360
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/check_console.py",
+      "sha256": "2210c3f594a712477557e7cf79e2e8d926b47d213f33e08365d62629c6ef1a05",
+      "bytes": 2880
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/check_dispatch.py",
+      "sha256": "1c3a6ebb29630466e1d710c56ca95b3f6fd274c054aa1dda29580d8ee91e5caf",
+      "bytes": 3115
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/check_host.py",
+      "sha256": "7c6b0a888e5ec65129aa5d650d09a0f43b86d25a71e78063826eece0ec258e3d",
+      "bytes": 4677
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/check_preprocessed_equivalence.py",
+      "sha256": "092905fbb4f3eaaab165cf8705042eb6955784403ac0c7b474bca876f583309c",
+      "bytes": 2584
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/check_preservation.py",
+      "sha256": "b8fcaa462d466b9981c2fdea16639ccd1fdee340c57bb8952f0921028570a592",
+      "bytes": 1118
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/console-results.json",
+      "sha256": "f53209ae10350d3be81b71b2e4444d8429cf24fe44611663bd332944224fbea4",
+      "bytes": 300
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/dispatch-results.json",
+      "sha256": "e0281202455e66783e42fdf59f0da83b29d20653a7ef07ffc18e8024281faf51",
+      "bytes": 511
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/host-results.json",
+      "sha256": "04262ef9fee0dff5c6a1543904c9df29b4c27bf8376636fa5e57f3502d63313f",
+      "bytes": 55531
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/preprocessed-equivalence-results.json",
+      "sha256": "2cf1bc9ca150c0aaa99c3fcd4e5f3c536f59044c18b34cca95e6d9e6639b1dcb",
+      "bytes": 3355
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/preservation-results.json",
+      "sha256": "f4fb3a544b287806f9cb12c9af85e5ee8cdf463ce9501af44789317a4bd7f411",
+      "bytes": 27748
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/README.md",
+      "sha256": "df3c6779fc1d62686cd427fb381f86a1a8fe8ec974353789f976a26e90e15afe",
+      "bytes": 8448
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/shader-results.json",
+      "sha256": "88d658b4bc0ffba79c1f3dea735337a344d405376470073c15a86dae969b8a52",
+      "bytes": 8416
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/summary.json",
+      "sha256": "b93e452bde99a9205cb7ab08c66b8dfaebd63f551f67864d814f1d4768d0fc5d",
+      "bytes": 957
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/fineedges-tests/validate_shaders.py",
+      "sha256": "603b7484ab57e06ef7e53da90bc004c4d6e216f4ea48c843387da7fd22301272",
+      "bytes": 4923
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/check_polarity.py",
+      "sha256": "274e2af424fdb7367ee367139511d0ce0f5b9bc9394dfa6b18d1f66274bbc9c6",
+      "bytes": 3567
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/checkpoint-preservation.json",
+      "sha256": "947f13741339adff68ac931dbf8baaa98bae7da9bb04faecdf2f15252b6ad106",
+      "bytes": 169
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/compare_dark_cutoff.py",
+      "sha256": "e3833af8f5136828fede15cac93b8a28e4366c24f6bb05af5c86d54965f1ecf2",
+      "bytes": 9190
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/compare_subpixel.py",
+      "sha256": "c4928d6146019e7e21c496b85d731bfa4bd9e6aa834160ce2bb457bd4aa36dd9",
+      "bytes": 8289
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/cutout-shadow-before.json",
+      "sha256": "07ed2c5f4655048edd209134fc2d8386a48b2266b199d7282d4d3dd12b696485",
+      "bytes": 26491
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/dark-cutoff-results.json",
+      "sha256": "9ca961058626446364aacbbca7859441e90ef77a3c3adc824107fbc7351199a4",
+      "bytes": 15116
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/foliage-audit.md",
+      "sha256": "74f9e98aa394dd7526d67dd3b90150c1a64b06fa4bfffddaeb382e1e6550db4b",
+      "bytes": 5537
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/foliage-dark-cutoff-handoff.md",
+      "sha256": "5a6a3a5d46b011dffcf241fde9f76e22f92312919f2bb39cdfb212f399b07e52",
+      "bytes": 6708
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/fxaa_host.cpp",
+      "sha256": "9657cbb449c6feb59269cff5889fd8a62b468820f569e0c316991d3724ad9744",
+      "bytes": 4328
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/polarity-results.json",
+      "sha256": "41b5a3d73289864aa889039d4d7baf4e622c541c4d434f40e77446bfb95caf9f",
+      "bytes": 3737
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/preservation-results.json",
+      "sha256": "cd19ed86c069a47e25a391db8d662a7fc5c0b52e65a0587ce0e632d012e1085d",
+      "bytes": 119
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/shader-results-candidate0.50.json",
+      "sha256": "074562ea69a8d8a75f41c11a9e02b654ac4b6250457a949f0d0e95275c6fd6dc",
+      "bytes": 8082
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/shader-results-candidate0.75.json",
+      "sha256": "262cc614767aa5bd49f358219988f1507361db13a7af3f7b20941b6da41219ae",
+      "bytes": 8082
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/shader-results.json",
+      "sha256": "893e70d7af5044422da176584a69b97c301dd6dedba717906ad9bf952793ac2d",
+      "bytes": 7153
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/subpixel-results-0.5.json",
+      "sha256": "ae97232c21e88b5b660a6849b1c9e1c02f605936bf9245904b836c88579d4bd0",
+      "bytes": 5603
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/subpixel-results-0.75.json",
+      "sha256": "fa978288a71434022a94719e20bb7d328f31938392d726f8d09ea6b6de42a5bf",
+      "bytes": 5605
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightfoliage-tests/validate_shaders.py",
+      "sha256": "01d24af4b211ead80d9241855361ede933f5ea9f2cc9e00d99566b7982d5c6e8",
+      "bytes": 4295
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/check_tablet_fit.py",
+      "sha256": "c7e5c2595ea3bc1a8d9a6d0c8a9a6e603f4a54db545e275bc97c7787726eca67",
+      "bytes": 3155
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/README.md",
+      "sha256": "3e055f3cd8ca0179bd9bfffec643c76606db9165f66c585acc1a7dd0c9e141c6",
+      "bytes": 2882
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/run_source_checks.py",
+      "sha256": "171631312f1c8a9ad94a52fe08a2efda4794dc4bf813d0182565e1172bf02a9a",
+      "bytes": 17100
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/tablet-fit-estimate.json",
+      "sha256": "c32a895adf1b0c98bdbe9258f4b106f193a4b0d2836542b6c9b538bc50555026",
+      "bytes": 899
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightlauncher-tests/verification.json",
+      "sha256": "27dd51d71839f545bf620470278f4e7f2436848462c59741ca5ff570370c021c",
+      "bytes": 489
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/android-syntax-results.json",
+      "sha256": "85f7e9d11293eb27291603fbf72751ee15760a4fc1b119bda949d77191c45124",
+      "bytes": 6575
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/check_android.py",
+      "sha256": "b9a5a6d6fb871cced37d744a626c74e48c5059abb390d2e04eeb2a9b3b97ce62",
+      "bytes": 1193
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/extract_and_run.py",
+      "sha256": "54590300d142b47ba1b9214a4ac6cb214a8c0bf1a2a0c4fac79f423fe040f489",
+      "bytes": 2537
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/final-summary.json",
+      "sha256": "10e511ab7d4167c016f84864fe15329ecf9cb038ef0de08126d0ae5784cb6432",
+      "bytes": 778
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/item-section-evidence.json",
+      "sha256": "b23fa27c45df651679841ee4562db24c0a9a89c54b99221117ee8dc461c57796",
+      "bytes": 8131
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/README.md",
+      "sha256": "dd6d30bd639341fe02ea16d79627bd0088a72f73e9ef7ba1bbe6d1b0bdbdfdcc",
+      "bytes": 6687
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/results.json",
+      "sha256": "aaad4c823455db59c9cbb6e043bc667b3f31dd955fef7a9e2fdbf977e94d6038",
+      "bytes": 3628
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nightquest-tests/verify_item_sections.py",
+      "sha256": "3bd7218b435f718386b27f78331622acd0b095d0544b018dc0149299a34b11b5",
+      "bytes": 2800
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/android-syntax-results.json",
+      "sha256": "a35fd43ec58d66d3066a716c132417e574ca8ebed3bdcc9748ba7840edbfb766",
+      "bytes": 9892
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/check_android.py",
+      "sha256": "c7694d43e71e240b73f9f57fcc200cd0cc231ec0761e3212fef7f01c91b37e4b",
+      "bytes": 1272
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/extract_and_run.py",
+      "sha256": "30310845da2f7689d92eca259d47285c2adedbbb537fe5d65801453fb7db8e2c",
+      "bytes": 2156
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/inspect_save.py",
+      "sha256": "3c96ff62b083a4b2f1ace9426e5eaacbad1b35043cabcca5ee4e6144b49e4890",
+      "bytes": 3546
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/README.md",
+      "sha256": "f07206f384715c47949213ffbc3aaa0cf9d60ca331a2b124c71599c32260565e",
+      "bytes": 5685
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/results.json",
+      "sha256": "9692729b442ed2b2e0f1a6312420e7a7e045cae694a452e4db0e7151693f5fc5",
+      "bytes": 1194
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/nighttrade-tests/save-stock-evidence.json",
+      "sha256": "a7d0c0a58a377b89e03e6f1727a7c29b1973ce3038b1a3bc27ee8f388e2313fc",
+      "bytes": 3495
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/android-syntax-results.json",
+      "sha256": "7715c8f6b99e7c79651695914e2d6c589b204b8f5ee483ce302cd1598ba434b8",
+      "bytes": 6192
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/audit-results.json",
+      "sha256": "0b747184132abc7143e9c8ef3ba3ae46ea4458202f5578029a30a594284410d0",
+      "bytes": 615
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/check_android.py",
+      "sha256": "e9ceb6f5286dddb56915d29bbf9e9ae755e2d4fa3573397865b2a1f6e5390d6e",
+      "bytes": 1168
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/check_audit.py",
+      "sha256": "14424c97a1cf15d6585dd9f406d7ad090c95997c26bd76bb9ff1c2ab19dcca90",
+      "bytes": 7316
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/check_fragment_lifetime.py",
+      "sha256": "f5744b89c479ab7b2f2d612e3d13766a32e64669adcf8d2664d2f333a4fd7da7",
+      "bytes": 4224
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/fragment-lifetime-results.json",
+      "sha256": "1f4a7ea41b85bafbe5726d0b995221db6b153257089faf40b2bc9e676abe57cc",
+      "bytes": 440
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/physics-stall-audit/README.md",
+      "sha256": "92c28935927b3ef40844bf48749ee835df6192503eb9ec6e0173c6ced2b8b4b1",
+      "bytes": 10924
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/android-syntax-results.json",
+      "sha256": "85f7e9d11293eb27291603fbf72751ee15760a4fc1b119bda949d77191c45124",
+      "bytes": 6575
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/extract_and_run.py",
+      "sha256": "0065d5de903bf5d16ca6bd58fe4c421c3ffa50f23623208a85d2d6ac7c933ad3",
+      "bytes": 4841
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/fixture.lua",
+      "sha256": "b0dd3b83bb883f29dd2546ba54875dda5f20daed31c10a4d12bdf309f8356b8e",
+      "bytes": 3912
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/harness.cpp",
+      "sha256": "4dad0d0d29869dff334e14afbe6a86feeb4aa6040ce13c5da29120a3f8429b03",
+      "bytes": 16886
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/luabind-action-review.md",
+      "sha256": "e94fbb8e9a3061a4c2ffa7f988504c5a3f84407dde5680946f49bc62efa17b01",
+      "bytes": 2776
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/prior-dispatch-results.json",
+      "sha256": "3da6e494cc1a98bcc862ea14333176a40fa3712386a0f9695dadded786854614",
+      "bytes": 3628
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/README.md",
+      "sha256": "4ec1f34881fe81ae0d077d0842ba12d52cd8d7feeb29f9b32235c8b83d681888",
+      "bytes": 7394
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/results.json",
+      "sha256": "bd6d232014d7da449be2bc68e1d418bb56c3f8d50ffbeb01a734f9f0d7501b6b",
+      "bytes": 8086
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/questlife-tests/run.log",
+      "sha256": "5dba42a0fedfb13286121b1a35695892f0d61b3ce6b2a0d219afaca25d78d81c",
+      "bytes": 2298
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/android-syntax-results.json",
+      "sha256": "9ed80af6418f26f82db7f58eecc7335581365cf246149e1077fce0f72df19972",
+      "bytes": 3550
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/check_android.py",
+      "sha256": "69539eab75377010e52942efacb15a8110a680dcc92cd7dd7c230d7c3807c498",
+      "bytes": 1040
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/check_matrix.py",
+      "sha256": "f697ff68dd3983fe9f5042ddb6c4a487a62777c1d65262078778888af448a98c",
+      "bytes": 3032
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/check_reader.py",
+      "sha256": "641dfebe7cd7f3278318c0fe531cc6b3f4292bbfdb7b8e9e4b83933b28c5e563",
+      "bytes": 5022
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/matrix-results.json",
+      "sha256": "8a23840a140f310b1a323fd1a0fda56f529374d161186b0eb3e41200c8ca7df4",
+      "bytes": 2030
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/reader-results.json",
+      "sha256": "7dba99ea39df9af74e41683753a0a31b7b5ca2e94123ef260ab17608eef94b99",
+      "bytes": 603
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/README.md",
+      "sha256": "e1e7bf6d902c1e8b06cb66fe181222a3bcfd77bf935bb45fecbef1b79439ad90",
+      "bytes": 5565
+    },
+    {
+      "path": "docs/development-checkpoint/evidence/shader-cache-audit/summary.json",
+      "sha256": "26473555b5aecdb1f9c8c3c96cfaf4c61578d0325d141129e487cb05ba77797d",
+      "bytes": 542
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+#include "common.h"
+
+layout(location = TEXCOORD0) in float2 base_uv;
+layout(location = FOG) in float fog_visibility;
+#ifdef OLR_R1_DETAIL
+layout(location = TEXCOORD3) in float2 detail_uv;
+layout(location = TEXCOORD4) in float2 detail_weights;
+#endif
+#ifdef OLR_R1_VERTEX
+layout(location = COLOR0) in float3 vertex_light;
+#else
+layout(location = TEXCOORD1) in float2 lightmap_uv;
+layout(location = COLOR0) in float3 hemi_light;
+layout(location = COLOR1) in float3 sun_light;
+#endif
+
+layout(location = 0) out float4 out_color;
+
+void main()
+{
+    float4 base = tex2D(s_base, base_uv);
+#ifdef OLR_R1_VERTEX
+    float3 light = vertex_light;
+#else
+    float4 lightmap = tex2D(s_lmap, lightmap_uv);
+    float hemi = dot(tex2D(s_hemi, lightmap_uv).rgb, float3(1.0 / 3.0));
+    float3 light = L_ambient.rgb / 1.5 + lightmap.rgb + sun_light * lightmap.a + hemi_light * hemi;
+#endif
+    float3 color = light * base.rgb * 2.0;
+#ifdef OLR_R1_DETAIL
+    color *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+#endif
+    color = saturate(color);
+    out_color = float4(lerp(fog_color.rgb, color, fog_visibility), base.a);
+}

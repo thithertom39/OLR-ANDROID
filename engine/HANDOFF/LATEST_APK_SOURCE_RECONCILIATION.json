@@ -1,0 +1,47 @@
+[
+  {
+    "path": "src/xrGame/GameObject.cpp",
+    "working_tree_sha256": "875b282e7cac8346ea8862672de785384e8661df5fb6c658a9dd0ac302923a83",
+    "packaged_sha256": "d17217c2f7b83fc6154e3692bce2dca846fa014c214b912b3408bb170ccb713e"
+  },
+  {
+    "path": "src/xrGame/CharacterPhysicsSupport.cpp",
+    "working_tree_sha256": "cf709f9a6b8afb3c3e670f0817db63eed296974215db9ae0741f07b187738cb2",
+    "packaged_sha256": "482ee6307baa4d01648e857deb25b93ceec7d1ce97681342c676c8d32222a422"
+  },
+  {
+    "path": "src/xrGame/spawn_position_audit.h",
+    "working_tree_sha256": null,
+    "packaged_sha256": "db566d75e3a423f469514221e8d4c2af62dec3f60b9074f8f758bfd071cf7811"
+  },
+  {
+    "path": "src/Layers/xrRender/DetailManager.h",
+    "working_tree_sha256": "8010d00cc57b9d77d2d2239f3998e5d2eafcb10b6669a1f4851e3466566976fa",
+    "packaged_sha256": "4cfb6cdad7e37ded5d4bd7fe9547f3df081532e2252a02be9e48e9abf88cbff7"
+  },
+  {
+    "path": "src/Layers/xrRender_R2/r2_R_lights.cpp",
+    "working_tree_sha256": "1d0b512f163732431691ed70023c3b4eeba2b2ec34d878508a6d5c9da988d0ef",
+    "packaged_sha256": "d54dfb0204e76ab3d33f3fd2edb2c18ae2146793566b7dd57ef6d6681ff2bf58"
+  },
+  {
+    "path": "src/Layers/xrRenderGL/glDetailManager_VS.cpp",
+    "working_tree_sha256": "812f2143154f168893c4d380f593b136a330ea2e71c438f63828624e80c72bb3",
+    "packaged_sha256": "64505b7dae4263d73d862d0fe4db8bb6775f4f4d4ceff00e8a125bd3a7f53572"
+  },
+  {
+    "path": "src/Layers/xrRenderGL/glDetailShadowCull.h",
+    "working_tree_sha256": null,
+    "packaged_sha256": "7b0aaa6a050d03cf05c02b78f48f3e7dbab1651935eed10b69d8793930078057"
+  },
+  {
+    "path": "src/Layers/xrRender/dxFontRender.cpp",
+    "working_tree_sha256": "9a1c65958673c51eddfd2853d6a469ffde50bb814133aaa201ee9b912a5141e1",
+    "packaged_sha256": "92efb13f44f610688eaa28c62b422d6d236206f56e0fb39f36295111679a3554"
+  },
+  {
+    "path": "src/Layers/xrRenderGL/glBufferUtils.cpp",
+    "working_tree_sha256": "9a7d835f088b0e95f2d0802eb533c82ea253b270756b20ee7d4277d99d7e97bd",
+    "packaged_sha256": "437e3d280decc198b5ddae28daeca1c9e505dbb34f07e0ddd0ad3e5bb85f84b9"
+  }
+]

@@ -1,0 +1,638 @@
+{
+  "variant": "nightpolish",
+  "created_at_utc": "2026-10-15T02:08:50.967869+00:00",
+  "source_commit": "4dee003158c57f170c70bae2df9e7f5d6a850e5e",
+  "apk": "openxray-soc-nightpolish-arm64.apk",
+  "apk_sha256": "3d499cbd74bc7f113132b15675db4e43c66c7e87f1977eea56f1cb3cb3c0f5d1",
+  "apk_bytes": 30951359,
+  "package": "org.openxray.dev",
+  "version": "1.6.02-nightpolish",
+  "native_libraries": 27,
+  "elf_16k_validation": "pass",
+  "signature_v2": true,
+  "new_launcher_resources_and_dex_verified": true,
+  "frozen_inputs_match": true,
+  "frozen_file_count": 11365,
+  "input_manifest": "nightpolish-build-inputs.json",
+  "packaging_helper": {
+    "frozen_sha256": "3d4afd3672bd76e4642024b198f5f5276fe07ff68be065b10e47600a180b7457",
+    "verified_sha256": "214ad2051d8c86daeb00bcb3bebfde81a6be85f0378296a50c1b80762ad3edb0",
+    "post_build_change": "Corrected GameSpy Git repository root and permitted safe verification retry; tracked source/build.ps1/local.properties unchanged"
+  },
+  "installed": true,
+  "runtime_verified": false,
+  "angle_included": false,
+  "foliage_fine_edges_implemented": false,
+  "changes": [
+    "SoC objective callback index and state signature",
+    "Normal/Diagnostic launch profiles",
+    "Persistent FXAA checkbox",
+    "Granular user.ltx configuration ownership",
+    "Optional trade audit"
+  ],
+  "artifacts": {
+    "openxray-soc-nightpolish-arm64.apk": {
+      "sha256": "3d499cbd74bc7f113132b15675db4e43c66c7e87f1977eea56f1cb3cb3c0f5d1",
+      "bytes": 30951359
+    },
+    "nightpolish-native-debug-symbols.zip": {
+      "sha256": "0cb53e605b05b6af447230162049a2cd4775f174145c021d3e2749043e8ed2f6",
+      "bytes": 21851036
+    },
+    "openxray-nightpolish.patch": {
+      "sha256": "fd51b7531c5366082966455b27744b621747adb09fd3141c4af1a9e6e367de06",
+      "bytes": 11308280
+    },
+    "openxray-nightpolish-gamespy.patch": {
+      "sha256": "980ed44127b4f8b5c0ee2a1ef7cb43f19741529b9af24e5a1efe570fedad175d",
+      "bytes": 1673
+    }
+  },
+  "elf_report": {
+    "apk": "openxray-soc-nightpolish-arm64.apk",
+    "bytes": 30951359,
+    "sha256": "3d499cbd74bc7f113132b15675db4e43c66c7e87f1977eea56f1cb3cb3c0f5d1",
+    "libraries": [
+      {
+        "name": "lib/arm64-v8a/libSDL2.so",
+        "size": 1517784,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1466496,
+            "vaddr": 1482880
+          },
+          {
+            "alignment": 16384,
+            "offset": 1501008,
+            "vaddr": 1533776
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libc++_shared.so",
+        "size": 1292896,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 634032,
+            "vaddr": 650416
+          },
+          {
+            "alignment": 16384,
+            "offset": 1250032,
+            "vaddr": 1282800
+          },
+          {
+            "alignment": 16384,
+            "offset": 1289792,
+            "vaddr": 1338944
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libmain.so",
+        "size": 274280,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 255104,
+            "vaddr": 271488
+          },
+          {
+            "alignment": 16384,
+            "offset": 271792,
+            "vaddr": 304560
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libogg.so",
+        "size": 30152,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 27504,
+            "vaddr": 43888
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libopenal.so",
+        "size": 1112640,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1078368,
+            "vaddr": 1094752
+          },
+          {
+            "alignment": 16384,
+            "offset": 1109656,
+            "vaddr": 1142424
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libvorbis.so",
+        "size": 204800,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 201056,
+            "vaddr": 217440
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libvorbisenc.so",
+        "size": 654160,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 561040,
+            "vaddr": 577424
+          },
+          {
+            "alignment": 16384,
+            "offset": 652032,
+            "vaddr": 684800
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libvorbisfile.so",
+        "size": 33296,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 30176,
+            "vaddr": 46560
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrAICore.so",
+        "size": 614808,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 583568,
+            "vaddr": 599952
+          },
+          {
+            "alignment": 16384,
+            "offset": 612344,
+            "vaddr": 645112
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrAPI.so",
+        "size": 4104,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1616,
+            "vaddr": 18000
+          },
+          {
+            "alignment": 16384,
+            "offset": 2104,
+            "vaddr": 34872
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrCDB.so",
+        "size": 437592,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 416864,
+            "vaddr": 433248
+          },
+          {
+            "alignment": 16384,
+            "offset": 434656,
+            "vaddr": 467424
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrCore.so",
+        "size": 832264,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 805712,
+            "vaddr": 822096
+          },
+          {
+            "alignment": 16384,
+            "offset": 829384,
+            "vaddr": 862152
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrEngine.so",
+        "size": 3187160,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 3110720,
+            "vaddr": 3127104
+          },
+          {
+            "alignment": 16384,
+            "offset": 3162072,
+            "vaddr": 3194840
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrGame.so",
+        "size": 41744360,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 37079616,
+            "vaddr": 37096000
+          },
+          {
+            "alignment": 16384,
+            "offset": 41516552,
+            "vaddr": 41549320
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrGameSpy.so",
+        "size": 923992,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 886688,
+            "vaddr": 903072
+          },
+          {
+            "alignment": 16384,
+            "offset": 907448,
+            "vaddr": 940216
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrLuaJIT.so",
+        "size": 679328,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 669760,
+            "vaddr": 686144
+          },
+          {
+            "alignment": 16384,
+            "offset": 677104,
+            "vaddr": 709872
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrLuabind.so",
+        "size": 374896,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 353600,
+            "vaddr": 369984
+          },
+          {
+            "alignment": 16384,
+            "offset": 372328,
+            "vaddr": 405096
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrMaterialSystem.so",
+        "size": 297624,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 278416,
+            "vaddr": 294800
+          },
+          {
+            "alignment": 16384,
+            "offset": 295168,
+            "vaddr": 327936
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrNetServer.so",
+        "size": 347512,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 324592,
+            "vaddr": 340976
+          },
+          {
+            "alignment": 16384,
+            "offset": 342568,
+            "vaddr": 375336
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrODE.so",
+        "size": 514864,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 494128,
+            "vaddr": 510512
+          },
+          {
+            "alignment": 16384,
+            "offset": 511952,
+            "vaddr": 544720
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrOPCODE.so",
+        "size": 391480,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 370416,
+            "vaddr": 386800
+          },
+          {
+            "alignment": 16384,
+            "offset": 388832,
+            "vaddr": 421600
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrParticles.so",
+        "size": 391408,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 369072,
+            "vaddr": 385456
+          },
+          {
+            "alignment": 16384,
+            "offset": 388952,
+            "vaddr": 421720
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrPhysics.so",
+        "size": 1205392,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1131344,
+            "vaddr": 1147728
+          },
+          {
+            "alignment": 16384,
+            "offset": 1202360,
+            "vaddr": 1235128
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrRender_GL.so",
+        "size": 5421976,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 5293568,
+            "vaddr": 5309952
+          },
+          {
+            "alignment": 16384,
+            "offset": 5392552,
+            "vaddr": 5425320
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrScriptEngine.so",
+        "size": 653048,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 624112,
+            "vaddr": 640496
+          },
+          {
+            "alignment": 16384,
+            "offset": 650336,
+            "vaddr": 683104
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrSound.so",
+        "size": 381496,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 359712,
+            "vaddr": 376096
+          },
+          {
+            "alignment": 16384,
+            "offset": 379000,
+            "vaddr": 411768
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrUICore.so",
+        "size": 1975320,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1883280,
+            "vaddr": 1899664
+          },
+          {
+            "alignment": 16384,
+            "offset": 1972856,
+            "vaddr": 2005624
+          }
+        ]
+      }
+    ],
+    "contains_angle": false,
+    "failures": []
+  },
+  "next_action": "Wait for user to reconnect tablet; backup settings/saves, then update APK with same signing key and verify existing quests, profiles and FXAA.",
+  "installed_hash_verified": true,
+  "installation": {
+    "created_at_local": "2026-10-15T05:29:08.887745+03:00",
+    "package": "org.openxray.dev",
+    "previous_version": "1.6.02-zoneskin3",
+    "version": "1.6.02-nightpolish",
+    "uid": "10361",
+    "apk_sha256": "3d499cbd74bc7f113132b15675db4e43c66c7e87f1977eea56f1cb3cb3c0f5d1",
+    "previous_apk_sha256": "b53bb3863f578c9ecf02ba98ba03b5f1485ef4e7295fcba419118d34c61f33db",
+    "signatures_match": true,
+    "installed_hash_verified": true,
+    "user_ltx_unchanged": true,
+    "save_files_unchanged": 4,
+    "backup_directory": "work\\nightpolish-runtime\\install-20261015-052900",
+    "installed": true,
+    "runtime_verified": false,
+    "native_game_started": false
+  },
+  "launcher_runtime_verified": true,
+  "launcher_runtime_scope": "Initial launcher opened and screenshot reviewed; initial controls visible and FXAA matches existing config. No game launch, AA/profile persistence roundtrip or quest test yet."
+}

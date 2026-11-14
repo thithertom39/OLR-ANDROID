@@ -1,0 +1,209 @@
+{
+  "full_lint": "failed",
+  "release_assemble_and_lint_vital": "passed",
+  "baseline_commit": "f7929b7b3ff5e1c185979feb9a60d45c778a5a72",
+  "errors": 32,
+  "warnings": 149,
+  "all_error_statements_present_in_baseline": true,
+  "counts": {
+    "MissingPermission": 26,
+    "NewApi": 4,
+    "UnspecifiedRegisterReceiverFlag": 1,
+    "RestrictedApi": 1
+  },
+  "issues": [
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 86,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 97,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 122,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 124,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 191,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 193,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 196,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 219,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 225,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 247,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 259,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 274,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 334,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 428,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 447,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 504,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 639,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+      "line": 640,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+      "line": 402,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+      "line": 458,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+      "line": 531,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+      "line": 535,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+      "line": 535,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLAudioManager.java",
+      "line": 229,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+      "line": 522,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "MissingPermission",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+      "line": 529,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "NewApi",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+      "line": 494,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "NewApi",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+      "line": 826,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "NewApi",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+      "line": 828,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "NewApi",
+      "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+      "line": 841,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "UnspecifiedRegisterReceiverFlag",
+      "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+      "line": 200,
+      "statement_present_in_baseline": true
+    },
+    {
+      "id": "RestrictedApi",
+      "file": "android/app/src/main/java/org/openxray/LauncherSkin.java",
+      "line": 99,
+      "statement_present_in_baseline": true
+    }
+  ],
+  "device_commands": false
+}

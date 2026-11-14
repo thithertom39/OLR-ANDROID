@@ -1,0 +1,59 @@
+# EGL context loss: зависимости и план восстановления
+
+23.10.2026, followup D2. **Реальное восстановление EGL в движок не добавлялось. APK не менялись. Устройства нет.** Это source audit и отдельная исполняемая модель правил восстановления, не работающий GL recovery prototype.
+
+R = C:/Users/User/Documents/Codex/2026-10-11/gjvyb/work/openxray-build. D2 = соседний work/stability-followup-20261023. Проверенные пути, SHA256 и номера строк записаны в D2/egl/source-map.json; воспроизводитель capture_source_map.py. Состояние D1 GL-005 остаётся открытым High / Confirmed missing capability; частота настоящей потери контекста на планшете неизвестна.
+
+## Фактический жизненный цикл
+
+1. SDL из work/deps/sdl2-src/src/video/android/SDL_androidevents.c, android_egl_context_backup, сохраняет текущий EGL context и снимает его с потока для освобождения surface. При возврате android_egl_context_restore пытается сделать старый context текущим. Если это не удалось, создаёт новый через SDL_GL_CreateContext и публикует SDL_RENDER_DEVICE_RESET. Это существенная граница между восстановлением поверхности и заменой пространства GL-объектов.
+2. src/xrEngine/AndroidAppLifecycle.h::State::Drain обслуживает background/foreground до отрисовки. DrainRenderResetDiagnostics намеренно только ограниченно логирует событие с full_context_recovery_unimplemented=1. Этот механизм не пересоздаёт ресурсы.
+3. src/Layers/xrRenderGL/glHW.cpp::CHW::CreateDevice хранит m_context, загружает GLES dispatch через GLAD, получает caps и проверяет выбранный Native/ANGLE backend. GetCurrentContext сравнивает текущий SDL pointer с m_context. После SDL replacement поле CHW не получает новую идентичность автоматически; GetDeviceState всегда Normal.
+4. CHW::Reset инвалидирует два кеша и пересоздаёт pFB. CResourceManager::reset_begin/end пересоздаёт RT, состояния sampler и dynamic streams/QuadIB, ремапит соответствующие v_geoms. CRender::reset_begin/end ждёт r_main/r_sun/r_sun_old, удаляет/создаёт Target, occlusion queries и sync point. Это полезный обычный reset, **не полная потеря контекста**.
+5. CResourceManager::OnDeviceDestroy/Create управляют blender/script/description библиотеками. В них нет универсальной регистрации всех GPU объектов и replay их данных. Вызов этих функций также не доказывает полноту recovery.
+
+## Карта ресурсов
+
+Все перечисленные ниже объекты требуют явного пересоздания или отказа от восстановления после подтверждённой потери единственного пространства имён. Сохранённый тот же context обычно сохраняет их; такие успешные HOME/lock tests не проверяют context loss. ANGLE не освобождает движок от учёта потерянных GL names.
+
+| Ресурс / реальные исходники | Что можно использовать | Что необходимо сделать при replacement |
+|---|---|---|
+| DDS/обычные CTexture: xrRenderGL/glSH_Texture.cpp::Load/Unload, glTexture.cpp::texture_load | cName, файловый loader, исходные игровые данные | Отбросить старые pSurface/desc_cache без GL delete, сбросить bLoaded и delegate, заново загрузить данные; отделить user/borrowed textures от owner. Loader сам по себе не вызывается, если stale pSurface/bLoaded остаётся. |
+| Sequence textures: CTexture::apply_seq/seqDATA | Имя .seq, frame list можно перечитать | Пересоздать все frame names, а не только выбранный pSurface, восстановить временную позицию и избежать удаления alias текущего кадра дважды. |
+| Video: CTexture::Load/apply_theora/Unload, pTheora/pBuffer | CPU video state потенциально сохраняем или переоткрываем файл по согласованной политике | Новые texture/PBO, отмена старых mapping pointers, повторная загрузка кадра; decoder state и seek требуют отдельной проверки. Не вызывать обычный Unload с устаревшими names в новом context. |
+| CRT: glSH_RT.cpp::create/destroy/reset_end | cName, dwWidth/Height, fmt, sampleCount | Пересоздать storage, pZRT и user wrapper; прошлое содержимое RT не восстанавливается. До first draw явно инициализировать необходимые buffers/history. В текущем пути depth — texture, pZRT alias pRT; отдельный обязательный renderbuffer здесь не найден. Если он появится, внести в registry. |
+| FBO CHW::pFB и attachments | UpdateViews, существующая сборка attachments | Новый FBO, правильные новые attachment names, проверки полноты; framebuffer0 принадлежит новой EGL surface. Старый pFB нельзя удалять в новом namespace. |
+| Статические level VBO/IBO: r2_loader.cpp::LoadBuffers, glBufferUtils.cpp::Vertex/IndexStagingBuffer::Unmap | level.geom/geomx можно перечитать | LoadBuffers вызывает Create без allowReadBack, затем Unmap(true) освобождает host bytes. Все статические GPU данные в памяти не сохранены. Нужны устойчивые recipes (файл/chunk/offset/format/size) либо безопасная перезагрузка level renderer; обычный reset этого не делает. |
+| Models, trees, skinned, details, light-volume geometry | FVisual/FSkinned/FTreeVisual и DetailManager имеют свои loaders, часть буферов может сохранять readback | Проинвентаризировать каждый путь; нельзя считать все CPU copies сохранёнными или все отброшенными. Target recreation покрывает часть procedural geometry, но Details пересоздаётся при изменении detail options, не при каждом reset. |
+| Dynamic VB/IB, QuadIB: R_DStreams.cpp, glBufferUtils.cpp | Create/reset и CPU upload путь | Новые stores, offsets и generation; старые mapped pointers запрещены. Перенастроить все SGeometry references, а не только случайное совпадение старого числа. |
+| VAO/declarations: glResourceManager_Resources.cpp::_CreateDecl | Сохранён dcl_code и CPU declaration | Новое VAO, повторный attribute format и buffer bindings; v_geoms хранит отдельные GLuint buffer references. |
+| Шейдеры/программы: ShaderResourceTraits.h::GLCompileShader, GLLinkMonolithicProgram, GLUseBinary; glResourceManager_Resources.cpp::_LinkPP | Файлы, compiler paths, material definitions | Сохранить точные permutation/flags/source identities и пересобрать. CreateShader возвращает уже имеющийся map entry без компиляции. В monolithic path _LinkPP обнуляет pass.vs/ps/gs; имени pp недостаточно без восстановления recipe. Binary cache проверять по текущим caps/driver и иметь source fallback. |
+| Constants/samplers: glr_constants_cache.h, glr_constants.cpp, glUniformBatch.h, glState.cpp | CPU state_code, material graph | Новые uniform locations и program names после link/reflection; dirty state для всех uniform batches, новые samplers. Старые location integers не переносимы. |
+| Procedural material/noise textures: xrRenderPC_GL/gl_rendertarget_build_textures.cpp | CPU генераторы Target | Повторно создать все textures включая mip chains, обновить wrappers/shader references. Проверить детерминированность/инициализацию. |
+| Borrowed aliases: ColorMapManager.cpp::UpdateTexture, environment/RT surface_set | Логическое имя owner | Сначала отсоединить, затем перепривязать к новому owner. GL surface_set только копирует GLuint, без refcount. D1 GL-006 ownership suspicion не закрывается generation model. |
+| Queries/fences: QueryHelper.h, r__sync_point.cpp, HWOCC, diagnostic glGpuProfiler.cpp | CPU scheduling/state | Отбросить handles и pending results; не ждать fence потерянного context. Создать новые, старые timings пометить invalid. Для debug profiler уже есть Shutdown(contextCurrent), но это не общий recovery. |
+| GL cache и command lists: glBackendStateCache.h, glTextureBindings.h, R_Backend | Invalidate/cleanup_contexts как заготовки | Инвалидировать physical bindings и все command-list pass/program/geometry/constants/texture caches. Оба helper cache thread_local: сброс одного потока не очищает другой. Связать validity с epoch и owner-thread. |
+| UI/fonts/particles/lighting/postprocess | CPU world и материал definitions могут пережить потерю | Их texture/geometry/program references тоже входят в registry. Отдельного автоматического восстановления всей UI graph не найдено; нужен smoke-test меню, PDA, fonts, HUD, flashlight/shadows, foliage и AA. |
+
+## Почему простого reset недостаточно
+
+Устаревший GLuint=7 и новый GLuint=7 — разные объекты. glIsTexture не устанавливает владельца. Даже адрес SDL/EGL context может переиспользоваться; одной проверки pointer equality недостаточно для поколения. В новом context нельзя запускать обычный delete старых объектов: числовое совпадение может удалить уже созданный новый объект. Обнуление CRT/CTexture handles из D1 исправляет повторный delete одного wrapper при живом контексте, но не вводит поколение, полную регистрацию или владельцев aliases.
+
+Нужно различать owner, borrowed view и resource identity; generation защищает границу context loss, но сама по себе не решает stale reference reuse внутри одного поколения. GL calls остаются на разрешённом render thread. CPU workers сначала прекращают выдачу новой работы и достигают барьера. После потери нельзя пытаться drain GPU ожиданием старых fences. Проверенные TaskQueue ограничения также не позволяют объявить такой барьер надёжным без дополнительной приёмки scheduler.
+
+## Поэтапный путь реализации, пока только план
+
+1. **Диагностика без recovery:** корреляция SDL reset, нового/старого context, render thread, выбранного backend и lifecycle session. Не создавать контекст вручную поверх SDL и не переключать Native/ANGLE в рамках восстановления. Fault injection должен моделировать реальную замену GL namespace, а не просто послать SDL event.
+2. **Инвентаризация и recipes:** owner registry с epoch, устойчивые descriptors всех textures/buffers/programs и явные borrowed aliases. Для static geometry выбрать повторное чтение assets либо сохранение CPU copies, измерив память. Восстановить shader permutations из точных параметров, не только разобрать display name.
+3. **Планируемый барьер:** stop submissions → quiesce CPU tasks → запретить draw → подтвердить текущий новый context → abandon old GPU names без удаления → invalidate caches/locations/mappings во всех списках/потоках.
+4. **Пересоздание:** GLAD/caps/backend validation → buffer/texture/shader owners → programs/reflection/samplers → VAO/geometry/aliases → attachments/FBO/Target/UI → clear/init содержимого → проверка completeness и всех обязательных объектов.
+5. **Публикация:** только все обязательные ресурсы нового поколения вместе делают renderer ready. Второй reset, отсутствие recipe, IO/compile/OOM/FBO failure блокируют публикацию. Нужен понятный контролируемый выход/повторный запуск без автозаписи поверх сейва; эта fallback policy также пока не реализована.
+6. **Аппаратная приёмка:** Native и ANGLE отдельно; preserved-context HOME/Recents/lock и настоящий context replacement отдельно. Проверить repeated replacement, отказ на разных стадиях, partial startup, menu/world/load/unload, resize, dynamic shadows, video, UI, AA и корректный normal Exit→Launcher. Не смешивать с thermal/queue/mod APK.
+
+## Что реально проверено offline
+
+D2/egl/recovery_model.py — **исполняемая reference policy**, без SDL/EGL/GL и без hooks в движке. Она проверяет dependency order, preconditions, owner epoch и all-or-nothing readiness. Current-inventory модель намеренно блокирует восстановление из-за отсутствующих static buffer recipes.
+
+19 тестовых методов проходят Windows и WSL (results.json). Включены оба backend names, все комбинации трёх readiness prerequisites, missing/cyclic dependencies, borrowed aliases, numerical-name reuse, 1000 поколений, потеря ещё одного context до commit и отказ каждого ресурса. Это проверки правил модели, не фактических CTexture/CHW объектов и не GPU recovery. Sanitizers к Python модели неприменимы; sanitizer-clean renderer не заявляется.
+
+**Решение:** безопасная полная реализация сейчас требует изменения владения и сохранения recipes за пределами небольшого патча. Experimental recovery в основную APK не подготовлена и не включена. Подготовлены конкретная карта, порядок и model fixtures для будущего изолированного прототипа. Обычный работающий resume сохранён без изменений.

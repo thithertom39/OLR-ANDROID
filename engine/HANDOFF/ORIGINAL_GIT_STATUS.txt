@@ -1,0 +1,282 @@
+ M CONTINUE_PROMPT.md
+ M Externals/imgui-proj/CMakeLists.txt
+ M Externals/ode/ode/src/joint.cpp
+ M Externals/ode/ode/src/quickstep.cpp
+ M PROJECT_STATUS.md
+ M android/app/build.gradle
+ M android/app/src/main/java/org/libsdl/app/SDLActivity.java
+ M android/app/src/main/java/org/openxray/AppLog.java
+ M android/app/src/main/java/org/openxray/CrashReporter.java
+ M android/app/src/main/java/org/openxray/LauncherActivity.java
+ M android/app/src/main/java/org/openxray/OpenXRayActivity.java
+ M android/app/src/main/java/org/openxray/TouchOverlayView.java
+ M res/cop/gamedata/shaders/gl/clouds.s
+ M res/cop/gamedata/shaders/gl/combine_volumetric.s
+ M res/cop/gamedata/shaders/gl/portal.s
+ M res/cs/gamedata/shaders/gl/clouds.s
+ M res/cs/gamedata/shaders/gl/combine_volumetric.s
+ M res/cs/gamedata/shaders/gl/portal.s
+ M res/soc/gamedata/shaders/gl/clouds.s
+ M res/soc/gamedata/shaders/gl/combine_volumetric.s
+ M res/soc/gamedata/shaders/gl/portal.s
+ M src/Layers/xrRender/SkeletonRigid.cpp
+ M src/Layers/xrRender/blenders/blender_luminance.cpp
+ M src/Layers/xrRender/light_smapvis.cpp
+ M src/Layers/xrRender/light_smapvis.h
+ M src/Layers/xrRender/light_vis.cpp
+ M src/Layers/xrRender/r__dsgraph_render.cpp
+ M src/Layers/xrRender/r__occlusion.cpp
+ M src/Layers/xrRender/r__occlusion.h
+ M src/Layers/xrRenderGL/glBackendStateCache.h
+ M src/Layers/xrRenderGL/glDetailManager_VS.cpp
+ M src/Layers/xrRenderGL/glHW.cpp
+ M src/Layers/xrRenderGL/glR_Backend_Runtime.h
+ M src/Layers/xrRenderGL/glSH_RT.cpp
+ M src/Layers/xrRenderGL/glSH_Texture.cpp
+ M src/Layers/xrRenderGL/glSpotShadowDump.h
+ M src/Layers/xrRenderGL/glTextureBindings.h
+ M src/Layers/xrRenderPC_GL/CMakeLists.txt
+ M src/Layers/xrRenderPC_GL/gl_rendertarget_phase_combine.cpp
+ M src/Layers/xrRenderPC_GL/gl_rendertarget_u_set_rt.cpp
+ M src/Layers/xrRender_R2/r2.cpp
+ M src/Layers/xrRender_R2/r2_R_calculate.cpp
+ M src/Layers/xrRender_R2/r2_R_render.cpp
+ M src/Layers/xrRender_R2/r2_rendertarget_phase_luminance.cpp
+ M src/Layers/xrRender_R2/r3_rendertarget_accum_point.cpp
+ M src/xrCore/FS.cpp
+ M src/xrCore/FS_internal.h
+ M src/xrCore/LocatorAPI.cpp
+ M src/xrCore/LocatorAPI.h
+ M src/xrCore/LocatorAPI_defs.cpp
+ M src/xrCore/Threading/Event.cpp
+ M src/xrCore/XML/XMLDocument.cpp
+ M src/xrCore/log.cpp
+ M src/xrEngine/IGame_Level.cpp
+ M src/xrEngine/IGame_Persistent.cpp
+ M src/xrEngine/device.cpp
+ M src/xrEngine/frame_trace.h
+ M src/xrEngine/x_ray.cpp
+ M src/xrEngine/xr_input.cpp
+ M src/xrGame/CharacterPhysicsSupport.cpp
+ M src/xrGame/MainMenu.cpp
+ M src/xrGame/UIGameCustom.cpp
+ M src/xrGame/alife_storage_manager.cpp
+ M src/xrGame/saved_game_wrapper.cpp
+ M src/xrGame/ui/UIScriptWnd.cpp
+ M src/xrPhysics/BlockAllocator.h
+ M src/xrPhysics/PHElement.cpp
+ M src/xrPhysics/PHIsland.cpp
+ M src/xrScriptEngine/script_engine.cpp
+ M src/xrServerEntities/xml_str_id_loader.h
+ M src/xrSound/SoundRender_Source.cpp
+ M src/xr_3da/entry_point.cpp
+?? ANDROID_CPU_EFFICIENCY_PLAN.md
+?? ANDROID_CPU_PROFILING_PLAN.md
+?? ANDROID_PERFORMANCE_OPTIMIZATION_REPORT.md
+?? ANDROID_THERMAL_POWER_AUDIT.md
+?? CHANGELOG_RU.md
+?? CORDON_GPU_PERFORMANCE_REPORT.md
+?? DEVICE_ACCEPTANCE_RESULTS_20261024.md
+?? EGL_CONTEXT_RECOVERY_PLAN.md
+?? ENGINE_CORRECTNESS_AUDIT.md
+?? Externals/ode/include/ode/quickstep_audit.h
+?? FRAME_EXECUTION_MAP.md
+?? GL_RESOURCE_LIFETIME_AUDIT.md
+?? LAUNCHER_CRASH_INVESTIGATION.md
+?? MOD_MANAGER_ARCHITECTURE.md
+?? MOD_MANAGER_READINESS.md
+?? NEXT_GPU_OPTIMIZATION_SESSION.md
+?? NEXT_STABILITY_SESSION.md
+?? NEXT_THERMAL_OPTIMIZATION_SESSION.md
+?? NEXT_THREADING_SESSION.md
+?? OPENXRAY_THREADING_AUDIT.md
+?? PROJECT_STABILITY_AUDIT.md
+?? RAGDOLL_FIX_REPORT.md
+?? SKADOVSK_FIX_INTEGRATION.md
+?? STABILITY_FIXES_AND_TESTS.md
+?? STABILITY_FOLLOWUP_RESULTS.md
+?? THERMAL_DEVICE_VALIDATION_PLAN.md
+?? THREADING_CANDIDATE_RANKING.md
+?? android/app/src/main/java/org/openxray/LifecycleTrace.java
+?? android/app/src/main/java/org/openxray/RenderBackendConfig.java
+?? docs/development-checkpoint/ANGLE_EXPOSURE_FIX_2026-10-20.md
+?? docs/development-checkpoint/ANGLE_INTEGRATION_2026-10-19.md
+?? evidence/angle-integration/README.md
+?? evidence/angle-integration/angle-apk-report.json
+?? evidence/angle-integration/angle-export-report.json
+?? evidence/angle-integration/angle-first-runtime-capture-hashes.json
+?? evidence/angle-integration/angle-first-runtime-report.json
+?? evidence/angle-integration/angle-highp-position-result.json
+?? evidence/angle-integration/angle-inputs.json
+?? evidence/angle-integration/angle-installation-report.json
+?? evidence/angle-integration/angleaudit-apk-report.json
+?? evidence/angle-integration/angleaudit-callback-android-syntax.json
+?? evidence/angle-integration/angleaudit-callback-results.json
+?? evidence/angle-integration/angleaudit-inputs.json
+?? evidence/angle-integration/angleaudit-installation-report.json
+?? evidence/angle-integration/angleaudit-luminance-results.json
+?? evidence/angle-integration/angleaudit-runtime-report.json
+?? evidence/angle-integration/angleexposure1-apk-report.json
+?? evidence/angle-integration/angleexposure1-inputs.json
+?? evidence/angle-integration/angleexposure1-installation-report.json
+?? evidence/angle-integration/angleexposure1-runtime-report.json
+?? evidence/angle-integration/angleexposure2-apk-report.json
+?? evidence/angle-integration/angleexposure2-assets-report.json
+?? evidence/angle-integration/angleexposure2-extracted-assets-report.json
+?? evidence/angle-integration/angleexposure2-inputs.json
+?? evidence/angle-integration/angleexposure2-installation-report.json
+?? evidence/angle-integration/angleexposure2-native-runtime.json
+?? evidence/angle-integration/angleexposure2-runtime-report.json
+?? evidence/angle-integration/angleexposure2-test-cleanup.json
+?? evidence/angle-integration/exposure-lua-contract-results.json
+?? evidence/angle-integration/exposure-lua-source-hashes.json
+?? evidence/angle-integration/exposure-results.json
+?? evidence/angle-integration/java-tests.json
+?? evidence/angle-integration/linux-build-result.json
+?? evidence/angle-integration/native-baseline-report.json
+?? evidence/angle-integration/native-dispatch-tests.json
+?? evidence/angle-integration/native-identity-tests.json
+?? evidence/angle-integration/native-startup-tests.json
+?? evidence/performance-20261022/README.md
+?? evidence/performance-20261022/baseline-manifest.json
+?? evidence/performance-20261022/candidate_pipeline.py
+?? evidence/performance-20261022/evidence-manifest.json
+?? evidence/performance-20261022/optimization-changes.json
+?? evidence/performance-20261022/optimization-vs-baseline.patch
+?? evidence/performance-20261022/packaged-assets-diff.json
+?? evidence/performance-20261022/perf20261022-apk-report.json
+?? evidence/performance-20261022/perf20261022-inputs.json
+?? evidence/performance-20261022/perf20261022-installation-report.json
+?? evidence/performance-20261022/perf20261022-regression-report.json
+?? evidence/performance-20261022/restore_optimization.py
+?? evidence/performance-20261022/rollback-tests.json
+?? evidence/performance-20261022/tests/android_input/README.md
+?? evidence/performance-20261022/tests/android_input/change-1.patch
+?? evidence/performance-20261022/tests/android_input/change-2.patch
+?? evidence/performance-20261022/tests/android_input/change-3.patch
+?? evidence/performance-20261022/tests/android_input/controller/README.md
+?? evidence/performance-20261022/tests/android_input/controller/baseline-controller.cpp
+?? evidence/performance-20261022/tests/android_input/controller/candidate-controller.cpp
+?? evidence/performance-20261022/tests/android_input/controller/results.json
+?? evidence/performance-20261022/tests/android_input/controller/run_controller_tests.py
+?? evidence/performance-20261022/tests/android_input/results.json
+?? evidence/performance-20261022/tests/android_input/timestamps/results.json
+?? evidence/performance-20261022/tests/android_input/timestamps/run.py
+?? evidence/performance-20261022/tests/android_input/touch/results.json
+?? evidence/performance-20261022/tests/android_input/touch/run.py
+?? evidence/performance-20261022/tests/android_input/verify_compile_and_evidence.py
+?? evidence/performance-20261022/tests/cpu_resources/01-android-stderr.patch
+?? evidence/performance-20261022/tests/cpu_resources/02-ui-callback-trace.patch
+?? evidence/performance-20261022/tests/cpu_resources/03-source-cache-owner.patch
+?? evidence/performance-20261022/tests/cpu_resources/04-source-exists.patch
+?? evidence/performance-20261022/tests/cpu_resources/05-vorbis-integer-read.patch
+?? evidence/performance-20261022/tests/cpu_resources/CPU_RESOURCE_FINDINGS.md
+?? evidence/performance-20261022/tests/cpu_resources/active-results.json
+?? evidence/performance-20261022/tests/cpu_resources/cache-baseline/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/cache-candidate/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/change-1.patch
+?? evidence/performance-20261022/tests/cpu_resources/change-2.patch
+?? evidence/performance-20261022/tests/cpu_resources/change-3.patch
+?? evidence/performance-20261022/tests/cpu_resources/change-4.patch
+?? evidence/performance-20261022/tests/cpu_resources/independent-review.md
+?? evidence/performance-20261022/tests/cpu_resources/load-master0-editor0-windows0/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master0-editor0-windows1/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master0-editor1-windows0/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master0-editor1-windows1/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master1-editor0-windows0/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master1-editor0-windows1/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master1-editor1-windows0/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/load-master1-editor1-windows1/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/log-android-debug-baseline/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/log-android-debug-candidate/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/log-android-release-baseline/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/log-android-release-candidate/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/log-desktop-baseline/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/log-desktop-candidate/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/logging-followup-results.json
+?? evidence/performance-20261022/tests/cpu_resources/logging-reinit-before-fix.json
+?? evidence/performance-20261022/tests/cpu_resources/logging_followup.py
+?? evidence/performance-20261022/tests/cpu_resources/logical-changes.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk-logging-followup-results.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk-results.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/1-baseline/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/1-baseline/log.cpp
+?? evidence/performance-20261022/tests/cpu_resources/ndk/1-candidate/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/2-baseline/UIScriptWnd.cpp
+?? evidence/performance-20261022/tests/cpu_resources/ndk/2-baseline/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/2-candidate/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/3-baseline/SoundRender_Core_SourceManager.cpp
+?? evidence/performance-20261022/tests/cpu_resources/ndk/3-baseline/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/3-candidate/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/4-baseline/SoundRender_Source.cpp
+?? evidence/performance-20261022/tests/cpu_resources/ndk/4-baseline/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk/4-candidate/command.json
+?? evidence/performance-20261022/tests/cpu_resources/ndk_compile.py
+?? evidence/performance-20261022/tests/cpu_resources/ndk_logging_followup.py
+?? evidence/performance-20261022/tests/cpu_resources/record_logical_changes.py
+?? evidence/performance-20261022/tests/cpu_resources/results.json
+?? evidence/performance-20261022/tests/cpu_resources/sound-source-00-baseline.cpp
+?? evidence/performance-20261022/tests/cpu_resources/sound-source-01-exist.cpp
+?? evidence/performance-20261022/tests/cpu_resources/tsan-results.json
+?? evidence/performance-20261022/tests/cpu_resources/tsan_check.py
+?? evidence/performance-20261022/tests/cpu_resources/ui-baseline/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/ui-candidate/test.cpp
+?? evidence/performance-20261022/tests/cpu_resources/verify.py
+?? evidence/performance-20261022/tests/cpu_resources/verify_active.py
+?? evidence/performance-20261022/tests/cpu_resources/vorbis-read/test.cpp
+?? evidence/performance-20261022/tests/draw_buffers/README.md
+?? evidence/performance-20261022/tests/draw_buffers/android-syntax-results.json
+?? evidence/performance-20261022/tests/draw_buffers/backend-bodies.h
+?? evidence/performance-20261022/tests/draw_buffers/baseline-body.h
+?? evidence/performance-20261022/tests/draw_buffers/before-hashes.json
+?? evidence/performance-20261022/tests/draw_buffers/before/src/Layers/xrRenderGL/glBackendStateCache.h
+?? evidence/performance-20261022/tests/draw_buffers/before/src/Layers/xrRenderGL/glHW.cpp
+?? evidence/performance-20261022/tests/draw_buffers/before/src/Layers/xrRenderGL/glR_Backend_Runtime.h
+?? evidence/performance-20261022/tests/draw_buffers/before/src/Layers/xrRenderGL/glSH_RT.cpp
+?? evidence/performance-20261022/tests/draw_buffers/before/src/Layers/xrRenderGL/glSpotShadowDump.h
+?? evidence/performance-20261022/tests/draw_buffers/before/src/Layers/xrRenderPC_GL/gl_rendertarget_u_set_rt.cpp
+?? evidence/performance-20261022/tests/draw_buffers/candidate-body.h
+?? evidence/performance-20261022/tests/draw_buffers/check_mutation.py
+?? evidence/performance-20261022/tests/draw_buffers/check_ndk.py
+?? evidence/performance-20261022/tests/draw_buffers/check_sanitizers.py
+?? evidence/performance-20261022/tests/draw_buffers/fixture.cpp
+?? evidence/performance-20261022/tests/draw_buffers/mutant-missing-bind-invalidation/backend-bodies.h
+?? evidence/performance-20261022/tests/draw_buffers/mutant-missing-bind-invalidation/baseline-body.h
+?? evidence/performance-20261022/tests/draw_buffers/mutant-missing-bind-invalidation/candidate-body.h
+?? evidence/performance-20261022/tests/draw_buffers/mutant-missing-bind-invalidation/fixture.cpp
+?? evidence/performance-20261022/tests/draw_buffers/mutation-results.json
+?? evidence/performance-20261022/tests/draw_buffers/production-change.diff
+?? evidence/performance-20261022/tests/draw_buffers/results.json
+?? evidence/performance-20261022/tests/draw_buffers/run.py
+?? evidence/performance-20261022/tests/draw_buffers/sanitizer-results.json
+?? evidence/performance-20261022/tests/draw_buffers/software/README.md
+?? evidence/performance-20261022/tests/draw_buffers/software/actual-glBackendStateCache.h
+?? evidence/performance-20261022/tests/draw_buffers/software/fixture.cpp
+?? evidence/performance-20261022/tests/draw_buffers/software/results.json
+?? evidence/performance-20261022/tests/draw_buffers/software/run.py
+?? evidence/performance-20261022/tests/draw_buffers/source-audit.json
+?? evidence/performance-20261022/tests/test_rollback.py
+?? evidence/performance-20261022/tests/texture_clear/README.md
+?? evidence/performance-20261022/tests/texture_clear/android-syntax-results.json
+?? evidence/performance-20261022/tests/texture_clear/baseline-body.h
+?? evidence/performance-20261022/tests/texture_clear/baseline-control/results.json
+?? evidence/performance-20261022/tests/texture_clear/candidate-body.h
+?? evidence/performance-20261022/tests/texture_clear/check_mutation.py
+?? evidence/performance-20261022/tests/texture_clear/check_ndk.py
+?? evidence/performance-20261022/tests/texture_clear/check_sanitizers.py
+?? evidence/performance-20261022/tests/texture_clear/fixture.cpp
+?? evidence/performance-20261022/tests/texture_clear/glTextureBindings.before.h
+?? evidence/performance-20261022/tests/texture_clear/mutant-missing-bind-invalidation/baseline-body.h
+?? evidence/performance-20261022/tests/texture_clear/mutant-missing-bind-invalidation/candidate-body.h
+?? evidence/performance-20261022/tests/texture_clear/mutant-missing-bind-invalidation/fixture.cpp
+?? evidence/performance-20261022/tests/texture_clear/mutation-results.json
+?? evidence/performance-20261022/tests/texture_clear/production-change.diff
+?? evidence/performance-20261022/tests/texture_clear/results.json
+?? evidence/performance-20261022/tests/texture_clear/run.py
+?? evidence/performance-20261022/tests/texture_clear/sanitizer-results.json
+?? evidence/performance-20261022/tests/texture_clear/sanitizer-tool-probe.json
+?? scripts/build_angle_pinned_linux.sh
+?? src/Layers/xrRenderGL/glDetailUniformBatch.h
+?? src/Layers/xrRenderGL/glGpuProfiler.cpp
+?? src/Layers/xrRenderGL/glGpuProfiler.h
+?? src/xrPhysics/ragdoll_audit.h

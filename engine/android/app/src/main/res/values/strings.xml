@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenXRay</string>
+    <string name="unlock_fps">Unlock FPS in game</string>
+    <string name="unlock_fps_hint">Requests the highest screen refresh rate. Android may keep a lower rate; the menu limit stays unchanged.</string>
+</resources>

@@ -1,0 +1,14 @@
+local previous_weather
+
+function on_game_load()
+    previous_weather = level.get_weather()
+    game.start_tutorial("restore_sun")
+    -- OpenXRay skips tutorials while the loading screen is active.
+    if game.has_active_tutorial() and game.active_tutorial_name() == "restore_sun" then
+        level.set_weather("ini_weather", true)
+    end
+end
+
+function set_sun()
+    level.set_weather(previous_weather)
+end

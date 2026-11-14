@@ -1,0 +1,7 @@
+#include "common.h"
+#include "iostructs/p_model_def.h"
+
+float4 _main(v2p input_data)
+{
+    return tex2D(s_base, input_data.tc0);
+}

@@ -1,0 +1,32 @@
+{
+  "installation": {
+    "created_at_local": "2026-10-15T05:29:08.887745+03:00",
+    "package": "org.openxray.dev",
+    "previous_version": "1.6.02-zoneskin3",
+    "version": "1.6.02-nightpolish",
+    "uid": "10361",
+    "apk_sha256": "3d499cbd74bc7f113132b15675db4e43c66c7e87f1977eea56f1cb3cb3c0f5d1",
+    "previous_apk_sha256": "b53bb3863f578c9ecf02ba98ba03b5f1485ef4e7295fcba419118d34c61f33db",
+    "signatures_match": true,
+    "installed_hash_verified": true,
+    "user_ltx_unchanged": true,
+    "save_files_unchanged": 4,
+    "backup_directory": "work\\nightpolish-runtime\\install-20261015-052900",
+    "installed": true,
+    "runtime_verified": false,
+    "native_game_started": false
+  },
+  "launcher_opened": true,
+  "launcher_visual_reviewed": true,
+  "launcher_screenshot": "work\\nightpolish-runtime\\launcher-first-open\\launcher.png",
+  "new_controls_visible_in_initial_viewport": true,
+  "launch_profile": "Normal (play)",
+  "fxaa_checked": false,
+  "actual_config_r2_aa": "off",
+  "fxaa_matches_existing_config": true,
+  "gameplay_started": false,
+  "quest_turnin_verified": false,
+  "fxaa_persistence_roundtrip_verified": false,
+  "profile_switch_roundtrip_verified": false,
+  "next_action": "User enables FXAA if desired, presses MAIN MENU, loads existing save, then tests Medusa/jacket quest turn-in and reports results."
+}

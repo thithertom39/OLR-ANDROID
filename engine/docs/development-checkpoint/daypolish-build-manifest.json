@@ -1,0 +1,836 @@
+{
+  "variant": "daypolish",
+  "created_at_utc": "2026-10-15T10:20:45.889276+00:00",
+  "source_commit": "84707f3d328eaad803556cc619a87a88690f5e2e",
+  "apk": "openxray-soc-daypolish-arm64.apk",
+  "apk_sha256": "a6a6bf1d36f87e76ed0bb61577f02f07b4a2da0adbe20819e04bf8fdd516016c",
+  "apk_bytes": 30953911,
+  "package": "org.openxray.dev",
+  "version": "1.6.02-daypolish",
+  "native_libraries": 27,
+  "elf_16k_validation": "pass",
+  "signature_v2": true,
+  "new_launcher_resources_and_dex_verified": true,
+  "frozen_inputs_match": true,
+  "frozen_file_count": 11405,
+  "input_manifest": "daypolish-build-inputs.json",
+  "packaging_helper": {
+    "frozen_sha256": "57aee5f6f217370334f8f22535541f812b866c0e253b20ed1a76cbe08ae1b047",
+    "verified_sha256": "57aee5f6f217370334f8f22535541f812b866c0e253b20ed1a76cbe08ae1b047",
+    "post_build_change": null
+  },
+  "installed": false,
+  "runtime_verified": false,
+  "angle_included": false,
+  "foliage_fine_edges_implemented": true,
+  "fine_edges_default_enabled": false,
+  "physics_drop_cause_verified": false,
+  "changes": [
+    "Solid dark panel interiors with original frames/wall",
+    "Optional Fine edges FXAA, Fast unchanged by default",
+    "Saved per-mode quality selector, preset-safe atomic AA write",
+    "Fragment lifetime fallback milliseconds correction",
+    "Bounded opt-in physics audit, paused in Normal profile",
+    "Consistent GLES shader cache preparation and guarded reads"
+  ],
+  "artifacts": {
+    "openxray-soc-daypolish-arm64.apk": {
+      "sha256": "a6a6bf1d36f87e76ed0bb61577f02f07b4a2da0adbe20819e04bf8fdd516016c",
+      "bytes": 30953911
+    },
+    "daypolish-native-debug-symbols.zip": {
+      "sha256": "c3953bebf7512e3df05f8bb68d6b770787fd4b2edc12d392f7fc773fb6246f60",
+      "bytes": 21853944
+    },
+    "openxray-daypolish.patch": {
+      "sha256": "1a378d810595af2d85eeac656b959f3e130a2ad9cdfebd11405489e369522d7d",
+      "bytes": 11325528
+    },
+    "openxray-daypolish-gamespy.patch": {
+      "sha256": "980ed44127b4f8b5c0ee2a1ef7cb43f19741529b9af24e5a1efe570fedad175d",
+      "bytes": 1673
+    }
+  },
+  "elf_report": {
+    "apk": "openxray-soc-daypolish-arm64.apk",
+    "bytes": 30953911,
+    "sha256": "a6a6bf1d36f87e76ed0bb61577f02f07b4a2da0adbe20819e04bf8fdd516016c",
+    "libraries": [
+      {
+        "name": "lib/arm64-v8a/libSDL2.so",
+        "size": 1517784,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1466496,
+            "vaddr": 1482880
+          },
+          {
+            "alignment": 16384,
+            "offset": 1501008,
+            "vaddr": 1533776
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libc++_shared.so",
+        "size": 1292896,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 634032,
+            "vaddr": 650416
+          },
+          {
+            "alignment": 16384,
+            "offset": 1250032,
+            "vaddr": 1282800
+          },
+          {
+            "alignment": 16384,
+            "offset": 1289792,
+            "vaddr": 1338944
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libmain.so",
+        "size": 274280,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 255104,
+            "vaddr": 271488
+          },
+          {
+            "alignment": 16384,
+            "offset": 271792,
+            "vaddr": 304560
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libogg.so",
+        "size": 30152,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 27504,
+            "vaddr": 43888
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libopenal.so",
+        "size": 1112640,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1078368,
+            "vaddr": 1094752
+          },
+          {
+            "alignment": 16384,
+            "offset": 1109656,
+            "vaddr": 1142424
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libvorbis.so",
+        "size": 204800,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 201056,
+            "vaddr": 217440
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libvorbisenc.so",
+        "size": 654160,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 561040,
+            "vaddr": 577424
+          },
+          {
+            "alignment": 16384,
+            "offset": 652032,
+            "vaddr": 684800
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libvorbisfile.so",
+        "size": 33296,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 30176,
+            "vaddr": 46560
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrAICore.so",
+        "size": 614808,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 583568,
+            "vaddr": 599952
+          },
+          {
+            "alignment": 16384,
+            "offset": 612344,
+            "vaddr": 645112
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrAPI.so",
+        "size": 4104,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1616,
+            "vaddr": 18000
+          },
+          {
+            "alignment": 16384,
+            "offset": 2104,
+            "vaddr": 34872
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrCDB.so",
+        "size": 437592,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 416864,
+            "vaddr": 433248
+          },
+          {
+            "alignment": 16384,
+            "offset": 434656,
+            "vaddr": 467424
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrCore.so",
+        "size": 832264,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 805712,
+            "vaddr": 822096
+          },
+          {
+            "alignment": 16384,
+            "offset": 829384,
+            "vaddr": 862152
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrEngine.so",
+        "size": 3187160,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 3110720,
+            "vaddr": 3127104
+          },
+          {
+            "alignment": 16384,
+            "offset": 3162072,
+            "vaddr": 3194840
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrGame.so",
+        "size": 41744840,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 37080080,
+            "vaddr": 37096464
+          },
+          {
+            "alignment": 16384,
+            "offset": 41517032,
+            "vaddr": 41549800
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrGameSpy.so",
+        "size": 923992,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 886688,
+            "vaddr": 903072
+          },
+          {
+            "alignment": 16384,
+            "offset": 907448,
+            "vaddr": 940216
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrLuaJIT.so",
+        "size": 679328,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 669760,
+            "vaddr": 686144
+          },
+          {
+            "alignment": 16384,
+            "offset": 677104,
+            "vaddr": 709872
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrLuabind.so",
+        "size": 374896,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 353600,
+            "vaddr": 369984
+          },
+          {
+            "alignment": 16384,
+            "offset": 372328,
+            "vaddr": 405096
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrMaterialSystem.so",
+        "size": 297624,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 278416,
+            "vaddr": 294800
+          },
+          {
+            "alignment": 16384,
+            "offset": 295168,
+            "vaddr": 327936
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrNetServer.so",
+        "size": 347512,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 324592,
+            "vaddr": 340976
+          },
+          {
+            "alignment": 16384,
+            "offset": 342568,
+            "vaddr": 375336
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrODE.so",
+        "size": 514864,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 494128,
+            "vaddr": 510512
+          },
+          {
+            "alignment": 16384,
+            "offset": 511952,
+            "vaddr": 544720
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrOPCODE.so",
+        "size": 391480,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 370416,
+            "vaddr": 386800
+          },
+          {
+            "alignment": 16384,
+            "offset": 388832,
+            "vaddr": 421600
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrParticles.so",
+        "size": 391408,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 369072,
+            "vaddr": 385456
+          },
+          {
+            "alignment": 16384,
+            "offset": 388952,
+            "vaddr": 421720
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrPhysics.so",
+        "size": 1207320,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1133248,
+            "vaddr": 1149632
+          },
+          {
+            "alignment": 16384,
+            "offset": 1204288,
+            "vaddr": 1237056
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrRender_GL.so",
+        "size": 5423808,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 5295392,
+            "vaddr": 5311776
+          },
+          {
+            "alignment": 16384,
+            "offset": 5394384,
+            "vaddr": 5427152
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrScriptEngine.so",
+        "size": 653048,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 624112,
+            "vaddr": 640496
+          },
+          {
+            "alignment": 16384,
+            "offset": 650336,
+            "vaddr": 683104
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrSound.so",
+        "size": 381496,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 359712,
+            "vaddr": 376096
+          },
+          {
+            "alignment": 16384,
+            "offset": 379000,
+            "vaddr": 411768
+          }
+        ]
+      },
+      {
+        "name": "lib/arm64-v8a/libxrUICore.so",
+        "size": 1975320,
+        "load_segments": [
+          {
+            "alignment": 16384,
+            "offset": 0,
+            "vaddr": 0
+          },
+          {
+            "alignment": 16384,
+            "offset": 1883280,
+            "vaddr": 1899664
+          },
+          {
+            "alignment": 16384,
+            "offset": 1972856,
+            "vaddr": 2005624
+          }
+        ]
+      }
+    ],
+    "contains_angle": false,
+    "failures": []
+  },
+  "next_action": "Wait until user returns and reconnects tablet. Backup/install as update; inspect panels and compare Fast/Fine edges in same saved scene. For crate slowdown use Diagnostic + -physics_audit and capture first simulation minute; keep nightpolish rollback.",
+  "build_duration": "2m 43s",
+  "full_android_lint": {
+    "full_lint": "failed",
+    "release_assemble_and_lint_vital": "passed",
+    "baseline_commit": "f7929b7b3ff5e1c185979feb9a60d45c778a5a72",
+    "errors": 32,
+    "warnings": 149,
+    "all_error_statements_present_in_baseline": true,
+    "counts": {
+      "MissingPermission": 26,
+      "NewApi": 4,
+      "UnspecifiedRegisterReceiverFlag": 1,
+      "RestrictedApi": 1
+    },
+    "issues": [
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 86,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 97,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 122,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 124,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 191,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 193,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 196,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 219,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 225,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 247,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 259,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 274,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 334,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 428,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 447,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 504,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 639,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+        "line": 640,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+        "line": 402,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+        "line": 458,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+        "line": 531,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+        "line": 535,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+        "line": 535,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLAudioManager.java",
+        "line": 229,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+        "line": 522,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "MissingPermission",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+        "line": 529,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "NewApi",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+        "line": 494,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "NewApi",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+        "line": 826,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "NewApi",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+        "line": 828,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "NewApi",
+        "file": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+        "line": 841,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "UnspecifiedRegisterReceiverFlag",
+        "file": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+        "line": 200,
+        "statement_present_in_baseline": true
+      },
+      {
+        "id": "RestrictedApi",
+        "file": "android/app/src/main/java/org/openxray/LauncherSkin.java",
+        "line": 99,
+        "statement_present_in_baseline": true
+      }
+    ],
+    "device_commands": false
+  },
+  "release_build_and_lint_vital": "passed",
+  "same_signature_as_installed_nightpolish": true,
+  "github_token_empty_verified": true,
+  "audit_scope": "Targeted UI/config/AA/physics/destruction/shader-cache review and full Android lint. No device actions, measured FPS gain or proof of crate-drop cause.",
+  "full_lint_triage": "docs/development-checkpoint/evidence/daypolish-lint-audit/README.md"
+}

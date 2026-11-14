@@ -1,0 +1,80 @@
+#pragma once
+
+#include "Layers/xrRender/HWCaps.h"
+#include "xrCore/ModuleLookup.hpp"
+
+namespace xray::render::RENDER_NAMESPACE
+{
+class CHW
+    : public pureAppActivate,
+      public pureAppDeactivate
+{
+public:
+    CHW();
+    ~CHW();
+
+    void CreateDevice(SDL_Window* sdlWnd);
+    void DestroyDevice();
+
+    void Reset();
+
+    void SetPrimaryAttributes(u32& windowFlags);
+
+    IRender::RenderContext GetCurrentContext() const;
+    int  MakeContextCurrent(IRender::RenderContext context) const;
+
+    static std::pair<u32, u32> GetSurfaceSize();
+    DeviceState GetDeviceState() const;
+
+    // Queries the active context for a named GL extension.
+    static bool HasExtension(cpcstr name);
+
+public:
+    void BeginScene();
+    void EndScene();
+    void Present();
+
+public:
+    void OnAppActivate() override;
+    void OnAppDeactivate() override;
+
+private:
+    void UpdateViews();
+    bool ThisInstanceIsGlobal() const;
+
+public:
+    void BeginPixEvent(pcstr name) const;
+    void EndPixEvent() const;
+
+public:
+    static constexpr auto IMM_CTX_ID = 0;
+
+    CHWCaps Caps;
+
+    u32 BackBufferCount{};
+    u32 CurrentBackBuffer{};
+
+    GLuint pFB{};
+
+    SDL_Window* m_window{};
+
+    SDL_GLContext m_context{};
+
+    pcstr AdapterName;
+    pcstr OpenGLVersionString;
+    pcstr ShadingVersion;
+    bool ComputeShadersSupported;
+
+    // Selected OpenGL ES version major*10+minor (e.g. 32, 31, 30).
+    // Used to pick the matching GLSL ES #version for shaders.
+    int ESVersion = 32;
+
+    // True when the driver exposes gl_ClipDistance to shaders (GL_EXT_clip_cull_distance).
+    // It is not core in GLSL ES, and a redeclaration of gl_PerVertex that adds
+    // gl_ClipDistance fails to compile on drivers without it (e.g. Mali-G57).
+    // Volumetric light shaders fall back to fragment-shader clipping when false.
+    bool ClipCullDistanceSupported = false;
+};
+
+extern ECORE_API CHW HW;
+} // namespace xray::render::RENDER_NAMESPACE

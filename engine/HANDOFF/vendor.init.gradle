@@ -1,0 +1,12 @@
+// Supply the copied dependency sources before AGP snapshots the CMake arguments.
+gradle.beforeProject { project ->
+    project.plugins.withId('com.android.application') {
+        def sourceRoot = project.rootProject.projectDir.parentFile.absolutePath.replace('\\', '/')
+        ['OGG':'ogg', 'VORBIS':'vorbis', 'LZO':'lzo', 'OPENAL-SOFT':'openal-soft', 'SDL2':'sdl2'].each { key, value ->
+            project.android.defaultConfig.externalNativeBuild.cmake.arguments.add(
+                "-DFETCHCONTENT_SOURCE_DIR_${key}=${sourceRoot}/vendor/${value}-src")
+        }
+        project.android.defaultConfig.externalNativeBuild.cmake.arguments.add(
+            "-DFETCHCONTENT_BASE_DIR=${sourceRoot}/../build-deps")
+    }
+}

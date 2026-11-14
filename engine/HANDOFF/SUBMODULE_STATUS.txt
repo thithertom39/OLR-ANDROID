@@ -1,0 +1,7 @@
+ ea81cef2ba519c593d4eccdd414da243ef17b061 Externals/GameSpy (ea81cef)
+ 5a5cd82e435a7b08d61b4e0af887493d24d9eca1 Externals/LuaJIT (heads/v2.1)
+ 3542f8830178061e0661f5df1e89d36ba7d7b0ab Externals/gli (heads/master)
+ fd13a1e8923a0a7077b404fc36fd063b25a0c0b5 Externals/imgui (fd13a1e)
+ 8da131b830f2615115c65438d48ac52cb9b7fa00 Externals/luabind (heads/xray)
+ 13a42df35dc7fcc94f987568e7274a998bb6cc86 Externals/sse2neon (13a42df)
+ 0e89050f39fc1e6b21b856ed8b7a3d68ff486ccb Externals/xrLuaFix (0e89050)

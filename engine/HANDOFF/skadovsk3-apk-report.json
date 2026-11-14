@@ -1,0 +1,875 @@
+{
+  "verified": true,
+  "variant": "skadovsk3",
+  "apk": "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\outputs\\openxray-soc-skadovsk3-arm64.apk",
+  "apk_sha256": "434e72bd687eb1c2d738ac4e29cca271d19510a53db6f62001e5892f5f537229",
+  "apk_bytes": 33713400,
+  "version": "1.6.02-skadovsk3",
+  "package": "org.openxray.dev",
+  "signature_v2_verified": true,
+  "certificate_sha256": "606162651241a780913dcff90a4bdd997899cb5aad606c44273d2d0ad3d4e244",
+  "arm64_library_count": 29,
+  "elf_16k_compatible": true,
+  "game_assets_equal_skadovsk3diag": true,
+  "generated_baseline_profile_validation": {
+    "asset": "assets/dexopt/baseline.prof",
+    "format": "ART010 single DEX",
+    "old_sha256": "daca6438f61017600bf8bb0a955caac9f0f5fe77f00a8caa8b931c165962b08b",
+    "new_sha256": "860bd035610c822085f92b389cbca3efd27137fcb00b83342182b8dc778296db",
+    "identical_other_assets": 2198,
+    "inflated_bytes": 12594,
+    "only_permitted_inflated_change": "4-byte original-input DEX checksum at offset8",
+    "old_input_checksum": 1425819472,
+    "new_input_checksum": 3757521714,
+    "note": "Generated build metadata; this input checksum is not asserted equal to the final merged APK DEX checksum."
+  },
+  "asset_count": 2199,
+  "resources_equal_skadovsk3diag": true,
+  "angle_and_cpp_runtime_identical": true,
+  "libraries": {
+    "libEGL_angle.so": {
+      "needed": [
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libEGL_angle.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "687c24475b1308662098e12665dddb4bfa7f041b"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "89be434d2e3340ea216d1a681641a4041d1aef827f32360e76035f4beea9e182"
+    },
+    "libGLESv2_angle.so": {
+      "needed": [
+        "libdl.so",
+        "libm.so",
+        "libnativewindow.so",
+        "liblog.so",
+        "libc.so"
+      ],
+      "soname": "libGLESv2_angle.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "740cd0f61a24359ebfd0d248c241ca91d21101d4"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "fa8cd4351f84a0dfb9cbaeb81cbe91260492e9ff54779ac3917441380b576c9b"
+    },
+    "libSDL2.so": {
+      "needed": [
+        "libm.so",
+        "libOpenSLES.so",
+        "libdl.so",
+        "liblog.so",
+        "libandroid.so",
+        "libGLESv1_CM.so",
+        "libGLESv2.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libSDL2.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "7cea1e47a78da48a1ef9e9dc9e3ea28bd868c5e8"
+      ],
+      "direct_graphics_imports": [
+        "glActiveTexture",
+        "glAttachShader",
+        "glBindAttribLocation",
+        "glBindBuffer",
+        "glBindFramebuffer",
+        "glBindFramebufferOES",
+        "glBindTexture",
+        "glBlendEquationOES",
+        "glBlendEquationSeparate",
+        "glBlendEquationSeparateOES",
+        "glBlendFunc",
+        "glBlendFuncSeparate",
+        "glBlendFuncSeparateOES",
+        "glBufferData",
+        "glBufferSubData",
+        "glCheckFramebufferStatus",
+        "glCheckFramebufferStatusOES",
+        "glClear",
+        "glClearColor",
+        "glColor4f",
+        "glColorPointer",
+        "glCompileShader",
+        "glCreateProgram",
+        "glCreateShader",
+        "glDeleteBuffers",
+        "glDeleteFramebuffers",
+        "glDeleteFramebuffersOES",
+        "glDeleteProgram",
+        "glDeleteShader",
+        "glDeleteTextures",
+        "glDisable",
+        "glDisableClientState",
+        "glDisableVertexAttribArray",
+        "glDrawArrays",
+        "glDrawTexfOES",
+        "glEnable",
+        "glEnableClientState",
+        "glEnableVertexAttribArray",
+        "glFinish",
+        "glFramebufferTexture2D",
+        "glFramebufferTexture2DOES",
+        "glGenBuffers",
+        "glGenFramebuffers",
+        "glGenFramebuffersOES",
+        "glGenTextures",
+        "glGetAttribLocation",
+        "glGetError",
+        "glGetIntegerv",
+        "glGetProgramInfoLog",
+        "glGetProgramiv",
+        "glGetShaderInfoLog",
+        "glGetShaderiv",
+        "glGetString",
+        "glGetUniformLocation",
+        "glLinkProgram",
+        "glLoadIdentity",
+        "glMatrixMode",
+        "glOrthof",
+        "glPixelStorei",
+        "glReadPixels",
+        "glScissor",
+        "glShaderBinary",
+        "glShaderSource",
+        "glTexCoordPointer",
+        "glTexEnvf",
+        "glTexImage2D",
+        "glTexParameteri",
+        "glTexParameteriv",
+        "glTexSubImage2D",
+        "glUniform1i",
+        "glUniform4f",
+        "glUniformMatrix4fv",
+        "glUseProgram",
+        "glVertexAttribPointer",
+        "glVertexPointer",
+        "glViewport"
+      ],
+      "sha256": "3b46c0f33c51cb90bea6cfb976050e660457ecb7968a1c43620de31dc01439c3"
+    },
+    "libc++_shared.so": {
+      "needed": [
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "soname": "libc++_shared.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "e8503e76ded720095755e58f7c0e4b30cf32df8c"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "92ee8da641b969254cc8723f64aa115d36c8ffa87115e38bc9cb89e3eefee839"
+    },
+    "libmain.so": {
+      "needed": [
+        "libxrRender_GL.so",
+        "libxrGame.so",
+        "liblog.so",
+        "libandroid.so",
+        "libxrEngine.so",
+        "libxrCore.so",
+        "libSDL2.so",
+        "libxrAPI.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libmain.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "46019a787b8ae04ce205e09f2a4bbd92293ef5d9"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "7ae72da25b1c9d171ddac116cc11a192b6b210b86083a2049e360bf920b40883"
+    },
+    "libogg.so": {
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libogg.so",
+      "load_alignments": [
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "8b5970a34a77f794db91158506dd6d9bc13302a5"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "2e2d96d049b05bcf600bd5a6316d7a68a339a2fa9427086355c9bef978c6b464"
+    },
+    "libopenal.so": {
+      "needed": [
+        "libOpenSLES.so",
+        "libdl.so",
+        "liblog.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libopenal.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "bbc95815b4cde4212cc3cc1fb9d8adf70b57e940"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "b637c7111374afe0224c2543eeedded0fb5589a2ed52a6b982348b64882875e6"
+    },
+    "libvorbis.so": {
+      "needed": [
+        "libogg.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libvorbis.so",
+      "load_alignments": [
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "2a2af7c20793774ab6e356f150ce44e0e8945ecc"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "bf1f67daac515f71dcface1149e44d8e6ff02d7170cdc9dea135427bc66f734d"
+    },
+    "libvorbisenc.so": {
+      "needed": [
+        "libvorbis.so",
+        "libogg.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libvorbisenc.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "7efd5c066edf087a82e2c05ebdd8e60f7f97d07c"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "fe777015f28f7d6808887b8208d7c10ef3160401240e62f4439d98b4828aafb2"
+    },
+    "libvorbisfile.so": {
+      "needed": [
+        "libvorbis.so",
+        "libogg.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libvorbisfile.so",
+      "load_alignments": [
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "908f294d513fad8102ca2ad1e9e713171c66ad4f"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "c5571bf0a1ddc5b31bab9a36b3ccfb6fd310b2a6bf5be9298ab7e68632ea051e"
+    },
+    "libxrAICore.so": {
+      "needed": [
+        "libxrEngine.so",
+        "libxrScriptEngine.so",
+        "libxrLuabind.so",
+        "libxrLuaJIT.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrAICore.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "2be1ba78db51fe95938eccc1d950d3f8a51e1c1a"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "c4c33f079567af9320d23d95b781f2c60364d07dd7da0a8db87d3b7e173f1445"
+    },
+    "libxrAPI.so": {
+      "needed": [
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrAPI.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "4a0050a93d4ac92fcb67f416bc72490e8040fc79"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "466bdfa9b7cde6fc4adf9c1c29239f18d598796caafd5204087460b82dd53581"
+    },
+    "libxrCDB.so": {
+      "needed": [
+        "libxrOPCODE.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrCDB.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "54917a82b4f027636d6a800f7e44f37b9ab99ec4"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "099d691140d0431d63e921322c85a827f48ab032cb4c79b43e9fae7edd19c6e7"
+    },
+    "libxrCore.so": {
+      "needed": [
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libdl.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libxrCore.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "cf6699d047013786424dc351702d16021145a47e"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "ea1b71e79f6402a931b41ec88df96cd558dd28b5b3cdce99dde6a47492284fb7"
+    },
+    "libxrEngine.so": {
+      "needed": [
+        "libxrSound.so",
+        "libxrScriptEngine.so",
+        "libxrNetServer.so",
+        "libopenal.so",
+        "libxrCDB.so",
+        "libxrMaterialSystem.so",
+        "libxrAPI.so",
+        "libxrLuabind.so",
+        "libxrLuaJIT.so",
+        "libxrCore.so",
+        "libSDL2.so",
+        "liblog.so",
+        "libandroid.so",
+        "libdl.so",
+        "libogg.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libxrEngine.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "a903b557757ef6c442e13ef67952add2a14cb6ab"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "415562ea4f03ccac2941cc522ad669e379d731cde3f3156d424510ce91a76728"
+    },
+    "libxrGame.so": {
+      "needed": [
+        "libxrAICore.so",
+        "libxrUICore.so",
+        "libxrGameSpy.so",
+        "libxrPhysics.so",
+        "libdl.so",
+        "libxrEngine.so",
+        "libxrNetServer.so",
+        "libxrSound.so",
+        "libxrMaterialSystem.so",
+        "libxrScriptEngine.so",
+        "libxrLuabind.so",
+        "libxrLuaJIT.so",
+        "libxrCDB.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libxrODE.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libxrGame.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "04ebfd842fef8db2b390d5a7a497f6d44fd288da"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "cd550efc0fca3a9050f2498574d385a8d8983dd8980faa2a89133aa6db8d2083"
+    },
+    "libxrGameSpy.so": {
+      "needed": [
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrGameSpy.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "7824d9fde85ce8def1e676c917cee2168a536347"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "58bbc9c5afc6ef18c7d9c09f2d45ed914a2b8550ab2b940c2f286a5cddac94c0"
+    },
+    "libxrLuaJIT.so": {
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libxrLuaJIT.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "c685b4c771c26dff64b9e5fa9fd6235a7b6ed79f"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "671289778020c0eb99a5c997c54c3dc64caa0a2da4bedb1ce29edcc545e1b62f"
+    },
+    "libxrLuabind.so": {
+      "needed": [
+        "libxrLuaJIT.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrLuabind.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "5f688aff75fd87367a9d3f6cdaf9a727acc248d1"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "c9773aaf3b3635b636a02b62301882a2d162c4519030372d0be2f1ddab39c82c"
+    },
+    "libxrMaterialSystem.so": {
+      "needed": [
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrMaterialSystem.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "13e5fd5ea9321492b035b642b46e6c0817112b70"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "54810283e8d9f73acf73cb54cb9f6c152e844d04579718af6bc45fc4046ce995"
+    },
+    "libxrNetServer.so": {
+      "needed": [
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrNetServer.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "d3611db1b5b97ad53d6f01095fe45eb0da18f9e3"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "abf14d12189bb326ce84045fb530c47c6fac1e4c81b7716aed5fcbc5bb75b65e"
+    },
+    "libxrODE.so": {
+      "needed": [
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrODE.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "01b472a698bb9c84dc4e8cb1e8f5be22fe2120f8"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "19ce78c52f28d9781140cde1b8beee03890c21e58c19143db0a51a607cb644be"
+    },
+    "libxrOPCODE.so": {
+      "needed": [
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrOPCODE.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "43581af1dc6b17457bdae1b1dde660d36a65d40b"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "e07e870339eb716dca76c944e767b6b3f4115f82e3d6b4729ce2c437786e48fa"
+    },
+    "libxrParticles.so": {
+      "needed": [
+        "libxrEngine.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrParticles.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "928cb01e8d2878f8cc226cc24038d5376d804857"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "34fdf4482817408f70869ccac977f9f57333740843a48abd95b81fec063a02ec"
+    },
+    "libxrPhysics.so": {
+      "needed": [
+        "libxrODE.so",
+        "libxrEngine.so",
+        "libxrScriptEngine.so",
+        "libxrSound.so",
+        "libxrLuabind.so",
+        "libxrLuaJIT.so",
+        "libxrMaterialSystem.so",
+        "libxrCDB.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrPhysics.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "7f2a51bd3bb01ec5e26ccc6512e0bd2ddad96a18"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "707829a7b1eb607fd9f5fbbb72c00ca4de25f9c5dbeea6ee7734b966fed2eb69"
+    },
+    "libxrRender_GL.so": {
+      "needed": [
+        "libxrParticles.so",
+        "libdl.so",
+        "libxrEngine.so",
+        "libxrScriptEngine.so",
+        "libxrLuabind.so",
+        "libxrLuaJIT.so",
+        "libxrCDB.so",
+        "libxrMaterialSystem.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libxrRender_GL.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "695599154d6fda261ea9adce0bf89a2d0dbe5acc"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "21208d9164bf74e4fac98183619a643388d025c93b703efb5cb9fa62f47c9219"
+    },
+    "libxrScriptEngine.so": {
+      "needed": [
+        "libxrLuabind.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libxrLuaJIT.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrScriptEngine.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "d9d7b8debc0bf9d5f7652b37ca9746d2981e3000"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "4ae73b891e8dd13b80b2c6f122a2742aa3236b3ac0503388c129d5a92cbfb436"
+    },
+    "libxrSound.so": {
+      "needed": [
+        "libxrCDB.so",
+        "libxrMaterialSystem.so",
+        "libopenal.so",
+        "libvorbisfile.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libxrAPI.so",
+        "libvorbis.so",
+        "libogg.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "soname": "libxrSound.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "16f498595a4c03db31cb6dcaa640617e038ccce2"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "46ce3213e4a1935c1ffea9478010858cc33904c22040e25f570884388aa542d3"
+    },
+    "libxrUICore.so": {
+      "needed": [
+        "libxrEngine.so",
+        "libxrSound.so",
+        "libxrScriptEngine.so",
+        "libxrLuabind.so",
+        "libxrLuaJIT.so",
+        "libxrAPI.so",
+        "libxrCore.so",
+        "liblog.so",
+        "libandroid.so",
+        "libSDL2.so",
+        "libdl.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libc.so"
+      ],
+      "soname": "libxrUICore.so",
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "build_ids": [
+        "f080ff45617085a51609e0de19a52cedaaba61ba"
+      ],
+      "direct_graphics_imports": [],
+      "sha256": "d1c9b9e179e51d2823446d484d1da154f1735f3cb0a47b51d1e6aba417f81f2d"
+    }
+  },
+  "probe_proof": {
+    "library": "libxrEngine.so",
+    "payload_sha256": "415562ea4f03ccac2941cc522ad669e379d731cde3f3156d424510ce91a76728",
+    "abi": "arm64-v8a",
+    "symbol": {
+      "name": "_ZN2ft8on_probeEiP7siginfoPv",
+      "address": 1544736,
+      "size": 76,
+      "type": "FUNC",
+      "binding": "GLOBAL",
+      "visibility": "DEFAULT",
+      "section": "14"
+    },
+    "instruction_count": 19,
+    "exact_complete_function_body": true,
+    "no_BL_BLR_or_external_helper_jumps": true,
+    "commands": [
+      [
+        "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\android-sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\llvm-readelf.exe",
+        "--dyn-syms",
+        "--wide",
+        "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\skadovsk-night-20261031\\production-build-pipeline\\handler-proof\\20261031-054845-259823\\libxrEngine.so"
+      ],
+      [
+        "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\android-sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\llvm-objdump.exe",
+        "--disassemble",
+        "--no-show-raw-insn",
+        "--start-address=0x179220",
+        "--stop-address=0x17926c",
+        "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\skadovsk-night-20261031\\production-build-pipeline\\handler-proof\\20261031-054845-259823\\libxrEngine.so"
+      ]
+    ],
+    "readelf_sha256": "7294a9e3e9f8db5a26e4e93acf952d91849dfbb465bfe5d0e140f5874e4821d7",
+    "objdump_sha256": "f632f7bf6dc2bac7e5deefa90d83aa78dc88cf2f91067641f887e657eaf6c0a6",
+    "raw_symbols": "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\skadovsk-night-20261031\\production-build-pipeline\\handler-proof\\20261031-054845-259823\\xrEngine.dynsym.txt",
+    "raw_symbols_sha256": "f370e27457f1ec55f470d6509f2fbc413a12677dc342246639da465a40d89dce",
+    "raw_disassembly": "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\skadovsk-night-20261031\\production-build-pipeline\\handler-proof\\20261031-054845-259823\\on_probe.disassembly.txt",
+    "raw_disassembly_sha256": "643108bd948496180d8797450878f28d084e51589b184d60119e910960b4a21a",
+    "scope": "Actual packaged ThinLTO-linked AArch64 handler has no decoded call/helper-tail transfer. Source protocol/lifetime review, tests and hardware acceptance remain separate.",
+    "proof_json": "C:\\Users\\User\\Documents\\Codex\\2026-10-11\\gjvyb\\work\\skadovsk-night-20261031\\production-build-pipeline\\handler-proof\\20261031-054845-259823\\proof.json",
+    "proof_json_sha256": "98c87f64698e55ae5bad2b37b32313e8e6e0727ba3dc0096ded57e0861e2ab74"
+  },
+  "diagnostic_capture_markers_verified": true,
+  "detail_light_cull_candidate": true,
+  "prior_ragdoll5_joint_preserved": true,
+  "hardware_validation": "pending",
+  "gpu_profile_compiled": false,
+  "gpu_profiler_strings_absent": true,
+  "runtime_optout": "-gles_no_detail_light_cull",
+  "default_enabled": true,
+  "existing_spawn_diagnostics_retained": true,
+  "font_reservation_candidate": true,
+  "source_changes": [
+    "cmake/XRay.Android.cmake",
+    "src/Layers/xrRender/dxFontRender.cpp",
+    "src/Layers/xrRenderGL/glBufferUtils.cpp",
+    "src/Layers/xrRenderGL/glDetailManager_VS.cpp"
+  ],
+  "source_inventory_verified": true,
+  "protected_apks": {
+    "cordonperf1": "22f0ec05d00ee25ad9f62a4aafcbddc99d92eee98ca92e8f4a93d0d3e5738df2",
+    "thermala1": "e54eccbedfa879cc3c9efedf4c492c31f50de84b8a759fd33c1f9f195c02b4dc",
+    "stabilityaudit1": "adc06bb3dcf9dba378532f4b8ae07a182b360a3973514adb7999850238689fbf",
+    "stabilityaudit2": "d3acce465bcadb0d44cf7d83e36576dceb95eca71745a970173fb31f1e6f5c00",
+    "stabilityaudit3": "6bc910261f2fc943ecccab130cca42f117a1cbdb2400b0a4a62a0c3a3e1941da",
+    "stabilityaudit4": "35a5e80c1c738e2ad94cd518125fa2fd5e6b5620215ca0552716221ee3a57a53",
+    "coppath1": "179de48d9953010243d61886b2ce852786035d1b004565b434f5fad05fdb594b",
+    "ragdoll1": "88ae73a12d21d64498188041349313f11b25a60616a31882d224cbea3a9e853e",
+    "ragdoll2": "db75c6eaff1909000c77630833d0351f0d2ef065855f31a785759b3e61a69732",
+    "ragdoll3": "dca2c837d983aac30a34d8b373a2a6defb02b5cd4adccb853eebe2f81b07eb8b",
+    "ragdoll4diag": "07dc161b1b10176cd2e8cd50672ca173d381ec016fb2bd7015ad801976d9d066",
+    "ragdoll5": "32ad0c68ecbdacd1a2cc34b6e5d0f8410610e7cf69e311d590807ff62406f0a6",
+    "ragdoll5-skadovsk1": "6b269d50f5c10d4514803822eb4f91a49672d95e5912fc16607940b346694d29",
+    "skadovsk2diag": "2afad699dce4d7790bb2e24ee5e6c93f7b29ef3eb6684b5cfdab7a36966fac51",
+    "skadovsk3diag": "f3bd32c0b2b696013b476d7d538a57f86621aa640c680d9f55dffb3f683a50d7"
+  },
+  "device_access": false,
+  "created_at": "2026-10-31T05:48:50.445637+03:00"
+}

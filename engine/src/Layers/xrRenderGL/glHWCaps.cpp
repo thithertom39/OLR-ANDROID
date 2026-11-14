@@ -1,0 +1,98 @@
+#include "stdafx.h"
+#pragma hdrstop
+
+#include "Layers/xrRender/HWCaps.h"
+#include "glHW.h"
+
+namespace xray::render::RENDER_NAMESPACE
+{
+namespace
+{
+u32 GetGpuNum()
+{
+    return 2;
+}
+}
+
+void CHWCaps::Update()
+{
+    // ***************** GEOMETRY
+    geometry_major = 4;
+    geometry_minor = 0;
+    geometry_profile = "vs_4_0";
+    geometry.bSoftware = FALSE;
+    geometry.bPointSprites = FALSE;
+    geometry.bNPatches = FALSE;
+    u32 cnt = 256;
+    clamp<u32>(cnt, 0, 256);
+    geometry.dwRegisters = cnt;
+    geometry.dwInstructions = 256;
+    geometry.dwClipPlanes = _min(6, 15);
+    // NOTE: Android uses the GLES loader (gladLoadGLES2), which sets only the
+    // GLAD_GL_ES_VERSION_* flags. Checking the desktop GLAD_GL_VERSION_3_0 /
+    // GLAD_GL_ARB_texture_float here always yields false on Android, leaving
+    // bVTF disabled and the skybox textures unbound (black sky).
+    // GLES 3.0+ mandates >= 16 vertex texture units, so ES 3.0 implies VTF.
+#if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
+    geometry.bVTF = (GLAD_GL_ES_VERSION_3_0 || GLAD_GL_ES_VERSION_2_0) && !strstr(Core.Params, "-novtf");
+#else
+    geometry.bVTF = (GLAD_GL_VERSION_3_0 || GLAD_GL_ARB_texture_float) && !strstr(Core.Params, "-novtf");
+#endif
+
+    // ***************** PIXEL processing
+    raster_major = 4;
+    raster_minor = 0;
+    raster_profile = "ps_4_0";
+    // XXX: review this
+    raster.dwStages = 15; // Previuos value is 16, but it's out of bounds
+    raster.bNonPow2 = TRUE;
+    raster.bCubemap = TRUE;
+    raster.dwMRT_count = 4;
+    // raster.b_MRT_mixdepth		= FALSE;
+    raster.b_MRT_mixdepth = TRUE;
+    raster.dwInstructions = 256;
+    //	TODO: GL: Find a way to detect cache size
+    geometry.dwVertexCache = 24;
+
+    // *******1********** Compatibility : vertex shader
+    if (0 == raster_major)
+        geometry_major = 0; // Disable VS if no PS
+
+    //
+    bTableFog = FALSE; // BOOL	(caps.RasterCaps&D3DPRASTERCAPS_FOGTABLE);
+
+    // Detect if stencil available
+    bStencil = TRUE;
+
+    // Scissoring
+    bScissor = TRUE;
+
+    // Float colour buffer support. The Android loader (gladLoadGLES2) only sets
+    // the GLAD_GL_ES_VERSION_* flags, so the desktop GLAD_GL_ARB_* checks never
+    // fire there -- ask for the ES extensions explicitly.
+    bColorBufferHalfFloat = GLAD_GL_ES_VERSION_3_2 || CHW::HasExtension("GL_EXT_color_buffer_half_float") ||
+        CHW::HasExtension("GL_EXT_color_buffer_float");
+    bFloatBlend = GLAD_GL_ES_VERSION_3_2 || CHW::HasExtension("GL_EXT_float_blend") ||
+        CHW::HasExtension("GL_EXT_color_buffer_float");
+    Msg("* GL caps: RGBA16F color-renderable=%s, float blend=%s", bColorBufferHalfFloat ? "yes" : "NO",
+        bFloatBlend ? "yes" : "NO");
+    if (!bColorBufferHalfFloat)
+        Msg("! This GPU reports no RGBA16F color-renderable support, but the deferred "
+            "g-buffer position target is unconditionally RGBA16F. Expect a black or "
+            "corrupt screen; this needs a real 8-bit g-buffer path, not just a flag.");
+
+    // Stencil relative caps
+    soInc = D3DSTENCILOP_INCRSAT;
+    soDec = D3DSTENCILOP_DECRSAT;
+    dwMaxStencilValue = (1 << 8) - 1;
+
+    // FFP lights
+    max_ffp_lights = 0;
+
+    // DEV INFO
+
+    iGPUNum = GetGpuNum();
+
+    useCombinedSamplers = true;
+}
+} // namespace xray::render::RENDER_NAMESPACE

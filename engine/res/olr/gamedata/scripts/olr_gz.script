@@ -1,0 +1,7 @@
+-- Зависимость подвижности ГГ от голода.
+-- Автор: Real Wolf
+
+function ActorPower()
+    local condition = db.actor:cast_Actor():conditions()
+    condition:SetMaxPower(condition:GetSatiety())
+end

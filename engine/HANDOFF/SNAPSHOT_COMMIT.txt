@@ -1,0 +1,2 @@
+b60b03f54867ec4789c607f17d534e73c5b3dd16
+Local snapshot commit excludes only this self-referential metadata file.

@@ -1,0 +1,802 @@
+------Copyright DEXXX-------soundtrack
+
+snd_obj = nil
+
+function s_stop()
+	if snd_obj and snd_obj:playing() then snd_obj:stop() end
+end
+
+function s_play(path)
+	s_stop()
+	snd_obj = xr_sound.get_safe_sound_object(path)
+	if snd_obj then
+		snd_obj:play_at_pos(db.actor, vector ():set (0, 0, 0), 0, sound_object.s2d)
+	end
+end
+
+
+
+function sosaka_cut_ros()
+s_play([[monsters\young_bloodsucker\hit_0]])
+end
+
+
+
+
+---------wolf----------
+
+function wolf_dontshoot()
+s_play([[ol25\01]])
+end
+
+function wolf_kontr()
+s_play([[ol25\04]])
+end
+
+function wolf_disat()
+s_play([[ol25\08]])
+end
+
+
+---------dol slizen----------
+
+function sliz1()
+s_play([[olr\slizen\222]])
+end
+
+function sliz2()
+s_play([[sergy_new\otbarmena]])
+end
+
+function sliz3()
+s_play([[sergy_new\yatoznayu]])
+end
+
+function sliz4()
+s_play([[sergy_new\davaitopai]])
+end
+
+function sliz5()
+s_play([[sergy_new\votislavno]])
+end
+
+
+---------esc digeer----------
+
+function dig1()
+s_play([[olr\dig\digger_1]])
+end
+
+function dig2()
+s_play([[olr\dig\digger_2]])
+end
+
+
+---------bar seryy----------
+
+function ser1()
+s_play([[olr\ser\ser1]])
+end
+
+function ser2()
+s_play([[olr\ser\ser2]])
+end
+function ser3()
+s_play([[olr\ser\ser3]])
+end
+function ser4()
+s_play([[olr\ser\ser4]])
+end
+
+function ser5()
+s_play([[olr\ser\ser5]])
+end
+
+function ser6()
+s_play([[olr\ser\ser6]])
+end
+
+
+
+
+---------bar seryy----------
+
+
+function rc_svd_shot()
+s_play([[weapons\rc_svd_shot]])
+end
+
+function loshok_hello()
+s_play([[soundtrack\prof_che_nado]])
+end
+
+function nehami_hello()
+s_play([[soundtrack\prof_ne_hami]])
+end
+
+---------ESCAPE----------
+
+function horek_1()
+s_play([[soundtrack\olr_escape\horek_1]])
+end
+
+
+function horek_2()
+s_play([[soundtrack\olr_escape\horek_2]])
+end
+
+function darkvalley_x18_open()
+s_play([[soundtrack\darkvalley_x18_open]])
+end
+
+function burart_oooi()
+s_play([[soundtrack\otchajanie_1]])
+end
+
+-------------------
+
+function hochesh_ubit()
+rnd = math.random(1, 3)
+if rnd == 1 then 
+s_play([[characters_voice\scenario\trader\trader_script1c_15]])
+end
+if rnd == 2 then 
+bar_spawn.default( actor, npc )
+end
+
+if rnd == 3 then 
+bar_spawn.default( actor, npc )
+end
+end
+
+function u_shveitsara_doljna_bit()
+rnd = math.random(1, 3)
+if rnd == 1 then 
+s_play([[characters_voice\scenario\trader\trader_script1c_14]])
+end
+if rnd == 2 then 
+bar_spawn.default( actor, npc )
+end
+
+if rnd == 3 then 
+bar_spawn.default( actor, npc )
+end
+end
+
+-------------------
+
+function agroprom_following_krot()
+s_play([[soundtrack\agroprom_following_krot]])
+end
+
+function borov_key()
+s_play([[soundtrack\agroprom_following_krot]])
+end
+
+function agro_u_cache_enter()
+s_play([[soundtrack\agro_u_cache_enter]])
+end
+
+function agro_u_bloodsucker_meet()
+s_play([[soundtrack\agro_u_bloodsucker_meet]])
+end
+
+function agro_u_bloodsucker_meet2()
+s_play([[soundtrack\agro_u_bloodsucker_meet2]])
+end
+
+
+function x18_laugh()
+s_play([[soundtrack\x18_laugh]])
+end
+
+function x18_code1()
+s_play([[soundtrack\x18_code1]])
+end
+
+function x18_code2()
+s_play([[soundtrack\x18_code2]])
+end
+
+function rostok_gordon()
+s_play([[soundtrack\rostok_gordon]])
+end
+
+function mil_notice()
+s_play([[soundtrack\mil_notice]])
+end
+
+function mil_after_barrier()
+s_play([[soundtrack\agroprom_following_krot]])
+end
+
+------Copyright DEXXX-------
+
+------Дополнение к саундтрекам-------
+function duty_warning2()
+s_play([[soundtrack\duty_warning2]])
+end
+
+------Меченый становрится зомби-------
+function set_zombie()
+s_play([[soundtrack\set_zombie_1]])
+end
+
+function ti_zombie()
+s_play([[characters_voice\scenario\trader\trader_tutorial_rejection_4]])
+end
+
+function trader_kakogo()
+s_play([[soundtrack\trader_kakogo]])
+end
+
+function otchajanie()
+rnd = math.random(1, 4)
+if rnd == 1 then 
+s_play([[soundtrack\otchajanie_1]])
+end
+if rnd == 2 then 
+s_play([[soundtrack\otchajanie_2]])
+end
+if rnd == 3 then 
+s_play([[soundtrack\otchajanie_3]])
+end
+if rnd == 4 then 
+s_play([[soundtrack\otchajanie_4]])
+end
+end
+
+function tompson_saharov()
+rnd = math.random(1, 2)
+if rnd == 1 then 
+s_play([[soundtrack\saharov_1]])
+end
+if rnd == 2 then 
+s_play([[soundtrack\saharov_2]])
+end
+end
+
+function tompson_bbb()
+rnd = math.random(1, 4)
+if rnd == 1 then 
+s_play([[soundtrack\uchen_1]])
+end
+if rnd == 2 then 
+s_play([[soundtrack\uchen_2]])
+end
+if rnd == 3 then 
+s_play([[soundtrack\uchen_3]])
+end
+if rnd == 4 then 
+s_play([[soundtrack\uchen_4]])
+end
+end
+
+function tompson_da()
+rnd = math.random(1, 5)
+if rnd == 1 then 
+s_play([[soundtrack\da_1]])
+end
+if rnd == 2 then 
+s_play([[soundtrack\da_2]])
+end
+if rnd == 3 then 
+s_play([[soundtrack\da_3]])
+end
+if rnd == 4 then 
+s_play([[soundtrack\da_4]])
+end
+if rnd == 5 then 
+s_play([[soundtrack\da_5]])
+end
+end
+
+function tompson_nado()
+rnd = math.random(1, 5)
+if rnd == 1 then 
+s_play([[soundtrack\nado_je_1]])
+end
+if rnd == 2 then 
+s_play([[soundtrack\nado_je_2]])
+end
+if rnd == 3 then 
+s_play([[soundtrack\nado_je_3]])
+end
+if rnd == 4 then 
+s_play([[soundtrack\nado_je_4]])
+end
+if rnd == 5 then 
+s_play([[soundtrack\nado_je_5]])
+end
+end
+
+
+function monolith_die()
+rnd = math.random(1, 12)
+if rnd == 1 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_1]])
+end
+if rnd == 2 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_2]])
+end
+if rnd == 3 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_3]])
+end
+if rnd == 4 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_4]])
+end
+if rnd == 5 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_7]])
+end
+if rnd == 6 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_8]])
+end
+if rnd == 7 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_9]])
+end
+if rnd == 8 then 
+s_play([[characters_voice\human_01\monolith\fight\attack\attack_10]])
+end
+if rnd == 9 then 
+s_play([[characters_voice\human_01\monolith\fight\enemy_down\enemy_down_9]])
+end
+if rnd == 10 then 
+s_play([[characters_voice\human_01\monolith\fight\enemy_down\enemy_down_8]])
+end
+if rnd == 11 then 
+s_play([[characters_voice\human_01\monolith\fight\enemy_down\enemy_down_2]])
+end
+if rnd == 12 then 
+s_play([[characters_voice\human_01\monolith\fight\enemy_down\enemy_down_1]])
+end
+end
+
+------Рассказ о группировке Долг-------
+function about_dolg_1()
+s_play([[soundtrack\dolg\dolg1]])
+end
+
+function about_dolg_2()
+s_play([[soundtrack\dolg\dolg2]])
+end
+
+function about_dolg_3()
+s_play([[soundtrack\dolg\dolg3]])
+end
+
+function about_dolg_4()
+s_play([[soundtrack\dolg\dolg4]])
+end
+
+------Псевдогиганты в тоннеле Янтаря-------
+function pseudogigant()
+s_play([[soundtrack\pseudogigant]])
+end
+------Убийство контроллёра на Военных складах-------
+function mil_controller_dead()
+s_play([[soundtrack\mil_controller_dead]])
+end
+
+------Круглов просит о помощи-------
+function kruglov_help()
+s_play([[characters_voice\scenario\rostok\kruglov_help_1]])
+end
+
+function kruglov_help_2()
+s_play([[characters_voice\scenario\rostok\kruglov_help_2]])
+end
+
+function kruglov_help_3()
+s_play([[characters_voice\scenario\rostok\kruglov_help_3]])
+end
+
+function kruglov_help_4()
+s_play([[characters_voice\scenario\rostok\kruglov_help_4]])
+end
+
+------Рассказ Кузнецова о своей службе-------
+function kuznetsov_1()
+s_play([[soundtrack\kuznetsov\kuznetsov_1]])
+end
+
+function kuznetsov_2()
+s_play([[soundtrack\kuznetsov\kuznetsov_2]])
+end
+function kuznetsov_3()
+s_play([[soundtrack\kuznetsov\kuznetsov_3]])
+end
+function kuznetsov_4()
+s_play([[soundtrack\kuznetsov\kuznetsov_4]])
+end
+function kuznetsov_5()
+s_play([[soundtrack\kuznetsov\kuznetsov_5]])
+end
+function kuznetsov_6()
+s_play([[soundtrack\kuznetsov\kuznetsov_6]])
+end
+function kuznetsov_7()
+s_play([[soundtrack\kuznetsov\kuznetsov_7]])
+end
+
+------Сидор отправляет за артом------
+function heli_scores()
+s_play([[characters_voice\scenario\escape\heli_kills_group]])
+end
+
+------Сидор отправляет спасать Толика------
+function sidor_go_help()
+s_play([[characters_voice\dialogs\trader_tutorial_go_help_tolik_1]])
+end
+
+function sidor_go_help_alt()
+s_play([[characters_voice\dialogs\trader_tutorial_go_help_tolik_2]])
+end
+
+------Волк приглашает в деревню------
+function wolf_to_dialog()
+s_play([[characters_voice\scenario\escape\wolf_to_dialog]])
+end
+------Лис просит о помощи-------
+function dogs_fox()
+s_play([[soundtrack\dogs_fox]])
+end
+
+------Horror time-------
+function rnd_moan()
+rnd = math.random(1, 126)
+if rnd == 1 then 
+s_play([[soundtrack\horror_time\1]])
+elseif rnd == 2 then 
+s_play([[soundtrack\horror_time\2]])
+elseif rnd == 3 then 
+s_play([[soundtrack\horror_time\3]])
+elseif rnd == 4 then 
+s_play([[soundtrack\horror_time\4]])
+elseif rnd == 5 then 
+s_play([[soundtrack\horror_time\5]])
+elseif rnd == 6 then 
+s_play([[soundtrack\horror_time\6]])
+elseif rnd == 7 then 
+s_play([[soundtrack\horror_time\7]])
+elseif rnd == 8 then 
+s_play([[soundtrack\horror_time\8]])
+elseif rnd == 9 then 
+s_play([[soundtrack\horror_time\9]])
+elseif rnd == 10 then 
+s_play([[soundtrack\horror_time\10]])
+elseif rnd == 11 then 
+s_play([[soundtrack\horror_time\11]])
+elseif rnd == 12 then 
+s_play([[soundtrack\horror_time\12]])
+elseif rnd == 13 then 
+s_play([[soundtrack\horror_time\13]])
+elseif rnd == 14 then 
+s_play([[soundtrack\horror_time\14]])
+elseif rnd == 15 then 
+s_play([[soundtrack\horror_time\15]])
+elseif rnd == 16 then 
+s_play([[soundtrack\horror_time\16]])
+elseif rnd == 17 then 
+s_play([[soundtrack\horror_time\17]])
+elseif rnd == 18 then 
+s_play([[soundtrack\horror_time\18]])
+elseif rnd == 19 then 
+s_play([[soundtrack\horror_time\19]])
+elseif rnd == 20 then 
+s_play([[soundtrack\horror_time\20]])
+elseif rnd == 21 then 
+s_play([[soundtrack\horror_time\21]])
+elseif rnd == 22 then 
+s_play([[soundtrack\horror_time\22]])
+elseif rnd == 23 then 
+s_play([[soundtrack\horror_time\23]])
+elseif rnd == 24 then 
+s_play([[soundtrack\horror_time\24]])
+elseif rnd == 25 then 
+s_play([[soundtrack\horror_time\25]])
+elseif rnd == 26 then 
+s_play([[soundtrack\horror_time\26]])
+elseif rnd == 27 then 
+s_play([[soundtrack\horror_time\27]])
+elseif rnd == 28 then 
+s_play([[soundtrack\horror_time\28]])
+elseif rnd == 29 then 
+s_play([[soundtrack\horror_time\29]])
+elseif rnd == 30 then 
+s_play([[soundtrack\horror_time\30]])
+elseif rnd == 31 then 
+s_play([[soundtrack\horror_time\31]])
+elseif rnd == 32 then 
+s_play([[soundtrack\horror_time\32]])
+elseif rnd == 33 then 
+s_play([[soundtrack\horror_time\33]])
+elseif rnd == 34 then 
+s_play([[soundtrack\horror_time\34]])
+elseif rnd == 35 then 
+s_play([[soundtrack\horror_time\35]])
+elseif rnd == 36 then 
+s_play([[soundtrack\horror_time\36]])
+elseif rnd == 37 then 
+s_play([[soundtrack\horror_time\37]])
+elseif rnd == 38 then 
+s_play([[soundtrack\horror_time\38]])
+elseif rnd == 39 then 
+s_play([[soundtrack\horror_time\39]])
+elseif rnd == 40 then 
+s_play([[soundtrack\horror_time\40]])
+elseif rnd == 41 then 
+s_play([[soundtrack\horror_time\41]])
+elseif rnd == 42 then 
+s_play([[soundtrack\horror_time\42]])
+elseif rnd == 43 then 
+s_play([[soundtrack\horror_time\43]])
+elseif rnd == 44 then 
+s_play([[soundtrack\horror_time\44]])
+elseif rnd == 45 then 
+s_play([[soundtrack\horror_time\45]])
+elseif rnd == 46 then 
+s_play([[soundtrack\horror_time\46]])
+elseif rnd == 47 then 
+s_play([[soundtrack\horror_time\47]])
+elseif rnd == 48 then 
+s_play([[soundtrack\horror_time\48]])
+elseif rnd == 49 then 
+s_play([[soundtrack\horror_time\49]])
+elseif rnd == 50 then 
+s_play([[soundtrack\horror_time\50]])
+elseif rnd == 51 then 
+s_play([[soundtrack\horror_time\51]])
+elseif rnd == 52 then 
+s_play([[soundtrack\horror_time\52]])
+elseif rnd == 53 then 
+s_play([[soundtrack\horror_time\53]])
+elseif rnd == 54 then 
+s_play([[soundtrack\horror_time\54]])
+elseif rnd == 55 then 
+s_play([[soundtrack\horror_time\55]])
+elseif rnd == 56 then 
+s_play([[soundtrack\horror_time\56]])
+elseif rnd == 57 then 
+s_play([[soundtrack\horror_time\57]])
+elseif rnd == 58 then 
+s_play([[soundtrack\horror_time\58]])
+elseif rnd == 59 then 
+s_play([[soundtrack\horror_time\59]])
+elseif rnd == 60 then 
+s_play([[soundtrack\horror_time\60]])
+elseif rnd == 61 then 
+s_play([[soundtrack\horror_time\61]])
+elseif rnd == 62 then 
+s_play([[soundtrack\horror_time\62]])
+elseif rnd == 63 then 
+s_play([[soundtrack\horror_time\63]])
+elseif rnd == 64 then 
+s_play([[soundtrack\horror_time\64]])
+elseif rnd == 65 then 
+s_play([[soundtrack\horror_time\65]])
+elseif rnd == 66 then 
+s_play([[soundtrack\horror_time\66]])
+elseif rnd == 67 then 
+s_play([[soundtrack\horror_time\67]])
+elseif rnd == 68 then 
+s_play([[soundtrack\horror_time\68]])
+elseif rnd == 69 then 
+s_play([[soundtrack\horror_time\69]])
+elseif rnd == 70 then 
+s_play([[soundtrack\horror_time\70]])
+elseif rnd == 71 then 
+s_play([[soundtrack\horror_time\71]])
+elseif rnd == 72 then 
+s_play([[soundtrack\horror_time\72]])
+elseif rnd == 73 then 
+s_play([[soundtrack\horror_time\73]])
+elseif rnd == 74 then 
+s_play([[soundtrack\horror_time\74]])
+elseif rnd == 75 then 
+s_play([[soundtrack\horror_time\75]])
+elseif rnd == 76 then 
+s_play([[soundtrack\horror_time\76]])
+elseif rnd == 77 then 
+s_play([[soundtrack\horror_time\77]])
+elseif rnd == 78 then 
+s_play([[soundtrack\horror_time\78]])
+elseif rnd == 79 then 
+s_play([[soundtrack\horror_time\79]])
+elseif rnd == 80 then 
+s_play([[soundtrack\horror_time\80]])
+elseif rnd == 81 then 
+s_play([[soundtrack\horror_time\81]])
+elseif rnd == 82 then 
+s_play([[soundtrack\horror_time\82]])
+elseif rnd == 83 then 
+s_play([[soundtrack\horror_time\83]])
+elseif rnd == 84 then 
+s_play([[soundtrack\horror_time\84]])
+elseif rnd == 85 then 
+s_play([[soundtrack\horror_time\85]])
+elseif rnd == 86 then 
+s_play([[soundtrack\horror_time\86]])
+elseif rnd == 87 then 
+s_play([[soundtrack\horror_time\87]])
+elseif rnd == 88 then 
+s_play([[soundtrack\horror_time\88]])
+elseif rnd == 89 then 
+s_play([[soundtrack\horror_time\89]])
+elseif rnd == 90 then 
+s_play([[soundtrack\horror_time\90]])
+elseif rnd == 91 then 
+s_play([[soundtrack\horror_time\91]])
+elseif rnd == 92 then 
+s_play([[soundtrack\horror_time\92]])
+elseif rnd == 93 then 
+s_play([[soundtrack\horror_time\93]])
+elseif rnd == 94 then 
+s_play([[soundtrack\horror_time\94]])
+elseif rnd == 95 then 
+s_play([[soundtrack\horror_time\95]])
+elseif rnd == 96 then 
+s_play([[soundtrack\horror_time\96]])
+elseif rnd == 97 then 
+s_play([[soundtrack\horror_time\97]])
+elseif rnd == 98 then 
+s_play([[soundtrack\horror_time\98]])
+elseif rnd == 99 then 
+s_play([[soundtrack\horror_time\99]])
+elseif rnd == 100 then 
+s_play([[soundtrack\horror_time\100]])
+elseif rnd == 101 then 
+s_play([[soundtrack\horror_time\101]])
+elseif rnd == 102 then 
+s_play([[soundtrack\horror_time\102]])
+elseif rnd == 103 then 
+s_play([[soundtrack\horror_time\103]])
+elseif rnd == 104 then 
+s_play([[soundtrack\horror_time\104]])
+elseif rnd == 105 then 
+s_play([[soundtrack\horror_time\105]])
+elseif rnd == 106 then 
+s_play([[soundtrack\horror_time\106]])
+elseif rnd == 107 then 
+s_play([[soundtrack\horror_time\107]])
+elseif rnd == 108 then 
+s_play([[soundtrack\horror_time\108]])
+elseif rnd == 109 then 
+s_play([[soundtrack\horror_time\109]])
+elseif rnd == 110 then 
+s_play([[soundtrack\horror_time\110]])
+elseif rnd == 111 then 
+s_play([[soundtrack\horror_time\111]])
+elseif rnd == 112 then 
+s_play([[soundtrack\horror_time\112]])
+elseif rnd == 113 then 
+s_play([[soundtrack\horror_time\113]])
+elseif rnd == 114 then 
+s_play([[soundtrack\horror_time\114]])
+elseif rnd == 115 then 
+s_play([[soundtrack\horror_time\115]])
+elseif rnd == 116 then 
+s_play([[soundtrack\horror_time\116]])
+elseif rnd == 117 then 
+s_play([[soundtrack\horror_time\117]])
+elseif rnd == 118 then 
+s_play([[soundtrack\horror_time\118]])
+elseif rnd == 119 then 
+s_play([[soundtrack\horror_time\119]])
+elseif rnd == 120 then 
+s_play([[soundtrack\horror_time\120]])
+elseif rnd == 121 then 
+s_play([[soundtrack\horror_time\121]])
+elseif rnd == 122 then 
+s_play([[characters_voice\scenario\esc\esc_music_horror_3]])
+elseif rnd == 123 then 
+s_play([[ambient\random\rnd_moan1]])
+elseif rnd == 124 then 
+s_play([[ambient\random\rnd_moan2]])
+elseif rnd == 125 then 
+s_play([[ambient\random\rnd_moan3]])
+elseif rnd == 126 then 
+s_play([[ambient\random\rnd_moan4]])
+elseif rnd == 127 then 
+s_play([[ambient\random\rnd_moan5]])
+elseif rnd == 128 then 
+s_play([[ambient\random\rnd_ratchant]])
+elseif rnd == 129 then 
+s_play([[ambient\random\rnd_respawn]])
+elseif rnd == 130 then 
+s_play([[characters_voice\scenario\esc\esc_music_horror_4]])
+end
+end
+
+------Звуки в подземных локациях, в основном при открывании дверей и при включении (выключении механизмов)-------
+
+function underground()
+rnd = math.random(1, 6)
+if rnd == 1 then 
+s_play([[soundtrack\underground\underground_1]])
+end
+if rnd == 2 then 
+s_play([[soundtrack\underground\underground_2]])
+end
+if rnd == 3 then 
+s_play([[soundtrack\underground\underground_3]])
+end
+if rnd == 4 then 
+s_play([[soundtrack\underground\underground_4]])
+end
+if rnd == 5 then 
+s_play([[soundtrack\underground\underground_5]])
+end
+if rnd == 6 then 
+s_play([[soundtrack\underground\underground_6]])
+end
+end
+
+------Ненавязчивые амбиентные звуки для сюжета-------
+function occusion()
+rnd = math.random(1, 10)
+if rnd == 1 then 
+s_play([[soundtrack\occusion\occusion_1]])
+elseif rnd == 2 then 
+s_play([[soundtrack\occusion\occusion_2]])
+elseif rnd == 3 then 
+s_play([[soundtrack\occusion\occusion_3]])
+elseif rnd == 4 then 
+s_play([[soundtrack\occusion\occusion_4]])
+elseif rnd == 5 then 
+s_play([[soundtrack\occusion\occusion_5]])
+elseif rnd == 6 then 
+s_play([[soundtrack\occusion\occusion_6]])
+elseif rnd == 7 then 
+s_play([[soundtrack\occusion\occusion_7]])
+elseif rnd == 8 then 
+s_play([[soundtrack\occusion\occusion_8]])
+elseif rnd == 9 then 
+s_play([[soundtrack\occusion\occusion_9]])
+elseif rnd == 10 then 
+s_play([[soundtrack\occusion\occusion_10]])
+end
+end
+
+------Звуки перед началом выброса-------
+function surge_begin()
+rnd = math.random(1, 19)
+if rnd == 1 then 
+s_play([[soundtrack\surge_begin\1]])
+elseif rnd == 2 then 
+s_play([[soundtrack\surge_begin\2]])
+elseif rnd == 3 then 
+s_play([[soundtrack\surge_begin\3]])
+elseif rnd == 4 then 
+s_play([[soundtrack\surge_begin\4]])
+elseif rnd == 5 then 
+s_play([[soundtrack\surge_begin\5]])
+elseif rnd == 6 then 
+s_play([[soundtrack\surge_begin\6]])
+elseif rnd == 7 then 
+s_play([[soundtrack\surge_begin\7]])
+elseif rnd == 8 then 
+s_play([[soundtrack\surge_begin\8]])
+elseif rnd == 9 then 
+s_play([[soundtrack\surge_begin\9]])
+elseif rnd == 10 then 
+s_play([[soundtrack\surge_begin\10]])
+elseif rnd == 11 then 
+s_play([[soundtrack\surge_begin\11]])
+elseif rnd == 12 then 
+s_play([[soundtrack\surge_begin\12]])
+elseif rnd == 13 then 
+s_play([[soundtrack\surge_begin\13]])
+elseif rnd == 14 then 
+s_play([[soundtrack\surge_begin\14]])
+elseif rnd == 15 then 
+s_play([[soundtrack\surge_begin\15]])
+elseif rnd == 16 then 
+s_play([[soundtrack\surge_begin\6]])
+elseif rnd == 17 then 
+s_play([[soundtrack\surge_begin\17]])
+elseif rnd == 18 then 
+s_play([[soundtrack\surge_begin\18]])
+elseif rnd == 19 then 
+s_play([[soundtrack\surge_begin\19]])
+end
+end
