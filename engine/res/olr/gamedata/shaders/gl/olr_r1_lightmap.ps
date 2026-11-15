@@ -11,6 +11,8 @@ layout(location = TEXCOORD6) in float3 olr_forward_world_normal;
 uniform float4 olr_forward_spot_pos;   // xyz position, w = inverse squared radius
 uniform float4 olr_forward_spot_dir;   // xyz direction, w = cosine of half cone
 uniform float4 olr_forward_spot_color; // RGB intensity, w = enabled
+uniform float4 olr_forward_omni_pos;   // near POINT position, w = 1/range^2
+uniform float4 olr_forward_omni_color; // RGB intensity, w = enabled
 #endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) in float2 detail_uv;
@@ -59,6 +61,21 @@ void main()
             float ndotl = max(0.0, dot(normalize(olr_forward_world_normal), -light_ray));
             float falloff = 1.0 - range_sq;
             light += olr_forward_spot_color.rgb * (ndotl * beam * falloff * falloff);
+        }
+    }
+    // The torch's close-range POINT source lights nearby geometry even
+    // outside the spotlight cone. It is unshadowed in the original R2 path.
+    if (olr_forward_omni_color.w > 0.5)
+    {
+        float3 light_to_surface = olr_forward_world_pos - olr_forward_omni_pos.xyz;
+        float distance_sq = dot(light_to_surface, light_to_surface);
+        float range_sq = distance_sq * olr_forward_omni_pos.w;
+        if (distance_sq > 0.0001 && range_sq < 1.0)
+        {
+            float3 to_light = -light_to_surface * inversesqrt(distance_sq);
+            float ndotl = max(0.0, dot(normalize(olr_forward_world_normal), to_light));
+            float falloff = 1.0 - range_sq;
+            light += olr_forward_omni_color.rgb * (ndotl * falloff * falloff);
         }
     }
     float3 shaded = diffuse.rgb * light * 2.0;
