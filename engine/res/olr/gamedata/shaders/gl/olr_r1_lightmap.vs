@@ -9,6 +9,10 @@ layout(location = BINORMAL) in float4 vertex_binormal;
 layout(location = TEXCOORD0) in float2 vertex_uv;
 layout(location = TEXCOORD0) out float2 base_uv;
 layout(location = FOG) out float fog_visibility;
+#ifdef OLR_R1_FORWARD
+layout(location = TEXCOORD2) in float2 vertex_hemi_uv;
+layout(location = TEXCOORD2) out float2 hemi_uv;
+#endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) out float2 detail_uv;
 layout(location = TEXCOORD4) out float2 detail_weights;
@@ -44,6 +48,9 @@ void main()
     vertex_light = baked.rgb;
 #else
     lightmap_uv = unpack_tc_lmap(vertex_lightmap_uv);
+#ifdef OLR_R1_FORWARD
+    hemi_uv = unpack_tc_lmap(vertex_hemi_uv);
+#endif
     hemi_light = hemi;
     sun_light = sun;
 #endif
