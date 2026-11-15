@@ -109,15 +109,20 @@ void CBlender_deffer_flat::Compile(CBlender_Compile& C)
         if (hasDetail)
             shader = vertexLit ? "olr_r1_vertex_detail" : "olr_r1_lightmap_detail";
 
-        C.r_Pass(shader, shader, FALSE, TRUE, FALSE, FALSE);
+        // Add only the baked diffuse contribution. The deferred R2 lighting
+        // (flashlight/point lights, hemisphere, ambient) must stay intact.
+        // HDR float blending is not available on all GLES devices.
+        const bool hdrAccumulator = RImplementation.o.fp16_blend;
+        const pcstr pixelShader = hdrAccumulator
+            ? (vertexLit ? "olr_r1_vertex_accum" : "olr_r1_lightmap_accum")
+            : shader;
+        C.r_Pass(shader, pixelShader, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
         C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
-        C.r_Sampler("s_base", C.L_textures[0]);
+        if (!hdrAccumulator)
+            C.r_Sampler("s_base", C.L_textures[0]);
         if (!vertexLit)
-        {
             C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
-            C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
-        }
-        if (hasDetail)
+        if (hasDetail && !hdrAccumulator)
             C.r_Sampler("s_detail", C.detail_texture);
         C.r_End();
         break;
