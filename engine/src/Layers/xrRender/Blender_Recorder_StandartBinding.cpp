@@ -379,6 +379,8 @@ struct OlrForwardSpot
     Fvector4 pos;   // xyz world, w = inverse squared range
     Fvector4 dir;   // xyz normalized direction, w = cos(cone/2)
     Fvector4 color; // rgb source color, w = active
+    Fvector4 omni_pos;   // additional camera-attached POINT light
+    Fvector4 omni_color;
 };
 const OlrForwardSpot& current_olr_forward_spot()
 {
@@ -390,6 +392,8 @@ const OlrForwardSpot& current_olr_forward_spot()
     spot.pos.set(0.f, 0.f, 0.f, 0.f);
     spot.dir.set(0.f, 0.f, 1.f, 1.f);
     spot.color.set(0.f, 0.f, 0.f, 0.f);
+    spot.omni_pos.set(0.f, 0.f, 0.f, 0.f);
+    spot.omni_color.set(0.f, 0.f, 0.f, 0.f);
     if (!Core.Params || !strstr(Core.Params, "-olr_r1_forward"))
         return spot;
 
@@ -411,6 +415,28 @@ const OlrForwardSpot& current_olr_forward_spot()
         consider(source);
     for (const light* source : RImplementation.Lights.package.v_spot)
         consider(source);
+
+    // The original player torch also has a nearby omnidirectional source.
+    const light* omni = nullptr;
+    float omniNearestSq = 2.25f;
+    for (const light* source : RImplementation.Lights.package.v_point)
+    {
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            source->flags.type != IRender_Light::POINT || source->range <= EPS_L)
+            continue;
+        const float dSq = source->position.distance_to_sqr(Device.vCameraPosition);
+        if (dSq < omniNearestSq)
+        {
+            omniNearestSq = dSq;
+            omni = source;
+        }
+    }
+    if (omni)
+    {
+        spot.omni_pos.set(omni->position.x, omni->position.y, omni->position.z,
+            1.f / (omni->range * omni->range));
+        spot.omni_color.set(omni->color.r, omni->color.g, omni->color.b, 1.f);
+    }
     if (!selected)
         return spot;
 
@@ -448,6 +474,18 @@ class cl_olr_spot_color final : public R_constant_setup
     void setup(CBackend& cmd_list, R_constant* C) override
     { cmd_list.set_c(C, current_olr_forward_spot().color); }
 };
+class cl_olr_omni_pos final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().omni_pos); }
+};
+class cl_olr_omni_color final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().omni_color); }
+};
+static cl_olr_omni_pos binder_olr_omni_pos;
+static cl_olr_omni_color binder_olr_omni_color;
 static cl_olr_spot_pos binder_olr_spot_pos;
 static cl_olr_spot_dir binder_olr_spot_dir;
 static cl_olr_spot_color binder_olr_spot_color;
@@ -522,6 +560,8 @@ void CBlender_Compile::SetMapping()
     r_Constant("olr_forward_spot_pos", &binder_olr_spot_pos);
     r_Constant("olr_forward_spot_dir", &binder_olr_spot_dir);
     r_Constant("olr_forward_spot_color", &binder_olr_spot_color);
+    r_Constant("olr_forward_omni_pos", &binder_olr_omni_pos);
+    r_Constant("olr_forward_omni_color", &binder_olr_omni_color);
 #endif
 
     // detail
