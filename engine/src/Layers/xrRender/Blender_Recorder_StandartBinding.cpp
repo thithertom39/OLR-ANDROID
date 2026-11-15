@@ -424,6 +424,13 @@ const OlrForwardSpot& current_olr_forward_spot()
     spot.pos.set(selected->position.x, selected->position.y, selected->position.z, invRangeSq);
     spot.dir.set(direction.x, direction.y, direction.z, std::cos(selected->cone * .5f));
     spot.color.set(selected->color.r, selected->color.g, selected->color.b, 1.f);
+    static bool firstTorchLogged = false;
+    if (!firstTorchLogged)
+    {
+        firstTorchLogged = true;
+        Msg("* OLR R1 forward torch: found nearby active spotlight (range=%.2f, cone=%.2f)",
+            double(selected->range), double(selected->cone));
+    }
     return spot;
 }
 class cl_olr_spot_pos final : public R_constant_setup
