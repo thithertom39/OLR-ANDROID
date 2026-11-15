@@ -451,6 +451,9 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
         C.r_Sampler("s_base", C.L_textures[0]);
         C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
         C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        // Match the adaptive exposure used by R2's combine_1 for deferred
+        // geometry. The forward pass writes into the same LDR scene target.
+        C.r_Sampler_rtf("s_tonemap", r2_RT_luminance_cur);
         if (useDetail)
             C.r_Sampler("s_detail", C.detail_texture);
         C.r_End();
