@@ -4,6 +4,9 @@
 // provide ambient, hemispheric, static-sun and dynamic point/spot light.
 layout(location = TEXCOORD0) in float2 base_uv;
 layout(location = FOG) in float fog_visibility;
+#ifdef OLR_R1_FORWARD
+layout(location = TEXCOORD2) in float2 hemi_uv;
+#endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) in float2 detail_uv;
 layout(location = TEXCOORD4) in float2 detail_weights;
@@ -26,7 +29,19 @@ void main()
     float3 baked = tex2D(s_lmap, lightmap_uv).rgb;
 #endif
 
-#ifdef OLR_R1_ACCUM
+#ifdef OLR_R1_FORWARD
+    // Native forward static shading: no G-buffer dependency or second light
+    // accumulation pass. Use the source OLR lightmap RGB + hemi + sun alpha.
+    float4 diffuse = tex2D(s_base, base_uv);
+    float4 lm = tex2D(s_lmap, lightmap_uv);
+    float3 light = L_ambient.rgb + lm.rgb + sun_light * lm.a + hemi_light * p_hemi(hemi_uv);
+    float3 shaded = diffuse.rgb * light * 2.0;
+#ifdef OLR_R1_DETAIL
+    shaded *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+#endif
+    shaded = mix(fog_color.rgb, shaded, fog_visibility);
+    out_color = float4(shaded, diffuse.a * fog_visibility * fog_visibility);
+#elif defined(OLR_R1_ACCUM)
     // The HDR accumulator stores illumination; combine_1 applies albedo and
     // fog exactly once, together with the regular dynamic lighting.
     out_color = float4(baked, 0.0);
