@@ -7,6 +7,7 @@
 
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
+#include <cmath>
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "Layers/xrRender/light.h"
 #endif
@@ -421,7 +422,7 @@ const OlrForwardSpot& current_olr_forward_spot()
     direction.normalize();
     const float invRangeSq = 1.f / (selected->range * selected->range);
     spot.pos.set(selected->position.x, selected->position.y, selected->position.z, invRangeSq);
-    spot.dir.set(direction.x, direction.y, direction.z, _cos(selected->cone * .5f));
+    spot.dir.set(direction.x, direction.y, direction.z, std::cos(selected->cone * .5f));
     spot.color.set(selected->color.r, selected->color.g, selected->color.b, 1.f);
     return spot;
 }
