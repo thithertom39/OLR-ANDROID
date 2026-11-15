@@ -456,6 +456,24 @@ void CRender::Render()
         dsgraph.render_emissive();
     }
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    // Blend baked light into the HDR irradiance accumulator before combine.
+    // Dynamic point/spot lights (including the flashlight) are added later
+    // and the combine shader multiplies all lighting by G-buffer albedo.
+    // Without float blending, the same queue is rendered additively in LDR
+    // during render_forward() instead.
+    if (o.fp16_blend && !dsgraph.mapOlrR1Lightmaps.empty())
+    {
+        Target->phase_accumulator(dsgraph.cmd_list);
+        dsgraph.cmd_list.set_xform_view(Device.mView);
+        dsgraph.cmd_list.set_xform_project(Device.mProject);
+        dsgraph.cmd_list.set_CullMode(CULL_CCW);
+        dsgraph.cmd_list.set_ColorWriteEnable();
+        dsgraph.cmd_list.set_Stencil(FALSE);
+        dsgraph.render_olr_r1_lightmaps();
+    }
+#endif
+
     // Lighting, non dependant on OCCQ
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     if (compareScene)
@@ -525,7 +543,13 @@ void CRender::render_forward()
         //	Igor: we don't want to render old lods on next frame.
         dsgraph.mapLOD.clear();
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-        dsgraph.render_olr_r1_lightmaps();
+        // On devices without HDR float blending, preserve existing R2 light
+        // by blending baked diffuse over the finished LDR image.
+        if (!o.fp16_blend)
+        {
+            dsgraph.cmd_list.set_Stencil(FALSE);
+            dsgraph.render_olr_r1_lightmaps();
+        }
 #endif
         dsgraph.render_graph(1); // normal level, secondary priority
         dsgraph.PortalTraverser.fade_render(); // faded-portals
