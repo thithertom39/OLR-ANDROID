@@ -221,6 +221,10 @@ void CRender::render_lights(light_Package& LP)
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const bool useStaticCache = !hwOcclusion &&
         GLDetailShadowCull::HasOption(Core.Params, "-gles_shadow_static_cache");
+    // Optional CPU wall-time diagnostics for individual shadow tiles.
+    // No GPU synchronization or changes to rendering.
+    const bool sampleShadowLightCost = !LP.v_shadowed.empty() && Device.dwFrame % 67 == 0 &&
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_shadow_light_cost");
     const bool sampleShadowCache = useStaticCache && !LP.v_shadowed.empty() && Device.dwFrame % 67 == 0;
     const bool verifyShadowCache = sampleShadowCache &&
         GLDetailShadowCull::HasOption(Core.Params, "-gles_verify_shadow_static_cache");
@@ -359,6 +363,11 @@ void CRender::render_lights(light_Package& LP)
             light* L = entry.L;
             Task* task = entry.task;
             const u32 batch_id = entry.batch_id;
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            CTimer shadowLightWaitTimer;
+            if (sampleShadowLightCost)
+                shadowLightWaitTimer.Start();
+#endif
             if (task)
                 {
 #if defined(XR_PLATFORM_ANDROID) && !defined(_EDITOR)
@@ -370,6 +379,11 @@ void CRender::render_lights(light_Package& LP)
     TaskScheduler->Wait(*task);
 }
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            const float shadowLightWaitMs = sampleShadowLightCost ?
+                shadowLightWaitTimer.GetElapsed_sec() * 1000.f : 0.f;
+            CTimer shadowLightSubmitTimer;
+            if (sampleShadowLightCost)
+                shadowLightSubmitTimer.Start();
             if (task && (entry.static_cache || shadowAudit))
                 std::atomic_thread_fence(std::memory_order_acquire);
             if (sampleShadowCache)
@@ -403,6 +417,10 @@ void CRender::render_lights(light_Package& LP)
             const bool bSpecial = !dsgraph.mapNormalPasses[1][0].empty() || !dsgraph.mapMatrixPasses[1][0].empty() ||
                 !dsgraph.mapSorted.empty();
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            const u32 shadowLightCallsStart = sampleShadowLightCost ? dsgraph.cmd_list.stat.render.calls : 0;
+            u32 shadowLightStaticEntries = 0, shadowLightDiscardedEntries = 0;
+            if (sampleShadowLightCost)
+                dsgraph.get_Counters(shadowLightStaticEntries, shadowLightDiscardedEntries);
             if (shadowAudit)
                 shadowAudit->Write(*L, dsgraph, bNormal || bSpecial);
 #endif
@@ -536,6 +554,21 @@ void CRender::render_lights(light_Package& LP)
 #endif
     L->svis[batch_id].end();
 } // NOTE(DX11): occqs are fetched here, this should be done on the imm context only
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if (sampleShadowLightCost)
+            {
+                const light* source = L->shadow_parent ? L->shadow_parent : L;
+                const u32 draws = dsgraph.cmd_list.stat.render.calls - shadowLightCallsStart;
+                Msg("* [gles_shadow_light_cost] frame=%u source=%p level_light=%d type=%u static=%u face=%d"
+                    " sector=%zu atlas=%u tile=%u,%u,%u normal=%u special=%u"
+                    " static_entries=%u depth_draws=%u wait_wall_ms=%.3f submit_wall_ms=%.3f",
+                    Device.dwFrame, static_cast<const void*>(source), source->shadow_level_index,
+                    unsigned(source->flags.type), unsigned(source->flags.bStatic), L->shadow_face,
+                    dsgraph.o.sector_id, unsigned(L->vis.smap_ID), L->X.S.posX, L->X.S.posY, L->X.S.size,
+                    unsigned(bNormal), unsigned(bSpecial), shadowLightStaticEntries, draws,
+                    double(shadowLightWaitMs), double(shadowLightSubmitTimer.GetElapsed_sec() * 1000.f));
+            }
+#endif
             RImplementation.release_context(batch_id);
         }
 
@@ -740,6 +773,11 @@ void CRender::render_lights(light_Package& LP)
             PIX_EVENT(ACCUM_SPOT);
             for (light* p_light : L_spot_s)
             {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                CTimer shadowLightAccumTimer;
+                if (sampleShadowLightCost)
+                    shadowLightAccumTimer.Start();
+#endif
                 {
 #if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope lightProbe(GLGpuProfiler::Stage::LocalSpotAccum);
@@ -752,6 +790,15 @@ void CRender::render_lights(light_Package& LP)
 #endif
     render_indirect(p_light);
 }
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                if (sampleShadowLightCost)
+                {
+                    const light* source = p_light->shadow_parent ? p_light->shadow_parent : p_light;
+                    Msg("* [gles_shadow_light_accum] frame=%u source=%p face=%d accum_wall_ms=%.3f",
+                        Device.dwFrame, static_cast<const void*>(source), p_light->shadow_face,
+                        double(shadowLightAccumTimer.GetElapsed_sec() * 1000.f));
+                }
+#endif
             }
 
             PIX_EVENT(ACCUM_VOLUMETRIC);
