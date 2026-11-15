@@ -13,6 +13,18 @@ uniform float4 olr_forward_spot_dir;   // xyz direction, w = cosine of half cone
 uniform float4 olr_forward_spot_color; // RGB intensity, w = enabled
 uniform float4 olr_forward_omni_pos;   // near POINT position, w = 1/range^2
 uniform float4 olr_forward_omni_color; // RGB intensity, w = enabled
+
+// Limited additional runtime lighting for nearby lamps and local sources.
+// All fields are disabled when light color alpha is zero.
+uniform float4 olr_forward_local_pos0;
+uniform float4 olr_forward_local_color0;
+uniform float4 olr_forward_local_dir0;
+uniform float4 olr_forward_local_pos1;
+uniform float4 olr_forward_local_color1;
+uniform float4 olr_forward_local_dir1;
+uniform float4 olr_forward_local_pos2;
+uniform float4 olr_forward_local_color2;
+uniform float4 olr_forward_local_dir2;
 #endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) in float2 detail_uv;
@@ -27,6 +39,33 @@ layout(location = COLOR1) in float3 sun_light;
 #endif
 
 layout(location = 0) out float4 out_color;
+
+#ifdef OLR_R1_FORWARD
+// Evaluated only on forward-drawn static surfaces; no deferred G-buffer,
+// extra shadow atlas, or additional submission of static geometry.
+// pos.w = inverse squared radius, dir.w = -2 for point or cos(cone/2).
+float3 olr_local_forward_diffuse(float4 pos, float4 color, float4 dir,
+    float3 surface_pos, float3 normal)
+{
+    if (color.w <= 0.5)
+        return float3(0.0);
+    float3 to_surface = surface_pos - pos.xyz;
+    float distance_sq = dot(to_surface, to_surface);
+    float range_ratio_sq = distance_sq * pos.w;
+    if (distance_sq <= 0.0001 || range_ratio_sq >= 1.0)
+        return float3(0.0);
+    float3 ray = to_surface * inversesqrt(distance_sq);
+    float beam = 1.0;
+    if (dir.w > -1.0)
+    {
+        float angle_cos = dot(ray, dir.xyz);
+        beam = smoothstep(dir.w, min(dir.w + 0.08, 0.999), angle_cos);
+    }
+    float ndotl = max(0.0, dot(normal, -ray));
+    float fade = 1.0 - range_ratio_sq;
+    return color.rgb * (ndotl * beam * fade * fade);
+}
+#endif
 
 void main()
 {
@@ -78,6 +117,16 @@ void main()
             light += olr_forward_omni_color.rgb * (ndotl * falloff * falloff);
         }
     }
+    // Add up to three runtime local lights, including room lamps. These are
+    // distinct from baked bStatic lights and the separate player torch.
+    float3 world_normal = normalize(olr_forward_world_normal);
+    light += olr_local_forward_diffuse(olr_forward_local_pos0, olr_forward_local_color0,
+        olr_forward_local_dir0, olr_forward_world_pos, world_normal);
+    light += olr_local_forward_diffuse(olr_forward_local_pos1, olr_forward_local_color1,
+        olr_forward_local_dir1, olr_forward_world_pos, world_normal);
+    light += olr_local_forward_diffuse(olr_forward_local_pos2, olr_forward_local_color2,
+        olr_forward_local_dir2, olr_forward_world_pos, world_normal);
+
     float3 shaded = diffuse.rgb * light * 2.0;
 #ifdef OLR_R1_DETAIL
     shaded *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
