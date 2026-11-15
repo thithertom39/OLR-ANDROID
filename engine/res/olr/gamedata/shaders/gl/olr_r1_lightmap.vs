@@ -41,8 +41,15 @@ void main()
     detail_uv = base_uv * dt_params.xy;
     detail_weights = float2(1.0 - detail_fade, 0.5 * detail_fade);
 #endif
+#ifdef OLR_R1_FORWARD
+    // Match OLR's original lmape.vs hemispheric and sun terms.
+    normal = normalize(normal);
+    float3 hemi = L_hemi_color.rgb * (0.5 + 0.5 * normal.y);
+    float3 sun = L_sun_color.rgb * max(0.0, dot(normal, -L_sun_dir_w.xyz));
+#else
     float3 hemi = L_hemi_color.rgb * (0.98 + 0.2 * normal.y);
     float3 sun = L_sun_color.rgb * max(0.3, dot(normal, -L_sun_dir_w.xyz));
+#endif
 #ifdef OLR_R1_VERTEX
     float4 baked = unpack_D3DCOLOR(vertex_color);
     // R2 already adds ambient/hemi/sun; retain only the baked vertex term.
