@@ -47,9 +47,11 @@ void main()
     olr_forward_world_pos = vertex_position.xyz;
     normal = normalize(normal);
     olr_forward_world_normal = normal;
-    // Match OLR's original lmape.vs hemispheric and sun terms.
-    float3 hemi = L_hemi_color.rgb * (0.5 + 0.5 * normal.y);
-    float3 sun = L_sun_color.rgb * max(0.0, dot(normal, -L_sun_dir_w.xyz));
+    // Match the PC OLR R1 shader pack's r1/common.h, not stock GLES
+    // v_hemi/v_sun. This pack deliberately keeps walls from becoming
+    // overly dark at certain normals (0.98 + 0.2*n.y, sun floor 0.3).
+    float3 hemi = L_hemi_color.rgb * (0.98 + 0.2 * normal.y);
+    float3 sun = L_sun_color.rgb * max(0.3, dot(normal, -L_sun_dir_w.xyz));
 #else
     float3 hemi = L_hemi_color.rgb * (0.98 + 0.2 * normal.y);
     float3 sun = L_sun_color.rgb * max(0.3, dot(normal, -L_sun_dir_w.xyz));
