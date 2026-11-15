@@ -1,5 +1,7 @@
 #include "common.h"
 
+// This optional OLR experiment adds only baked lighting. R2 continues to
+// provide ambient, hemispheric, static-sun and dynamic point/spot light.
 layout(location = TEXCOORD0) in float2 base_uv;
 layout(location = FOG) in float fog_visibility;
 #ifdef OLR_R1_DETAIL
@@ -18,18 +20,24 @@ layout(location = 0) out float4 out_color;
 
 void main()
 {
-    float4 base = tex2D(s_base, base_uv);
 #ifdef OLR_R1_VERTEX
-    float3 light = vertex_light;
+    float3 baked = vertex_light;
 #else
-    float4 lightmap = tex2D(s_lmap, lightmap_uv);
-    float hemi = dot(tex2D(s_hemi, lightmap_uv).rgb, float3(1.0 / 3.0));
-    float3 light = L_ambient.rgb / 1.5 + lightmap.rgb + sun_light * lightmap.a + hemi_light * hemi;
+    float3 baked = tex2D(s_lmap, lightmap_uv).rgb;
 #endif
-    float3 color = light * base.rgb * 2.0;
+
+#ifdef OLR_R1_ACCUM
+    // The HDR accumulator stores illumination; combine_1 applies albedo and
+    // fog exactly once, together with the regular dynamic lighting.
+    out_color = float4(baked, 0.0);
+#else
+    // Fallback when the device cannot blend into RGBA16F: add the shaded
+    // baked component to LDR rather than replacing flashlight-lit pixels.
+    float3 shaded = tex2D(s_base, base_uv).rgb * baked;
 #ifdef OLR_R1_DETAIL
-    color *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+    shaded *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
 #endif
-    color = saturate(color);
-    out_color = float4(lerp(fog_color.rgb, color, fog_visibility), base.a);
+    shaded *= fog_visibility;
+    out_color = float4(shaded, 0.0);
+#endif
 }

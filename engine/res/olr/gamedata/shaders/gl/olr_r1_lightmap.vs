@@ -40,7 +40,8 @@ void main()
     float3 sun = L_sun_color.rgb * max(0.3, dot(normal, -L_sun_dir_w.xyz));
 #ifdef OLR_R1_VERTEX
     float4 baked = unpack_D3DCOLOR(vertex_color);
-    vertex_light = baked.rgb + hemi * packed_normal.w + sun * baked.w + L_ambient.rgb;
+    // R2 already adds ambient/hemi/sun; retain only the baked vertex term.
+    vertex_light = baked.rgb;
 #else
     lightmap_uv = unpack_tc_lmap(vertex_lightmap_uv);
     hemi_light = hemi;

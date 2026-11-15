@@ -366,7 +366,8 @@ void R_dsgraph_structure::render_olr_r1_lightmaps()
         return;
 
     static const bool logged = [] {
-        Msg("* OLR R1 lightmaps: drawing default static materials in the forward pass");
+        Msg("* OLR R1 lightmaps: add baked light via %s; R2 dynamic lights preserved",
+            RImplementation.o.fp16_blend ? "HDR accumulator" : "LDR forward fallback");
         return true;
     }();
     (void)logged;
