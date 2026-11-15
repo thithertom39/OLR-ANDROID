@@ -83,7 +83,16 @@ void main()
     shaded *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
 #endif
     shaded = mix(fog_color.rgb, shaded, fog_visibility);
-    out_color = float4(shaded, diffuse.a * fog_visibility * fog_visibility);
+
+    // R2's combine_1 applies the adaptive exposure from s_tonemap before
+    // writing the LDR color buffer. Static forward geometry is drawn after
+    // combine_1, so it must apply that SAME exposure here; otherwise baked
+    // world surfaces stay in unexposed linear color while all deferred
+    // objects use the adapted scene brightness.
+    float exposure = tex2D(s_tonemap, float2(0.5, 0.5)).x;
+    float4 mapped_low, mapped_high;
+    tonemap(mapped_low, mapped_high, shaded, exposure);
+    out_color = float4(mapped_low.rgb, diffuse.a * fog_visibility * fog_visibility);
 #elif defined(OLR_R1_ACCUM)
     // The HDR accumulator stores illumination; combine_1 applies albedo and
     // fog exactly once, together with the regular dynamic lighting.
