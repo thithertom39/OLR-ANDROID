@@ -238,6 +238,7 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
 #endif
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    bool olrForwardQueued = false;
     if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
     {
         auto* lightmap = vis_sh->olr_r1_lightmap._get();
@@ -247,11 +248,11 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
             // surfaces: enqueue ONCE instead of enqueuing a G-buffer draw
             // plus an additive pass. Fallback preserves unsupported shaders.
             static const bool forwardStatic = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward");
-            if (forwardStatic && sh->flags.iPriority == 0 && !sh->flags.bEmissive &&
-                !sh->flags.bWmark && !sh->flags.bDistort)
+            if (forwardStatic && sh->flags.iPriority < 2 && !sh->flags.bStrictB2F &&
+                !sh->flags.bEmissive && !sh->flags.bWmark && !sh->flags.bDistort)
             {
                 mapOlrR1Lightmaps.insert_anyway(distSQ, _MatrixItemS({ SSA, nullptr, pVisual, Fidentity, lightmap }));
-                return;
+                olrForwardQueued = true;
             }
             if (!forwardStatic)
                 mapOlrR1Lightmaps.insert_anyway(distSQ, _MatrixItemS({ SSA, nullptr, pVisual, Fidentity, lightmap }));
@@ -263,6 +264,11 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
         val_feedback->rfeedback_static(pVisual);
 
     counter_S++;
+
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (olrForwardQueued)
+        return; // Geometry is forwarded once; preserve normal visibility counters.
+#endif
 
     for (u32 iPass = 0; iPass < sh->passes.size(); ++iPass)
     {
