@@ -242,7 +242,20 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
     {
         auto* lightmap = vis_sh->olr_r1_lightmap._get();
         if (lightmap)
-            mapOlrR1Lightmaps.insert_anyway(distSQ, _MatrixItemS({ SSA, nullptr, pVisual, Fidentity, lightmap }));
+        {
+            // A real forward geometry path for opaque static lightmapped
+            // surfaces: enqueue ONCE instead of enqueuing a G-buffer draw
+            // plus an additive pass. Fallback preserves unsupported shaders.
+            static const bool forwardStatic = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward");
+            if (forwardStatic && sh->flags.iPriority == 0 && !sh->flags.bEmissive &&
+                !sh->flags.bWmark && !sh->flags.bDistort)
+            {
+                mapOlrR1Lightmaps.insert_anyway(distSQ, _MatrixItemS({ SSA, nullptr, pVisual, Fidentity, lightmap }));
+                return;
+            }
+            if (!forwardStatic)
+                mapOlrR1Lightmaps.insert_anyway(distSQ, _MatrixItemS({ SSA, nullptr, pVisual, Fidentity, lightmap }));
+        }
     }
 #endif
 
