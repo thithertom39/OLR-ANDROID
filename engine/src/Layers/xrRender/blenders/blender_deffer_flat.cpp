@@ -109,9 +109,26 @@ void CBlender_deffer_flat::Compile(CBlender_Compile& C)
         if (hasDetail)
             shader = vertexLit ? "olr_r1_vertex_detail" : "olr_r1_lightmap_detail";
 
-        // Add only the baked diffuse contribution. The deferred R2 lighting
-        // (flashlight/point lights, hemisphere, ambient) must stay intact.
-        // HDR float blending is not available on all GLES devices.
+        // Forward R1 experiment: one opaque geometry draw, direct to the
+        // scene color target with depth writes. Unlike the additive variant,
+        // these materials do not enter the deferred G-buffer.
+        static const bool forwardStatic = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward");
+        if (forwardStatic)
+        {
+            if (vertexLit)
+                break; // Vertex-lit materials need their own R1 shader path.
+            pcstr forwardShader = hasDetail ? "olr_r1_lightmap_forward_detail" : "olr_r1_lightmap_forward";
+            C.r_Pass(forwardShader, forwardShader, FALSE, TRUE, TRUE, FALSE);
+            C.r_Sampler("s_base", C.L_textures[0]);
+            C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+            C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+            if (hasDetail)
+                C.r_Sampler("s_detail", C.detail_texture);
+            C.r_End();
+            break;
+        }
+
+        // Existing hybrid: additive baked light in the R2 lighting buffer.
         const bool hdrAccumulator = RImplementation.o.fp16_blend;
         const pcstr pixelShader = hdrAccumulator
             ? (vertexLit ? "olr_r1_vertex_accum" : "olr_r1_lightmap_accum")
