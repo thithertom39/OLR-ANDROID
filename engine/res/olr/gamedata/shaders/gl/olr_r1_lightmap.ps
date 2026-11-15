@@ -6,6 +6,11 @@ layout(location = TEXCOORD0) in float2 base_uv;
 layout(location = FOG) in float fog_visibility;
 #ifdef OLR_R1_FORWARD
 layout(location = TEXCOORD2) in float2 hemi_uv;
+layout(location = TEXCOORD5) in float3 olr_forward_world_pos;
+layout(location = TEXCOORD6) in float3 olr_forward_world_normal;
+uniform float4 olr_forward_spot_pos;   // xyz position, w = inverse squared radius
+uniform float4 olr_forward_spot_dir;   // xyz direction, w = cosine of half cone
+uniform float4 olr_forward_spot_color; // RGB intensity, w = enabled
 #endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) in float2 detail_uv;
@@ -35,6 +40,27 @@ void main()
     float4 diffuse = tex2D(s_base, base_uv);
     float4 lm = tex2D(s_lmap, lightmap_uv);
     float3 light = L_ambient.rgb + lm.rgb + sun_light * lm.a + hemi_light * p_hemi(hemi_uv);
+
+    // Dynamic torch on static surfaces in the SAME forward pass; no G-buffer
+    // and no second geometry submission. Stage 1 uses diffuse cone falloff
+    // without a shadow-map lookup or projected cookie.
+    if (olr_forward_spot_color.w > 0.5)
+    {
+        float3 light_to_surface = olr_forward_world_pos - olr_forward_spot_pos.xyz;
+        float distance_sq = dot(light_to_surface, light_to_surface);
+        float range_sq = distance_sq * olr_forward_spot_pos.w;
+        if (distance_sq > 0.0001 && range_sq < 1.0)
+        {
+            float inv_distance = inversesqrt(distance_sq);
+            float3 light_ray = light_to_surface * inv_distance;
+            float angle_cos = dot(light_ray, olr_forward_spot_dir.xyz);
+            float beam = smoothstep(olr_forward_spot_dir.w,
+                min(olr_forward_spot_dir.w + 0.08, 0.999), angle_cos);
+            float ndotl = max(0.0, dot(normalize(olr_forward_world_normal), -light_ray));
+            float falloff = 1.0 - range_sq;
+            light += olr_forward_spot_color.rgb * (ndotl * beam * falloff * falloff);
+        }
+    }
     float3 shaded = diffuse.rgb * light * 2.0;
 #ifdef OLR_R1_DETAIL
     shaded *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
