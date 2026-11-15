@@ -366,8 +366,11 @@ void R_dsgraph_structure::render_olr_r1_lightmaps()
         return;
 
     static const bool logged = [] {
-        Msg("* OLR R1 lightmaps: add baked light via %s; R2 dynamic lights preserved",
-            RImplementation.o.fp16_blend ? "HDR accumulator" : "LDR forward fallback");
+        if (strstr(Core.Params, "-olr_r1_forward"))
+            Msg("* OLR R1 forward: rendering eligible static lightmapped geometry directly; dynamic geometry remains deferred");
+        else
+            Msg("* OLR R1 lightmaps: add baked light via %s; R2 dynamic lights preserved",
+                RImplementation.o.fp16_blend ? "HDR accumulator" : "LDR forward fallback");
         return true;
     }();
     (void)logged;
