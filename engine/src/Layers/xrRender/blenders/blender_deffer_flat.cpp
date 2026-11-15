@@ -122,6 +122,7 @@ void CBlender_deffer_flat::Compile(CBlender_Compile& C)
             C.r_Sampler("s_base", C.L_textures[0]);
             C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
             C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+            C.r_Sampler_rtf("s_tonemap", r2_RT_luminance_cur);
             if (hasDetail)
                 C.r_Sampler("s_detail", C.detail_texture);
             C.r_End();
