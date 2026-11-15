@@ -7,6 +7,9 @@
 
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRender/light.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -365,6 +368,84 @@ class cl_entity_data : public R_constant_setup //--#SM+#--
 };
 static cl_entity_data binder_entity_data;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+// Cached once per frame. Finds the active camera-attached spotlight (torch)
+// without adding G-buffer, shadow atlas, or geometry passes.
+namespace
+{
+struct OlrForwardSpot
+{
+    Fvector4 pos;   // xyz world, w = inverse squared range
+    Fvector4 dir;   // xyz normalized direction, w = cos(cone/2)
+    Fvector4 color; // rgb source color, w = active
+};
+const OlrForwardSpot& current_olr_forward_spot()
+{
+    static OlrForwardSpot spot{};
+    static u32 frame = u32(-1);
+    if (frame == Device.dwFrame)
+        return spot;
+    frame = Device.dwFrame;
+    spot.pos.set(0.f, 0.f, 0.f, 0.f);
+    spot.dir.set(0.f, 0.f, 1.f, 1.f);
+    spot.color.set(0.f, 0.f, 0.f, 0.f);
+    if (!Core.Params || !strstr(Core.Params, "-olr_r1_forward"))
+        return spot;
+
+    const light* selected = nullptr;
+    float nearestSq = 2.25f; // 1.5 metres from the camera
+    const auto consider = [&](const light* source)
+    {
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            source->flags.type != IRender_Light::SPOT || source->range <= EPS_L)
+            return;
+        const float dSq = source->position.distance_to_sqr(Device.vCameraPosition);
+        if (dSq < nearestSq)
+        {
+            nearestSq = dSq;
+            selected = source;
+        }
+    };
+    for (const light* source : RImplementation.Lights.package.v_shadowed)
+        consider(source);
+    for (const light* source : RImplementation.Lights.package.v_spot)
+        consider(source);
+    if (!selected)
+        return spot;
+
+    Fvector direction = selected->direction;
+    const float directionSq = direction.x * direction.x +
+        direction.y * direction.y + direction.z * direction.z;
+    if (directionSq < 0.0001f)
+        return spot;
+    direction.normalize();
+    const float invRangeSq = 1.f / (selected->range * selected->range);
+    spot.pos.set(selected->position.x, selected->position.y, selected->position.z, invRangeSq);
+    spot.dir.set(direction.x, direction.y, direction.z, _cos(selected->cone * .5f));
+    spot.color.set(selected->color.r, selected->color.g, selected->color.b, 1.f);
+    return spot;
+}
+class cl_olr_spot_pos final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().pos); }
+};
+class cl_olr_spot_dir final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().dir); }
+};
+class cl_olr_spot_color final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().color); }
+};
+static cl_olr_spot_pos binder_olr_spot_pos;
+static cl_olr_spot_dir binder_olr_spot_dir;
+static cl_olr_spot_color binder_olr_spot_color;
+} // namespace
+#endif
+
 // Standart constant-binding
 void CBlender_Compile::SetMapping()
 {
@@ -429,6 +510,11 @@ void CBlender_Compile::SetMapping()
     r_Constant("L_ambient", &binder_amb_color);
 #endif
     r_Constant("screen_res", &binder_screen_res);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    r_Constant("olr_forward_spot_pos", &binder_olr_spot_pos);
+    r_Constant("olr_forward_spot_dir", &binder_olr_spot_dir);
+    r_Constant("olr_forward_spot_color", &binder_olr_spot_color);
+#endif
 
     // detail
     // if (bDetail  && detail_scaler)
