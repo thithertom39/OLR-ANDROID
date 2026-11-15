@@ -418,7 +418,7 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
     // lightmapped materials, never alpha-tested / transparent Lua shaders.
     static const bool olrR1Forward = Core.Params && strstr(Core.Params, "-olr ") &&
         strstr(Core.Params, "-olr_r1_forward");
-    if (olrR1Forward && xr_strcmp(s_shader, "default") == 0 &&
+    if (olrR1Forward && xr_stricmp(s_shader, "default") == 0 &&
         C.L_textures.size() == 3 &&
         strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 &&
         strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0 &&
