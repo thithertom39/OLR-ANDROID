@@ -13,6 +13,8 @@ layout(location = FOG) out float fog_visibility;
 // Original OLR lmape.vs derives hemi UV from the same TEXCOORD1 lmap UV.
 // Static level vertices do not supply a separate TEXCOORD2 attribute.
 layout(location = TEXCOORD2) out float2 hemi_uv;
+layout(location = TEXCOORD5) out float3 olr_forward_world_pos;
+layout(location = TEXCOORD6) out float3 olr_forward_world_normal;
 #endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) out float2 detail_uv;
@@ -42,8 +44,10 @@ void main()
     detail_weights = float2(1.0 - detail_fade, 0.5 * detail_fade);
 #endif
 #ifdef OLR_R1_FORWARD
-    // Match OLR's original lmape.vs hemispheric and sun terms.
+    olr_forward_world_pos = vertex_position.xyz;
     normal = normalize(normal);
+    olr_forward_world_normal = normal;
+    // Match OLR's original lmape.vs hemispheric and sun terms.
     float3 hemi = L_hemi_color.rgb * (0.5 + 0.5 * normal.y);
     float3 sun = L_sun_color.rgb * max(0.0, dot(normal, -L_sun_dir_w.xyz));
 #else
