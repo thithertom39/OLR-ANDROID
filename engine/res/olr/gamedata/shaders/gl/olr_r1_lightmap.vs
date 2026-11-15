@@ -10,7 +10,8 @@ layout(location = TEXCOORD0) in float2 vertex_uv;
 layout(location = TEXCOORD0) out float2 base_uv;
 layout(location = FOG) out float fog_visibility;
 #ifdef OLR_R1_FORWARD
-layout(location = TEXCOORD2) in float2 vertex_hemi_uv;
+// Original OLR lmape.vs derives hemi UV from the same TEXCOORD1 lmap UV.
+// Static level vertices do not supply a separate TEXCOORD2 attribute.
 layout(location = TEXCOORD2) out float2 hemi_uv;
 #endif
 #ifdef OLR_R1_DETAIL
@@ -49,7 +50,7 @@ void main()
 #else
     lightmap_uv = unpack_tc_lmap(vertex_lightmap_uv);
 #ifdef OLR_R1_FORWARD
-    hemi_uv = unpack_tc_lmap(vertex_hemi_uv);
+    hemi_uv = lightmap_uv;
 #endif
     hemi_light = hemi;
     sun_light = sun;
