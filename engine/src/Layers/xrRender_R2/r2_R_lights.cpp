@@ -364,9 +364,12 @@ void CRender::render_lights(light_Package& LP)
             Task* task = entry.task;
             const u32 batch_id = entry.batch_id;
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-            CTimer shadowLightWaitTimer;
+            std::optional<CTimer> shadowLightWaitTimer;
             if (sampleShadowLightCost)
-                shadowLightWaitTimer.Start();
+            {
+                shadowLightWaitTimer.emplace();
+                shadowLightWaitTimer->Start();
+            }
 #endif
             if (task)
                 {
@@ -380,10 +383,13 @@ void CRender::render_lights(light_Package& LP)
 }
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
             const float shadowLightWaitMs = sampleShadowLightCost ?
-                shadowLightWaitTimer.GetElapsed_sec() * 1000.f : 0.f;
-            CTimer shadowLightSubmitTimer;
+                shadowLightWaitTimer->GetElapsed_sec() * 1000.f : 0.f;
+            std::optional<CTimer> shadowLightSubmitTimer;
             if (sampleShadowLightCost)
-                shadowLightSubmitTimer.Start();
+            {
+                shadowLightSubmitTimer.emplace();
+                shadowLightSubmitTimer->Start();
+            }
             if (task && (entry.static_cache || shadowAudit))
                 std::atomic_thread_fence(std::memory_order_acquire);
             if (sampleShadowCache)
@@ -566,7 +572,7 @@ void CRender::render_lights(light_Package& LP)
                     unsigned(source->flags.type), unsigned(source->flags.bStatic), L->shadow_face,
                     dsgraph.o.sector_id, unsigned(L->vis.smap_ID), L->X.S.posX, L->X.S.posY, L->X.S.size,
                     unsigned(bNormal), unsigned(bSpecial), shadowLightStaticEntries, draws,
-                    double(shadowLightWaitMs), double(shadowLightSubmitTimer.GetElapsed_sec() * 1000.f));
+                    double(shadowLightWaitMs), double(shadowLightSubmitTimer->GetElapsed_sec() * 1000.f));
             }
 #endif
             RImplementation.release_context(batch_id);
@@ -774,9 +780,12 @@ void CRender::render_lights(light_Package& LP)
             for (light* p_light : L_spot_s)
             {
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-                CTimer shadowLightAccumTimer;
+                std::optional<CTimer> shadowLightAccumTimer;
                 if (sampleShadowLightCost)
-                    shadowLightAccumTimer.Start();
+                {
+                    shadowLightAccumTimer.emplace();
+                    shadowLightAccumTimer->Start();
+                }
 #endif
                 {
 #if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
@@ -796,7 +805,7 @@ void CRender::render_lights(light_Package& LP)
                     const light* source = p_light->shadow_parent ? p_light->shadow_parent : p_light;
                     Msg("* [gles_shadow_light_accum] frame=%u source=%p face=%d accum_wall_ms=%.3f",
                         Device.dwFrame, static_cast<const void*>(source), p_light->shadow_face,
-                        double(shadowLightAccumTimer.GetElapsed_sec() * 1000.f));
+                        double(shadowLightAccumTimer->GetElapsed_sec() * 1000.f));
                 }
 #endif
             }
