@@ -374,6 +374,12 @@ static cl_entity_data binder_entity_data;
 // without adding G-buffer, shadow atlas, or geometry passes.
 namespace
 {
+constexpr u32 kOlrForwardLocalCount = 3;
+
+// Unlike level-baked bStatic lights, runtime POINT/SPOT sources need to
+// illuminate forward R1 geometry independently of the deferred G-buffer.
+// Limit the number of nearby sources to avoid looping over every level light
+// in every fragment. Camera-attached flashlight light is handled separately.
 struct OlrForwardSpot
 {
     Fvector4 pos;   // xyz world, w = inverse squared range
@@ -381,6 +387,9 @@ struct OlrForwardSpot
     Fvector4 color; // rgb source color, w = active
     Fvector4 omni_pos;   // additional camera-attached POINT light
     Fvector4 omni_color;
+    Fvector4 local_pos[kOlrForwardLocalCount];
+    Fvector4 local_color[kOlrForwardLocalCount];
+    Fvector4 local_dir[kOlrForwardLocalCount]; // w < -1 for POINT; cos half-cone for SPOT
 };
 const OlrForwardSpot& current_olr_forward_spot()
 {
@@ -394,6 +403,12 @@ const OlrForwardSpot& current_olr_forward_spot()
     spot.color.set(0.f, 0.f, 0.f, 0.f);
     spot.omni_pos.set(0.f, 0.f, 0.f, 0.f);
     spot.omni_color.set(0.f, 0.f, 0.f, 0.f);
+    for (u32 i = 0; i < kOlrForwardLocalCount; ++i)
+    {
+        spot.local_pos[i].set(0.f, 0.f, 0.f, 0.f);
+        spot.local_color[i].set(0.f, 0.f, 0.f, 0.f);
+        spot.local_dir[i].set(0.f, 0.f, 0.f, -2.f);
+    }
     if (!Core.Params || !strstr(Core.Params, "-olr_r1_forward"))
         return spot;
 
@@ -437,25 +452,103 @@ const OlrForwardSpot& current_olr_forward_spot()
             1.f / (omni->range * omni->range));
         spot.omni_color.set(omni->color.r, omni->color.g, omni->color.b, 1.f);
     }
-    if (!selected)
-        return spot;
-
-    Fvector direction = selected->direction;
-    const float directionSq = direction.x * direction.x +
-        direction.y * direction.y + direction.z * direction.z;
-    if (directionSq < 0.0001f)
-        return spot;
-    direction.normalize();
-    const float invRangeSq = 1.f / (selected->range * selected->range);
-    spot.pos.set(selected->position.x, selected->position.y, selected->position.z, invRangeSq);
-    spot.dir.set(direction.x, direction.y, direction.z, std::cos(selected->cone * .5f));
-    spot.color.set(selected->color.r, selected->color.g, selected->color.b, 1.f);
-    static bool firstTorchLogged = false;
-    if (!firstTorchLogged)
+    if (selected)
     {
-        firstTorchLogged = true;
-        Msg("* OLR R1 forward torch: found nearby active spotlight (range=%.2f, cone=%.2f)",
-            double(selected->range), double(selected->cone));
+        Fvector direction = selected->direction;
+        const float directionSq = direction.x * direction.x +
+            direction.y * direction.y + direction.z * direction.z;
+        if (directionSq > 0.0001f)
+        {
+            direction.normalize();
+            const float invRangeSq = 1.f / (selected->range * selected->range);
+            spot.pos.set(selected->position.x, selected->position.y, selected->position.z, invRangeSq);
+            spot.dir.set(direction.x, direction.y, direction.z, std::cos(selected->cone * .5f));
+            spot.color.set(selected->color.r, selected->color.g, selected->color.b, 1.f);
+            static bool firstTorchLogged = false;
+            if (!firstTorchLogged)
+            {
+                firstTorchLogged = true;
+                Msg("* OLR R1 forward torch: found nearby active spotlight (range=%.2f, cone=%.2f)",
+                    double(selected->range), double(selected->cone));
+            }
+        }
+    }
+
+    // Shadowed POINT lights are exported as six OMNIPART faces. Deduplicate
+    // them through shadow_parent and use the original source color/position.
+    // Static level lights are intentionally excluded: their lightmap
+    // contributions must never be applied a second time.
+    struct Candidate
+    {
+        const light* source = nullptr;
+        float normalizedDistanceSq = 0.f;
+    };
+    Candidate nearest[kOlrForwardLocalCount]{};
+    const auto addLocal = [&](const light* entry)
+    {
+        const light* source = entry && entry->shadow_parent ? entry->shadow_parent : entry;
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            source == selected || source == omni || source->range <= EPS_L)
+            return;
+        if (source->flags.type != IRender_Light::POINT &&
+            source->flags.type != IRender_Light::SPOT)
+            return;
+
+        const float rangeSq = source->range * source->range;
+        const float normalizedDistanceSq =
+            source->position.distance_to_sqr(Device.vCameraPosition) / rangeSq;
+        if (normalizedDistanceSq > 1.f)
+            return; // Camera is outside this light's effective range.
+
+        for (const Candidate& candidate : nearest)
+            if (candidate.source == source)
+                return;
+        for (u32 j = 0; j < kOlrForwardLocalCount; ++j)
+        {
+            if (nearest[j].source && nearest[j].normalizedDistanceSq <= normalizedDistanceSq)
+                continue;
+            for (u32 k = kOlrForwardLocalCount - 1; k > j; --k)
+                nearest[k] = nearest[k - 1];
+            nearest[j].source = source;
+            nearest[j].normalizedDistanceSq = normalizedDistanceSq;
+            break;
+        }
+    };
+    for (const light* source : RImplementation.Lights.package.v_point)
+        addLocal(source);
+    for (const light* source : RImplementation.Lights.package.v_spot)
+        addLocal(source);
+    for (const light* source : RImplementation.Lights.package.v_shadowed)
+        addLocal(source);
+
+    for (u32 j = 0; j < kOlrForwardLocalCount; ++j)
+    {
+        const light* source = nearest[j].source;
+        if (!source)
+            continue;
+        const float rangeSq = source->range * source->range;
+        spot.local_pos[j].set(source->position.x, source->position.y,
+            source->position.z, 1.f / rangeSq);
+        spot.local_color[j].set(source->color.r, source->color.g, source->color.b, 1.f);
+        if (source->flags.type == IRender_Light::SPOT)
+        {
+            Fvector direction = source->direction;
+            const float lenSq = direction.x * direction.x +
+                direction.y * direction.y + direction.z * direction.z;
+            if (lenSq > 0.0001f)
+            {
+                direction.normalize();
+                spot.local_dir[j].set(direction.x, direction.y,
+                    direction.z, std::cos(source->cone * .5f));
+            }
+        }
+    }
+    static bool firstLocalLogged = false;
+    if (!firstLocalLogged && nearest[0].source)
+    {
+        firstLocalLogged = true;
+        Msg("* OLR R1 forward: local runtime lighting active (up to %u sources, first range=%.2f)",
+            kOlrForwardLocalCount, double(nearest[0].source->range));
     }
     return spot;
 }
@@ -484,6 +577,34 @@ class cl_olr_omni_color final : public R_constant_setup
     void setup(CBackend& cmd_list, R_constant* C) override
     { cmd_list.set_c(C, current_olr_forward_spot().omni_color); }
 };
+template <u32 Index>
+class cl_olr_local_pos final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().local_pos[Index]); }
+};
+template <u32 Index>
+class cl_olr_local_color final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().local_color[Index]); }
+};
+template <u32 Index>
+class cl_olr_local_dir final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().local_dir[Index]); }
+};
+
+static cl_olr_local_pos<0> binder_olr_local_pos0;
+static cl_olr_local_color<0> binder_olr_local_color0;
+static cl_olr_local_dir<0> binder_olr_local_dir0;
+static cl_olr_local_pos<1> binder_olr_local_pos1;
+static cl_olr_local_color<1> binder_olr_local_color1;
+static cl_olr_local_dir<1> binder_olr_local_dir1;
+static cl_olr_local_pos<2> binder_olr_local_pos2;
+static cl_olr_local_color<2> binder_olr_local_color2;
+static cl_olr_local_dir<2> binder_olr_local_dir2;
 static cl_olr_omni_pos binder_olr_omni_pos;
 static cl_olr_omni_color binder_olr_omni_color;
 static cl_olr_spot_pos binder_olr_spot_pos;
@@ -562,6 +683,15 @@ void CBlender_Compile::SetMapping()
     r_Constant("olr_forward_spot_color", &binder_olr_spot_color);
     r_Constant("olr_forward_omni_pos", &binder_olr_omni_pos);
     r_Constant("olr_forward_omni_color", &binder_olr_omni_color);
+    r_Constant("olr_forward_local_pos0", &binder_olr_local_pos0);
+    r_Constant("olr_forward_local_color0", &binder_olr_local_color0);
+    r_Constant("olr_forward_local_dir0", &binder_olr_local_dir0);
+    r_Constant("olr_forward_local_pos1", &binder_olr_local_pos1);
+    r_Constant("olr_forward_local_color1", &binder_olr_local_color1);
+    r_Constant("olr_forward_local_dir1", &binder_olr_local_dir1);
+    r_Constant("olr_forward_local_pos2", &binder_olr_local_pos2);
+    r_Constant("olr_forward_local_color2", &binder_olr_local_color2);
+    r_Constant("olr_forward_local_dir2", &binder_olr_local_dir2);
 #endif
 
     // detail
