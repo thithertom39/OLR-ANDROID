@@ -80,7 +80,9 @@ void main()
     // accumulation pass. Use the source OLR lightmap RGB + hemi + sun alpha.
     float4 diffuse = tex2D(s_base, base_uv);
     float4 lm = tex2D(s_lmap, lightmap_uv);
-    float3 light = L_ambient.rgb + lm.rgb + sun_light * lm.a + hemi_light * p_hemi(hemi_uv);
+    // PC OLR r1/lmap.ps and r1/lmape.ps use ambient/1.5; preserve
+    // the author's original static-light balance instead of stock GL R1.
+    float3 light = L_ambient.rgb / 1.5 + lm.rgb + sun_light * lm.a + hemi_light * p_hemi(hemi_uv);
 
     // Dynamic torch on static surfaces in the SAME forward pass; no G-buffer
     // and no second geometry submission. Stage 1 uses diffuse cone falloff
