@@ -150,7 +150,10 @@ void main()
     // and lightmap terms. Compute a tone-mapped delta in LDR to preserve the
     // appearance of the existing exposure-adjusted forward base pass.
     float3 baked_light = light;
-    light += olr_local_forward_diffuse(olr_r1_dynamic_pos, olr_r1_dynamic_color,
+    // Original OLR 2.5 r1/add_point.ps and add_spot.ps multiply their
+    // per-light RGB contribution by t_base.a before the 2x color scale.
+    // Keep this alpha-based material modulation in the additive path only.
+    light += diffuse.a * olr_local_forward_diffuse(olr_r1_dynamic_pos, olr_r1_dynamic_color,
         olr_r1_dynamic_dir, olr_forward_world_pos, normalize(olr_forward_world_normal));
 #endif
 
