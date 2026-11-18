@@ -85,9 +85,17 @@ void main()
     // accumulation pass. Use the source OLR lightmap RGB + hemi + sun alpha.
     float4 diffuse = tex2D(s_base, base_uv);
     float4 lm = tex2D(s_lmap, lightmap_uv);
-    // PC OLR r1/lmap.ps and r1/lmape.ps use ambient/1.5; preserve
-    // the author's original static-light balance instead of stock GL R1.
+    // Original OLR 2.5 PC shader pack (r1/impl.ps and r1/impl_dt.ps)
+    // computes l_hemi = I.c0 * t_base.a, then
+    // light = L_ambient + l_base + l_sun + l_hemi.
+    // This distinct, opt-in multipass base follows that formula instead
+    // of reusing the GLES hybrid's separate hemi-lightmap approximation.
+#if defined(OLR_R1_MULTIPASS_BASE) || defined(OLR_R1_DYNAMIC_PASS)
+    float3 light = L_ambient.rgb + lm.rgb + sun_light * lm.a + hemi_light * diffuse.a;
+#else
+    // Existing tested forward mode stays bit-for-bit unchanged.
     float3 light = L_ambient.rgb / 1.5 + lm.rgb + sun_light * lm.a + hemi_light * p_hemi(hemi_uv);
+#endif
 
 #if !defined(OLR_R1_MULTIPASS_BASE) && !defined(OLR_R1_DYNAMIC_PASS)
     // Legacy single-pass lighting is kept for users not testing multipass.
