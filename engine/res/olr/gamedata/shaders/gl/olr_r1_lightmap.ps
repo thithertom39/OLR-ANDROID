@@ -25,6 +25,11 @@ uniform float4 olr_forward_local_dir1;
 uniform float4 olr_forward_local_pos2;
 uniform float4 olr_forward_local_color2;
 uniform float4 olr_forward_local_dir2;
+#ifdef OLR_R1_DYNAMIC_PASS
+uniform float4 olr_r1_dynamic_pos;
+uniform float4 olr_r1_dynamic_color;
+uniform float4 olr_r1_dynamic_dir;
+#endif
 #endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) in float2 detail_uv;
@@ -84,6 +89,8 @@ void main()
     // the author's original static-light balance instead of stock GL R1.
     float3 light = L_ambient.rgb / 1.5 + lm.rgb + sun_light * lm.a + hemi_light * p_hemi(hemi_uv);
 
+#if !defined(OLR_R1_MULTIPASS_BASE) && !defined(OLR_R1_DYNAMIC_PASS)
+    // Legacy single-pass lighting is kept for users not testing multipass.
     // Dynamic torch on static surfaces in the SAME forward pass; no G-buffer
     // and no second geometry submission. Stage 1 uses diffuse cone falloff
     // without a shadow-map lookup or projected cookie.
@@ -128,6 +135,16 @@ void main()
         olr_forward_local_dir1, olr_forward_world_pos, world_normal);
     light += olr_local_forward_diffuse(olr_forward_local_pos2, olr_forward_local_color2,
         olr_forward_local_dir2, olr_forward_world_pos, world_normal);
+#endif
+
+#ifdef OLR_R1_DYNAMIC_PASS
+    // The additive pass adds only its own source, without the static ambient
+    // and lightmap terms. Compute a tone-mapped delta in LDR to preserve the
+    // appearance of the existing exposure-adjusted forward base pass.
+    float3 baked_light = light;
+    light += olr_local_forward_diffuse(olr_r1_dynamic_pos, olr_r1_dynamic_color,
+        olr_r1_dynamic_dir, olr_forward_world_pos, normalize(olr_forward_world_normal));
+#endif
 
     float3 shaded = diffuse.rgb * light * 2.0;
 #ifdef OLR_R1_DETAIL
@@ -143,7 +160,18 @@ void main()
     float exposure = tex2D(s_tonemap, float2(0.5, 0.5)).x;
     float4 mapped_low, mapped_high;
     tonemap(mapped_low, mapped_high, shaded, exposure);
+#ifdef OLR_R1_DYNAMIC_PASS
+    float3 baked_shaded = diffuse.rgb * baked_light * 2.0;
+#ifdef OLR_R1_DETAIL
+    baked_shaded *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+#endif
+    baked_shaded = mix(fog_color.rgb, baked_shaded, fog_visibility);
+    float4 baked_low, baked_high;
+    tonemap(baked_low, baked_high, baked_shaded, exposure);
+    out_color = float4(max(mapped_low.rgb - baked_low.rgb, float3(0.0)), 0.0);
+#else
     out_color = float4(mapped_low.rgb, diffuse.a * fog_visibility * fog_visibility);
+#endif
 #elif defined(OLR_R1_ACCUM)
     // The HDR accumulator stores illumination; combine_1 applies albedo and
     // fog exactly once, together with the regular dynamic lighting.
