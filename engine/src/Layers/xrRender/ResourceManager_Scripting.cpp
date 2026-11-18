@@ -410,6 +410,62 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
     }
     ScriptEngineLock.Leave();
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    // OLR's level materials normally compile via _lua_Create(), not the
+    // C++ blender path. Without this bridge the R1 forward queue stays empty
+    // even though -olr_r1_forward is present on the command line.
+    // Keep the first stage deliberately limited to known opaque "default"
+    // lightmapped materials, never alpha-tested / transparent Lua shaders.
+    static const bool olrR1Forward = Core.Params && strstr(Core.Params, "-olr ") &&
+        strstr(Core.Params, "-olr_r1_forward");
+    if (olrR1Forward && xr_stricmp(s_shader, "default") == 0 &&
+        C.L_textures.size() == 3 &&
+        strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 &&
+        strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0 &&
+        S.E[0] &&
+        S.E[0]->flags.iPriority < 2 &&
+        !S.E[0]->flags.bStrictB2F &&
+        !S.E[0]->flags.bEmissive &&
+        !S.E[0]->flags.bDistort &&
+        !S.E[0]->flags.bWmark)
+    {
+        // Build an additional, standalone GLES program; the original Lua
+        // shader elements remain available as the deferred fallback.
+        // Do not call _cpp_Compile(): there is no C++ blender attached here.
+        ShaderElement forward;
+        C.SH = &forward;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+
+        C.detail_texture = nullptr;
+        C.detail_scaler = nullptr;
+        const bool hasDetailTexture = m_textures_description.GetDetailTexture(
+            C.L_textures[0], C.detail_texture, C.detail_scaler);
+        bool diffuseDetail = false;
+        bool bumpDetail = false;
+        m_textures_description.GetTextureUsage(C.L_textures[0], diffuseDetail, bumpDetail);
+        const bool useDetail = hasDetailTexture && diffuseDetail &&
+            C.detail_texture && C.detail_scaler;
+        pcstr shader = useDetail ? "olr_r1_lightmap_forward_detail" : "olr_r1_lightmap_forward";
+        C.r_Pass(shader, shader, FALSE, TRUE, TRUE, FALSE);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+        C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        // Match the adaptive exposure used by R2's combine_1 for deferred
+        // geometry. The forward pass writes into the same LDR scene target.
+        C.r_Sampler_rtf("s_tonemap", r2_RT_luminance_cur);
+        if (useDetail)
+            C.r_Sampler("s_detail", C.detail_texture);
+        C.r_End();
+        S.olr_r1_lightmap = _CreateElement(std::move(forward));
+
+        static u32 logged = 0;
+        if (S.olr_r1_lightmap && logged++ < 8)
+            Msg("* OLR R1 forward: compiled Lua default lightmap material '%s' (detail=%u)",
+                C.L_textures[0].c_str(), unsigned(useDetail));
+    }
+#endif
+
     ScopeLock scope(&v_shaders_lock);
     // Search equal in shaders array
     for (Shader* v_shader : v_shaders)

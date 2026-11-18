@@ -109,15 +109,38 @@ void CBlender_deffer_flat::Compile(CBlender_Compile& C)
         if (hasDetail)
             shader = vertexLit ? "olr_r1_vertex_detail" : "olr_r1_lightmap_detail";
 
-        C.r_Pass(shader, shader, FALSE, TRUE, FALSE, FALSE);
-        C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
-        C.r_Sampler("s_base", C.L_textures[0]);
-        if (!vertexLit)
+        // Forward R1 experiment: one opaque geometry draw, direct to the
+        // scene color target with depth writes. Unlike the additive variant,
+        // these materials do not enter the deferred G-buffer.
+        static const bool forwardStatic = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward");
+        if (forwardStatic)
         {
+            if (vertexLit)
+                break; // Vertex-lit materials need their own R1 shader path.
+            pcstr forwardShader = hasDetail ? "olr_r1_lightmap_forward_detail" : "olr_r1_lightmap_forward";
+            C.r_Pass(forwardShader, forwardShader, FALSE, TRUE, TRUE, FALSE);
+            C.r_Sampler("s_base", C.L_textures[0]);
             C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
             C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+            C.r_Sampler_rtf("s_tonemap", r2_RT_luminance_cur);
+            if (hasDetail)
+                C.r_Sampler("s_detail", C.detail_texture);
+            C.r_End();
+            break;
         }
-        if (hasDetail)
+
+        // Existing hybrid: additive baked light in the R2 lighting buffer.
+        const bool hdrAccumulator = RImplementation.o.fp16_blend;
+        const pcstr pixelShader = hdrAccumulator
+            ? (vertexLit ? "olr_r1_vertex_accum" : "olr_r1_lightmap_accum")
+            : shader;
+        C.r_Pass(shader, pixelShader, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
+        C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
+        if (!hdrAccumulator)
+            C.r_Sampler("s_base", C.L_textures[0]);
+        if (!vertexLit)
+            C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+        if (hasDetail && !hdrAccumulator)
             C.r_Sampler("s_detail", C.detail_texture);
         C.r_End();
         break;

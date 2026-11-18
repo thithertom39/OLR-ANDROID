@@ -59,6 +59,21 @@ jobs:
             'ndk;27.0.12077973' \
             'cmake;3.22.1'
 
+      # The existing repository snapshot contains libvorbis' top-level files,
+      # but its required lib/ subtree was not committed. Recover that subtree
+      # from the exact original source revision, never the moving default branch.
+      - name: Restore missing pinned Vorbis library sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f engine/vendor/vorbis-src/lib/vorbisfile.c ]]; then
+            git clone --quiet https://github.com/xiph/vorbis.git "$RUNNER_TEMP/vorbis-original"
+            git -C "$RUNNER_TEMP/vorbis-original" checkout --quiet --detach 0657aee69dec8508a0011f47f3b69d7538e9d262
+            test -f "$RUNNER_TEMP/vorbis-original/lib/vorbisfile.c"
+            cp -a "$RUNNER_TEMP/vorbis-original/lib" engine/vendor/vorbis-src/lib
+            echo "Restored libvorbis/lib from pinned commit 0657aee."
+          fi
+
       - name: Validate bundled native dependencies
         shell: bash
         run: |
