@@ -54,3 +54,16 @@ Workflow: [Build OLR Android APK](../.github/workflows/android-apk.yml)
 
 Открытый pull request с изменением самого workflow запускает пробную сборку.
 Для кнопки ручного запуска через GitHub интерфейс файл с `workflow_dispatch` сначала должен оказаться в основной ветке `main`.
+
+
+## Experimental original-R1-style multi-pass lighting (WIP)
+
+This work-in-progress path is independent of the existing single-pass R1-forward prototype. Enable it **only** with both `-olr_r1_forward -olr_r1_multipass` on the OLR renderer. Omitting the second flag preserves the previous, tested R1-forward behavior.
+
+- Base opaque world lightmapped geometry is drawn once from baked lightmap + ambient/hemi/sun.
+- Each visible dynamic POINT or SPOT source with a light sphere intersecting the world visual is submitted as a separate additive pass, including the player's torch; static `bStatic` sources are excluded to prevent double-counting.
+- Point-light cubemap faces are deduplicated by their shared parent.
+- Each pass writes a tone-mapped **difference** into the post-combine LDR buffer, because the current engine is still carrying R2's post-processing. This is a transitional approximation, not a bit-identical copy of PC OLR's LDR blending.
+- This prototype supports only Lua `default` opaque lightmapped materials. Projected spot cookies, light shadow occlusion, vertex-lit materials, alpha-test, original R1 geometry traversal, and removing the remaining R2 deferred stages are *not* yet implemented.
+
+**Warning:** A large number of overlapping dynamic sources creates additional draw calls and may cost significant FPS. This is an isolated architectural experiment, not a performance release; keep the established APK installed separately until device testing passes. Verify dark basement (lamp on/torch off), torch cone, geometry, and FPS at 1728×1080. Build success alone does not establish GLSL runtime success.
