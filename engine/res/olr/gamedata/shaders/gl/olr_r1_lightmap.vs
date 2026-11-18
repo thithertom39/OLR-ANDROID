@@ -9,6 +9,13 @@ layout(location = BINORMAL) in float4 vertex_binormal;
 layout(location = TEXCOORD0) in float2 vertex_uv;
 layout(location = TEXCOORD0) out float2 base_uv;
 layout(location = FOG) out float fog_visibility;
+#ifdef OLR_R1_FORWARD
+// Original OLR lmape.vs derives hemi UV from the same TEXCOORD1 lmap UV.
+// Static level vertices do not supply a separate TEXCOORD2 attribute.
+layout(location = TEXCOORD2) out float2 hemi_uv;
+layout(location = TEXCOORD5) out float3 olr_forward_world_pos;
+layout(location = TEXCOORD6) out float3 olr_forward_world_normal;
+#endif
 #ifdef OLR_R1_DETAIL
 layout(location = TEXCOORD3) out float2 detail_uv;
 layout(location = TEXCOORD4) out float2 detail_weights;
@@ -36,13 +43,28 @@ void main()
     detail_uv = base_uv * dt_params.xy;
     detail_weights = float2(1.0 - detail_fade, 0.5 * detail_fade);
 #endif
+#ifdef OLR_R1_FORWARD
+    olr_forward_world_pos = vertex_position.xyz;
+    normal = normalize(normal);
+    olr_forward_world_normal = normal;
+    // Match the PC OLR R1 shader pack's r1/common.h, not stock GLES
+    // v_hemi/v_sun. This pack deliberately keeps walls from becoming
+    // overly dark at certain normals (0.98 + 0.2*n.y, sun floor 0.3).
     float3 hemi = L_hemi_color.rgb * (0.98 + 0.2 * normal.y);
     float3 sun = L_sun_color.rgb * max(0.3, dot(normal, -L_sun_dir_w.xyz));
+#else
+    float3 hemi = L_hemi_color.rgb * (0.98 + 0.2 * normal.y);
+    float3 sun = L_sun_color.rgb * max(0.3, dot(normal, -L_sun_dir_w.xyz));
+#endif
 #ifdef OLR_R1_VERTEX
     float4 baked = unpack_D3DCOLOR(vertex_color);
-    vertex_light = baked.rgb + hemi * packed_normal.w + sun * baked.w + L_ambient.rgb;
+    // R2 already adds ambient/hemi/sun; retain only the baked vertex term.
+    vertex_light = baked.rgb;
 #else
     lightmap_uv = unpack_tc_lmap(vertex_lightmap_uv);
+#ifdef OLR_R1_FORWARD
+    hemi_uv = lightmap_uv;
+#endif
     hemi_light = hemi;
     sun_light = sun;
 #endif

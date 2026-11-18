@@ -227,7 +227,11 @@ Shader* CResourceManager::_cpp_Create(
     }
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-    static const bool olrR1Lightmaps = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_lightmaps");
+    // This is a separate, opt-in geometry pipeline experiment. It routes
+    // supported opaque baked surfaces out of the deferred G-buffer.
+    static const bool olrR1Forward = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward");
+    static const bool olrR1Lightmaps = olrR1Forward ||
+        (strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_lightmaps"));
     const auto blenderClass = B->getDescription().CLS;
     if (olrR1Lightmaps && (blenderClass == B_DEFAULT || blenderClass == B_VERT))
     {
