@@ -5,6 +5,10 @@
 #include "xrCore/AndroidCpuProfile.h"
 
 #include "FBasicVisual.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "light.h"
+#include <cmath>
+#endif
 #include "SkeletonCustom.h"
 #include "FLOD.h"
 
@@ -19,6 +23,11 @@ using namespace R_dsgraph;
 // static forward pass. Unlike the old camera-global selection, this uses
 // each static visual's world-space bounds to avoid proximity popping.
 static thread_local bool g_olrR1ForwardVisualPass = false;
+static bool olr_r1_multipass_enabled()
+{
+    return Core.Params && strstr(Core.Params, "-olr_r1_forward") &&
+        strstr(Core.Params, "-olr_r1_multipass");
+}
 void olr_r1_forward_bind_visual_lights(CBackend& cmd_list, const Fsphere& bounds);
 #endif
 
@@ -246,12 +255,76 @@ void __fastcall render_item(u32 context_id, const T& item)
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     // Must run after set_Element/apply_lmaterial: CBackend may cache the
     // previous shader and does not automatically rebind local light data.
-    if (g_olrR1ForwardVisualPass)
+    if (g_olrR1ForwardVisualPass && !olr_r1_multipass_enabled())
         olr_r1_forward_bind_visual_lights(dsgraph.cmd_list, V->vis.sphere);
 #endif
     //--#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
     //RCache.hemi.c_update(V);
-    V->Render(dsgraph.cmd_list, calcLOD(item.first, V->vis.sphere.R), dsgraph.o.phase == CRender::PHASE_SMAP);
+    const float visualLOD = calcLOD(item.first, V->vis.sphere.R);
+    V->Render(dsgraph.cmd_list, visualLOD, dsgraph.o.phase == CRender::PHASE_SMAP);
+
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    // Optional R1-like dynamic light traversal. One baked world draw above,
+    // then one additive draw for EACH intersecting non-baked POINT/SPOT light,
+    // including the player torch. No arbitrary three-light shader slot cap.
+    // The pass is built only for supported opaque Lua lightmap materials.
+    if (g_olrR1ForwardVisualPass && olr_r1_multipass_enabled())
+    {
+        ShaderElement* extra = V->shader->olr_r1_lightmap_dynamic._get();
+        if (!extra)
+            return;
+
+        static thread_local xr_vector<const light*> visited;
+        visited.clear();
+        const auto drawLight = [&](const light* entry)
+        {
+            const light* source = entry && entry->shadow_parent ? entry->shadow_parent : entry;
+            if (!source || !source->flags.bActive || source->flags.bStatic ||
+                source->range <= EPS_L ||
+                (source->flags.type != IRender_Light::POINT &&
+                 source->flags.type != IRender_Light::SPOT))
+                return;
+
+            for (const light* alreadyDrawn : visited)
+                if (alreadyDrawn == source)
+                    return;
+            visited.push_back(source);
+
+            const float maxReach = source->range + V->vis.sphere.R;
+            if (source->position.distance_to_sqr(V->vis.sphere.P) > maxReach * maxReach)
+                return;
+
+            Fvector4 pos, direction, color;
+            pos.set(source->position.x, source->position.y, source->position.z,
+                1.f / (source->range * source->range));
+            color.set(source->color.r, source->color.g, source->color.b, 1.f);
+            direction.set(0.f, 0.f, 0.f, -2.f); // point, no cone
+            if (source->flags.type == IRender_Light::SPOT)
+            {
+                Fvector dir = source->direction;
+                const float dirSq = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
+                if (dirSq <= 0.0001f)
+                    return;
+                dir.normalize();
+                direction.set(dir.x, dir.y, dir.z, std::cos(source->cone * 0.5f));
+            }
+
+            dsgraph.cmd_list.set_Element(extra);
+            dsgraph.cmd_list.apply_lmaterial();
+            dsgraph.cmd_list.set_c("olr_r1_dynamic_pos", pos);
+            dsgraph.cmd_list.set_c("olr_r1_dynamic_dir", direction);
+            dsgraph.cmd_list.set_c("olr_r1_dynamic_color", color);
+            V->Render(dsgraph.cmd_list, visualLOD, false);
+        };
+
+        for (const light* source : RImplementation.Lights.package.v_point)
+            drawLight(source);
+        for (const light* source : RImplementation.Lights.package.v_spot)
+            drawLight(source);
+        for (const light* source : RImplementation.Lights.package.v_shadowed)
+            drawLight(source);
+    }
+#endif
 }
 
 template<class T>
