@@ -7,6 +7,7 @@
 #include "FBasicVisual.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "light.h"
+#include "xrRender_console.h"
 #include <cmath>
 #endif
 #include "SkeletonCustom.h"
@@ -294,10 +295,21 @@ void __fastcall render_item(u32 context_id, const T& item)
             if (source->position.distance_to_sqr(V->vis.sphere.P) > maxReach * maxReach)
                 return;
 
+            // Match the original R1 adjustable distant-light fade.
+            // r1_dlights_clip is not a hard cutoff at the light's own radius:
+            // the original R1 fades contribution by camera-to-light volume
+            // distance and lets users increase this budget.
+            const float clipDistance = Device.vCameraPosition.distance_to(source->position) - source->range;
+            const float clipRange = _max(ps_r1_dlights_clip, EPS_L);
+            const float lightScale = clampr(1.f - clipDistance / clipRange, 0.f, 1.f);
+            if (lightScale <= EPS_L)
+                return;
+
             Fvector4 pos, direction, color;
             pos.set(source->position.x, source->position.y, source->position.z,
                 1.f / (source->range * source->range));
-            color.set(source->color.r, source->color.g, source->color.b, 1.f);
+            color.set(source->color.r * lightScale, source->color.g * lightScale,
+                source->color.b * lightScale, 1.f);
             direction.set(0.f, 0.f, 0.f, -2.f); // point, no cone
             if (source->flags.type == IRender_Light::SPOT)
             {
