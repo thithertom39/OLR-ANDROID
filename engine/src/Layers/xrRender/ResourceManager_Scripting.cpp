@@ -446,8 +446,15 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
         m_textures_description.GetTextureUsage(C.L_textures[0], diffuseDetail, bumpDetail);
         const bool useDetail = hasDetailTexture && diffuseDetail &&
             C.detail_texture && C.detail_scaler;
+        // Experimental original-R1-style lighting: static geometry first,
+        // then a separate additive pass for each relevant runtime lamp.
+        // Keep the existing single-pass forward mode as a safe fallback.
+        const bool multipass = Core.Params && strstr(Core.Params, "-olr_r1_multipass");
         pcstr shader = useDetail ? "olr_r1_lightmap_forward_detail" : "olr_r1_lightmap_forward";
-        C.r_Pass(shader, shader, FALSE, TRUE, TRUE, FALSE);
+        pcstr pixelShader = multipass
+            ? (useDetail ? "olr_r1_lightmap_baked_detail" : "olr_r1_lightmap_baked")
+            : shader;
+        C.r_Pass(shader, pixelShader, FALSE, TRUE, TRUE, FALSE);
         C.r_Sampler("s_base", C.L_textures[0]);
         C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
         C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
@@ -458,6 +465,27 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
             C.r_Sampler("s_detail", C.detail_texture);
         C.r_End();
         S.olr_r1_lightmap = _CreateElement(std::move(forward));
+
+        if (multipass)
+        {
+            ShaderElement additive;
+            C.SH = &additive;
+            C.RS.Invalidate();
+            C.SetParams(S.E[0]->flags.iPriority, false);
+            pcstr lightShader = useDetail
+                ? "olr_r1_lightmap_dynamic_detail" : "olr_r1_lightmap_dynamic";
+            C.r_Pass(shader, lightShader, FALSE, TRUE, FALSE, TRUE,
+                D3DBLEND_ONE, D3DBLEND_ONE);
+            C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
+            C.r_Sampler("s_base", C.L_textures[0]);
+            C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+            C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+            C.r_Sampler_rtf("s_tonemap", r2_RT_luminance_cur);
+            if (useDetail)
+                C.r_Sampler("s_detail", C.detail_texture);
+            C.r_End();
+            S.olr_r1_lightmap_dynamic = _CreateElement(std::move(additive));
+        }
 
         static u32 logged = 0;
         if (S.olr_r1_lightmap && logged++ < 8)
