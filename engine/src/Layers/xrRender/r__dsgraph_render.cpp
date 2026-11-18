@@ -14,6 +14,14 @@ namespace xray::render::RENDER_NAMESPACE
 {
 using namespace R_dsgraph;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+// Per-visual local light constants are written only during the optional
+// static forward pass. Unlike the old camera-global selection, this uses
+// each static visual's world-space bounds to avoid proximity popping.
+static thread_local bool g_olrR1ForwardVisualPass = false;
+void olr_r1_forward_bind_visual_lights(CBackend& cmd_list, const Fsphere& bounds);
+#endif
+
 extern float r_ssaHZBvsTEX;
 extern float r_ssaGLOD_start, r_ssaGLOD_end;
 
@@ -235,6 +243,12 @@ void __fastcall render_item(u32 context_id, const T& item)
     RImplementation.apply_object(dsgraph.cmd_list, item.second.pObject);
     dsgraph.cmd_list.apply_lmaterial();
     hud_transform_helper::apply_custom_state(dsgraph.cmd_list);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    // Must run after set_Element/apply_lmaterial: CBackend may cache the
+    // previous shader and does not automatically rebind local light data.
+    if (g_olrR1ForwardVisualPass)
+        olr_r1_forward_bind_visual_lights(dsgraph.cmd_list, V->vis.sphere);
+#endif
     //--#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
     //RCache.hemi.c_update(V);
     V->Render(dsgraph.cmd_list, calcLOD(item.first, V->vis.sphere.R), dsgraph.o.phase == CRender::PHASE_SMAP);
@@ -366,12 +380,18 @@ void R_dsgraph_structure::render_olr_r1_lightmaps()
         return;
 
     static const bool logged = [] {
-        Msg("* OLR R1 lightmaps: add baked light via %s; R2 dynamic lights preserved",
-            RImplementation.o.fp16_blend ? "HDR accumulator" : "LDR forward fallback");
+        if (strstr(Core.Params, "-olr_r1_forward"))
+            Msg("* OLR R1 forward: rendering eligible static lightmapped geometry directly; dynamic geometry remains deferred");
+        else
+            Msg("* OLR R1 lightmaps: add baked light via %s; R2 dynamic lights preserved",
+                RImplementation.o.fp16_blend ? "HDR accumulator" : "LDR forward fallback");
         return true;
     }();
     (void)logged;
+    const bool previous = g_olrR1ForwardVisualPass;
+    g_olrR1ForwardVisualPass = Core.Params && strstr(Core.Params, "-olr_r1_forward");
     sort_front_to_back_render_and_clean(context_id, mapOlrR1Lightmaps);
+    g_olrR1ForwardVisualPass = previous;
 }
 #endif
 

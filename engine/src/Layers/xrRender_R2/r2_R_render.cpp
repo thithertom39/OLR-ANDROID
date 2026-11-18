@@ -462,7 +462,8 @@ void CRender::Render()
     // and the combine shader multiplies all lighting by G-buffer albedo.
     // Without float blending, the same queue is rendered additively in LDR
     // during render_forward() instead.
-    if (o.fp16_blend && !dsgraph.mapOlrR1Lightmaps.empty())
+    const bool olrR1Forward = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward");
+    if (!olrR1Forward && o.fp16_blend && !dsgraph.mapOlrR1Lightmaps.empty())
     {
         Target->phase_accumulator(dsgraph.cmd_list);
         dsgraph.cmd_list.set_xform_view(Device.mView);
@@ -545,9 +546,12 @@ void CRender::render_forward()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
         // On devices without HDR float blending, preserve existing R2 light
         // by blending baked diffuse over the finished LDR image.
-        if (!o.fp16_blend)
+        if (strstr(Core.Params, "-olr_r1_forward") || !o.fp16_blend)
         {
             dsgraph.cmd_list.set_Stencil(FALSE);
+            dsgraph.cmd_list.set_Z(true);
+            dsgraph.cmd_list.set_xform_view(Device.mView);
+            dsgraph.cmd_list.set_xform_project(Device.mProject);
             dsgraph.render_olr_r1_lightmaps();
         }
 #endif

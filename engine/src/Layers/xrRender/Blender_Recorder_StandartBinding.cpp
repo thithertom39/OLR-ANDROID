@@ -7,6 +7,10 @@
 
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
+#include <cmath>
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRender/light.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -365,6 +369,248 @@ class cl_entity_data : public R_constant_setup //--#SM+#--
 };
 static cl_entity_data binder_entity_data;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+// Cached once per frame. Finds the active camera-attached spotlight (torch)
+// without adding G-buffer, shadow atlas, or geometry passes.
+namespace
+{
+constexpr u32 kOlrForwardLocalCount = 3;
+
+// Unlike level-baked bStatic lights, runtime POINT/SPOT sources need to
+// illuminate forward R1 geometry independently of the deferred G-buffer.
+// Limit the number of nearby sources to avoid looping over every level light
+// in every fragment. Camera-attached flashlight light is handled separately.
+struct OlrForwardSpot
+{
+    Fvector4 pos;   // xyz world, w = inverse squared range
+    Fvector4 dir;   // xyz normalized direction, w = cos(cone/2)
+    Fvector4 color; // rgb source color, w = active
+    Fvector4 omni_pos;   // additional camera-attached POINT light
+    Fvector4 omni_color;
+    const light* torch_spot = nullptr;
+    const light* torch_point = nullptr;
+};
+const OlrForwardSpot& current_olr_forward_spot()
+{
+    static OlrForwardSpot spot{};
+    static u32 frame = u32(-1);
+    if (frame == Device.dwFrame)
+        return spot;
+    frame = Device.dwFrame;
+    spot.pos.set(0.f, 0.f, 0.f, 0.f);
+    spot.dir.set(0.f, 0.f, 1.f, 1.f);
+    spot.color.set(0.f, 0.f, 0.f, 0.f);
+    spot.omni_pos.set(0.f, 0.f, 0.f, 0.f);
+    spot.omni_color.set(0.f, 0.f, 0.f, 0.f);
+    spot.torch_spot = nullptr;
+    spot.torch_point = nullptr;
+    if (!Core.Params || !strstr(Core.Params, "-olr_r1_forward"))
+        return spot;
+
+    const light* selected = nullptr;
+    float nearestSq = 2.25f; // 1.5 metres from the camera
+    const auto consider = [&](const light* source)
+    {
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            source->flags.type != IRender_Light::SPOT || source->range <= EPS_L)
+            return;
+        const float dSq = source->position.distance_to_sqr(Device.vCameraPosition);
+        if (dSq < nearestSq)
+        {
+            nearestSq = dSq;
+            selected = source;
+        }
+    };
+    for (const light* source : RImplementation.Lights.package.v_shadowed)
+        consider(source);
+    for (const light* source : RImplementation.Lights.package.v_spot)
+        consider(source);
+
+    // The original player torch also has a nearby omnidirectional source.
+    const light* omni = nullptr;
+    float omniNearestSq = 2.25f;
+    for (const light* source : RImplementation.Lights.package.v_point)
+    {
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            source->flags.type != IRender_Light::POINT || source->range <= EPS_L)
+            continue;
+        const float dSq = source->position.distance_to_sqr(Device.vCameraPosition);
+        if (dSq < omniNearestSq)
+        {
+            omniNearestSq = dSq;
+            omni = source;
+        }
+    }
+    spot.torch_spot = selected;
+    spot.torch_point = omni;
+    if (omni)
+    {
+        spot.omni_pos.set(omni->position.x, omni->position.y, omni->position.z,
+            1.f / (omni->range * omni->range));
+        spot.omni_color.set(omni->color.r, omni->color.g, omni->color.b, 1.f);
+    }
+    if (selected)
+    {
+        Fvector direction = selected->direction;
+        const float directionSq = direction.x * direction.x +
+            direction.y * direction.y + direction.z * direction.z;
+        if (directionSq > 0.0001f)
+        {
+            direction.normalize();
+            const float invRangeSq = 1.f / (selected->range * selected->range);
+            spot.pos.set(selected->position.x, selected->position.y, selected->position.z, invRangeSq);
+            spot.dir.set(direction.x, direction.y, direction.z, std::cos(selected->cone * .5f));
+            spot.color.set(selected->color.r, selected->color.g, selected->color.b, 1.f);
+            static bool firstTorchLogged = false;
+            if (!firstTorchLogged)
+            {
+                firstTorchLogged = true;
+                Msg("* OLR R1 forward torch: found nearby active spotlight (range=%.2f, cone=%.2f)",
+                    double(selected->range), double(selected->cone));
+            }
+        }
+    }
+
+    return spot;
+}
+class cl_olr_spot_pos final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().pos); }
+};
+class cl_olr_spot_dir final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().dir); }
+};
+class cl_olr_spot_color final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().color); }
+};
+class cl_olr_omni_pos final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().omni_pos); }
+};
+class cl_olr_omni_color final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    { cmd_list.set_c(C, current_olr_forward_spot().omni_color); }
+};
+static cl_olr_omni_pos binder_olr_omni_pos;
+static cl_olr_omni_color binder_olr_omni_color;
+static cl_olr_spot_pos binder_olr_spot_pos;
+static cl_olr_spot_dir binder_olr_spot_dir;
+static cl_olr_spot_color binder_olr_spot_color;
+} // namespace
+
+// The R1 forward shader binds local lights once PER VISIBLE STATIC VISUAL,
+// using the visual's WORLD-SPACE bounds. Camera distance is intentionally
+// absent: a ceiling lamp must still illuminate its walls when observed from
+// across the room. Source lights are already visibility-culled by R2's light
+// package. This is a bounded single-pass interim renderer (three slots),
+// not the original R1 additive-light traversal.
+void olr_r1_forward_bind_visual_lights(CBackend& cmd_list, const Fsphere& visual_bounds)
+{
+    if (!Core.Params || !strstr(Core.Params, "-olr_r1_forward"))
+        return;
+    const auto& torch = current_olr_forward_spot();
+
+    struct Candidate
+    {
+        const light* source = nullptr;
+        float distance_ratio = 0.f;
+    };
+    Candidate candidates[kOlrForwardLocalCount]{};
+
+    const auto consider = [&](const light* entry)
+    {
+        const light* source = entry && entry->shadow_parent ? entry->shadow_parent : entry;
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            source == torch.torch_spot || source == torch.torch_point ||
+            source->range <= EPS_L)
+            return;
+        if (source->flags.type != IRender_Light::POINT &&
+            source->flags.type != IRender_Light::SPOT)
+            return;
+        const float reach = source->range + visual_bounds.R;
+        const float distSq = source->position.distance_to_sqr(visual_bounds.P);
+        if (distSq >= reach * reach)
+            return; // Light volume cannot intersect the visible visual.
+        const float nearestSurfaceDistance =
+            _max(0.f, _sqrt(distSq) - visual_bounds.R);
+        const float ratio = nearestSurfaceDistance / source->range;
+
+        // A POINT shadow source may also occur as six OMNIPART faces. It is
+        // important to deduplicate by parent before spending a shader slot.
+        for (const Candidate& candidate : candidates)
+            if (candidate.source == source)
+                return;
+
+        for (u32 i = 0; i < kOlrForwardLocalCount; ++i)
+        {
+            if (candidates[i].source && candidates[i].distance_ratio <= ratio)
+                continue;
+            for (u32 j = kOlrForwardLocalCount - 1; j > i; --j)
+                candidates[j] = candidates[j - 1];
+            candidates[i] = {source, ratio};
+            break;
+        }
+    };
+    for (const light* source : RImplementation.Lights.package.v_point)
+        consider(source);
+    for (const light* source : RImplementation.Lights.package.v_spot)
+        consider(source);
+    for (const light* source : RImplementation.Lights.package.v_shadowed)
+        consider(source);
+
+    // Set every slot for every draw. CBackend caches bound shader programs,
+    // so per-frame constant binders cannot safely select per-visual lights.
+    static const char* posNames[kOlrForwardLocalCount] =
+        {"olr_forward_local_pos0", "olr_forward_local_pos1", "olr_forward_local_pos2"};
+    static const char* colorNames[kOlrForwardLocalCount] =
+        {"olr_forward_local_color0", "olr_forward_local_color1", "olr_forward_local_color2"};
+    static const char* dirNames[kOlrForwardLocalCount] =
+        {"olr_forward_local_dir0", "olr_forward_local_dir1", "olr_forward_local_dir2"};
+
+    for (u32 i = 0; i < kOlrForwardLocalCount; ++i)
+    {
+        Fvector4 position, color, direction;
+        position.set(0.f, 0.f, 0.f, 0.f);
+        color.set(0.f, 0.f, 0.f, 0.f);
+        direction.set(0.f, 0.f, 0.f, -2.f);
+        const light* source = candidates[i].source;
+        if (source)
+        {
+            position.set(source->position.x, source->position.y,
+                source->position.z, 1.f / (source->range * source->range));
+            color.set(source->color.r, source->color.g, source->color.b, 1.f);
+            if (source->flags.type == IRender_Light::SPOT)
+            {
+                Fvector dir = source->direction;
+                const float lenSq = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
+                if (lenSq > 0.0001f)
+                {
+                    dir.normalize();
+                    direction.set(dir.x, dir.y, dir.z,
+                        std::cos(source->cone * .5f));
+                }
+            }
+        }
+        cmd_list.set_c(posNames[i], position);
+        cmd_list.set_c(colorNames[i], color);
+        cmd_list.set_c(dirNames[i], direction);
+    }
+    static bool logged = false;
+    if (!logged && candidates[0].source)
+    {
+        logged = true;
+        Msg("* OLR R1 forward: geometry-local lighting active (3 slots, no camera radius gate)");
+    }
+}
+#endif
+
 // Standart constant-binding
 void CBlender_Compile::SetMapping()
 {
@@ -429,6 +675,13 @@ void CBlender_Compile::SetMapping()
     r_Constant("L_ambient", &binder_amb_color);
 #endif
     r_Constant("screen_res", &binder_screen_res);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    r_Constant("olr_forward_spot_pos", &binder_olr_spot_pos);
+    r_Constant("olr_forward_spot_dir", &binder_olr_spot_dir);
+    r_Constant("olr_forward_spot_color", &binder_olr_spot_color);
+    r_Constant("olr_forward_omni_pos", &binder_olr_omni_pos);
+    r_Constant("olr_forward_omni_color", &binder_olr_omni_color);
+#endif
 
     // detail
     // if (bDetail  && detail_scaler)
