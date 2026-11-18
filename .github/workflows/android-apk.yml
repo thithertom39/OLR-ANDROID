@@ -1,0 +1,164 @@
+name: Build OLR Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_build:
+        description: 'Build .dev variant (install alongside regular app)'
+        type: boolean
+        default: true
+      gpu_profile:
+        description: 'Enable GPU profiling diagnostics'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - '.github/workflows/android-apk.yml'
+      - 'docs/ANDROID_CLOUD_BUILD.md'
+
+# This workflow only needs to read the repository.
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Build arm64-v8a APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      ANDROID_USER_HOME: ${{ github.workspace }}/.android
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+      TEST_BUILD: ${{ github.event_name == 'pull_request' || inputs.test_build }}
+      GPU_PROFILE: ${{ inputs.gpu_profile }}
+    steps:
+      - name: Check out bundled sources
+        uses: actions/checkout@v4
+        with:
+          # These dependency trees are already checked in as ordinary files.
+          submodules: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v4
+
+      - name: Install pinned Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v sdkmanager
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install \
+            'platform-tools' \
+            'platforms;android-34' \
+            'build-tools;34.0.0' \
+            'ndk;27.0.12077973' \
+            'cmake;3.22.1'
+
+      # The existing repository snapshot contains libvorbis' top-level files,
+      # but its required lib/ subtree was not committed. Recover that subtree
+      # from the exact original source revision, never the moving default branch.
+      - name: Restore missing pinned Vorbis library sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f engine/vendor/vorbis-src/lib/vorbisfile.c ]]; then
+            git clone --quiet https://github.com/xiph/vorbis.git "$RUNNER_TEMP/vorbis-original"
+            git -C "$RUNNER_TEMP/vorbis-original" checkout --quiet --detach 0657aee69dec8508a0011f47f3b69d7538e9d262
+            test -f "$RUNNER_TEMP/vorbis-original/lib/vorbisfile.c"
+            cp -a "$RUNNER_TEMP/vorbis-original/lib" engine/vendor/vorbis-src/lib
+            echo "Restored libvorbis/lib from pinned commit 0657aee."
+          fi
+
+      - name: Validate bundled native dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f engine/android/gradle/wrapper/gradle-wrapper.jar
+          test -f engine/HANDOFF/vendor.init.gradle
+          for dependency in ogg vorbis lzo openal-soft sdl2; do
+            test -f "engine/vendor/${dependency}-src/CMakeLists.txt" || {
+              echo "::error::Missing bundled dependency: ${dependency}"
+              exit 1
+            }
+          done
+          if [[ ! -d engine/android/app/src/main/jniLibs/arm64-v8a ]]; then
+            echo "::warning::Prebuilt ANGLE libraries are not in this checkout. ANGLE/Vulkan may be unavailable at runtime."
+          fi
+
+      - name: Configure APK signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.OLR_APK_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.OLR_APK_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.OLR_APK_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.OLR_APK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$ANDROID_USER_HOME"
+          if [[ -n "$KEYSTORE_BASE64" ]]; then
+            if [[ -z "$KEYSTORE_PASSWORD" || -z "$KEY_ALIAS" || -z "$KEY_PASSWORD" ]]; then
+              echo "::error::Provide all four OLR_APK_* secrets for persistent signing."
+              exit 1
+            fi
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/olr-signing.jks"
+            chmod 600 "$RUNNER_TEMP/olr-signing.jks"
+            {
+              echo "ORG_GRADLE_PROJECT_OXRAY_KEYSTORE=$RUNNER_TEMP/olr-signing.jks"
+              echo "ORG_GRADLE_PROJECT_OXRAY_KEYSTORE_PASS=$KEYSTORE_PASSWORD"
+              echo "ORG_GRADLE_PROJECT_OXRAY_KEY_ALIAS=$KEY_ALIAS"
+              echo "ORG_GRADLE_PROJECT_OXRAY_KEY_PASS=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -noprompt \
+              -keystore "$ANDROID_USER_HOME/debug.keystore" \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 3650 \
+              -dname 'CN=OLR Android CI Test'
+            echo "ORG_GRADLE_PROJECT_OXRAY_KEYSTORE=$ANDROID_USER_HOME/debug.keystore" >> "$GITHUB_ENV"
+            echo "::warning::Using a new temporary signing key. Future CI APKs cannot update this installation unless a persistent key is configured."
+          fi
+
+      - name: Build release APK
+        shell: bash
+        working-directory: engine/android
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          args=(
+            assembleRelease
+            -POXR_GITHUB_TOKEN=
+            --no-daemon
+            --console=plain
+            --max-workers=2
+            --init-script ../HANDOFF/vendor.init.gradle
+          )
+          if [[ "$TEST_BUILD" == "true" ]]; then
+            args+=(-POXRAY_TEST_BUILD=true -POXRAY_TEST_VARIANT=cloud)
+          fi
+          if [[ "$GPU_PROFILE" == "true" ]]; then
+            args+=(-POXRAY_GPU_PROFILE=true)
+          fi
+          ./gradlew "${args[@]}"
+
+      - name: Verify and name APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=engine/android/app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          mkdir -p out
+          cp "$apk" out/OLR-Android-arm64.apk
+          sha256sum out/OLR-Android-arm64.apk
+
+      - name: Upload downloadable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OLR-Android-arm64-${{ github.run_number }}
+          path: out/OLR-Android-arm64.apk
+          if-no-files-found: error
+          retention-days: 7
