@@ -60,7 +60,14 @@ material-specific difference.
 ## POINT and SPOT equations and transforms
 
 Primary C++ source:
-[LightPPA.cpp](https://github.com/OpenXRay/xray/blob/master/trunk/xr_3da/xrRender_R1/LightPPA.cpp).
+[LightPPA.cpp, active POINT implementation at line 144](https://github.com/OpenXRay/xray/blob/master/trunk/xr_3da/xrRender_R1/LightPPA.cpp#L144)
+and
+[active SPOT implementation at line 216](https://github.com/OpenXRay/xray/blob/master/trunk/xr_3da/xrRender_R1/LightPPA.cpp#L216).
+This is `OpenXRay/xray`, not `OpenXRay/xray-16`. The earlier `render_point`
+definition at line 47 is commented out; the second definition at line 144 is
+active. These functions are named `render_point` / `render_spot`, not
+`calculate_point` / `calculate_spot` in this reference. SPOT view/projection are
+at lines 240-241, texture adjustment at 245-255, and subspace submission at 266.
 Local OLR shader references: `r1/common.h`, `lmap_point.vs`, `lmap_spot.vs`,
 `add_point.ps`, `add_spot.ps`, and `r1/.s`.
 
@@ -148,7 +155,7 @@ not candidates for committing to the public source repository.
 ## Sector/subspace traversal
 
 Primary source:
-[r__dsgraph_render.cpp](https://github.com/OpenXRay/xray/blob/master/trunk/xr_3da/xrRender/r__dsgraph_render.cpp),
+[r__dsgraph_render.cpp, subspace implementation at line 439](https://github.com/OpenXRay/xray/blob/master/trunk/xr_3da/xrRender/r__dsgraph_render.cpp#L439),
 `r_dsgraph_render_subspace`, together with `LightPPA.cpp`.
 
 The original traversal increments the renderer marker, creates a frustum with

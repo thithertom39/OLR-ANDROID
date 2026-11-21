@@ -54,7 +54,7 @@ static void olr_r1_light_camera(const light& source, Fmatrix& combined, Fvector&
     }
     else
     {
-        // LightPPA::calculate_point's original top-down visibility volume.
+        // LightPPA::render_point's original top-down visibility volume.
         origin.y += 300.f;
         direction.set(0.f, -1.f, 0.f);
         up.set(0.f, 0.f, 1.f);
@@ -436,7 +436,7 @@ void __fastcall render_item(u32 context_id, const T& item)
             dsgraph.cmd_list.apply_lmaterial();
             if (native)
             {
-                // LightPPA::cl_light_PR and calculate_spot, including its
+                // LightPPA::cl_light_PR and render_spot, including its
                 // authored 32-texel half-texel convention (not DDS width).
                 pos.w = .5f / source->range;
                 if (source->flags.type == IRender_Light::SPOT)

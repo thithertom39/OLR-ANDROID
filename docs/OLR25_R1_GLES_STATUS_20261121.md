@@ -65,6 +65,27 @@ the GLES compiler entry point. Physical-device and CI results are recorded
 separately in the saved checkpoint report, without treating these host tests
 as device evidence.
 
+CI at `29a5df2575f4cbf38745fceaf391f4fd31335ab1` also
+[passed](https://github.com/thithertom39/OLR-ANDROID/actions/runs/44908650295).
+The downloaded artifact ZIP's SHA-256 matches GitHub's artifact digest.
+On SM-X710 / Android 16 / Adreno 740, the locally signed APK loaded the same
+Cordon save and produced gameplay frames in native, previous forward,
+previous multipass and ordinary R2 modes. Native camera/joystick inputs
+produced changed gameplay views. These are short smoke tests, not complete
+regression or PC-equivalence tests. Battery readings were 16.3-17.1 C during
+the recorded sessions, thermal status 0. Game was stopped and screen switched
+off after each session. Existing saves and restored user.ltx match their
+before-test SHA-256 hashes.
+
+The attempted cellar probe is **not** a passed test: the candidate coordinates
+did not locate the actual room, and some earlier probe frames were obscured
+by the Android console/IME. Flashlight and the specific cellar fixture still
+need a valid matching save/camera and device verification. Do not infer a
+renderer defect from the invalid below-terrain probe. No spawned test items
+or teleports were saved over user saves. `tools/tablet-r1-smoke.ps1` intentionally
+does not ship that unvalidated probe; it supports bounded launcher/gameplay
+captures, optional control input and thermal shutdown only.
+
 ## Diagnostic display
 
 Append `-olr_r1_debug=N` and restart the game. Normal mode is 0. These branches
