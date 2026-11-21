@@ -12,7 +12,15 @@ float Contrast(float Input, float ContrastPower)
      return Output;
 }
 
-#ifdef USE_SHOC_RESOURCES
+#ifdef OLR_R1_NATIVE
+void tonemap(out float4 low, out float4 high, float3 rgb, float scale)
+{
+    // Shared sky / legacy-material shaders must not reintroduce exposure.
+    // The native base and local-light programs do not call this function.
+    low = float4(rgb, 1.0);
+    high = float4(0.0);
+}
+#elif defined(USE_SHOC_RESOURCES)
 void tonemap( out float4 low, out float4 high, float3 rgb, float scale)
 {
         rgb	= rgb*scale;

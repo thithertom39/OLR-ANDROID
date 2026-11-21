@@ -127,7 +127,7 @@ c2_out _main( v2p_aa_AA I )
 			img 	= mblur( center, ( gbd ).P, img.rgb);
 #endif
 
-#ifdef 	USE_DISTORT
+#if defined(USE_DISTORT) && !defined(OLR_R1_NATIVE)
  	float3	blurred	= bloom.rgb*def_hdr	;
 			img		= lerp	(img,blurred,distort.z);
 #endif
