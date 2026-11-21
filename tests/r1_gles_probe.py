@@ -1,0 +1,410 @@
+#!/usr/bin/env python3
+"""Compile real R1 GLES sources and draw reference pixels with Mesa EGL.
+
+Run in WSL/Linux, e.g.:
+  python3 tests/r1_gles_probe.py --output logs/r1-gles-probe.json
+
+Uses only Python's standard library plus system libEGL/libGLESv2. It expands
+the repository's actual includes (including Windows separators), leaving GLSL
+conditionals to the real driver compiler. No replacement shader functions or
+mock GLES implementation are used. This is a software-driver correctness
+probe, not an Adreno/device test or a scene/visual parity test.
+"""
+
+import argparse
+import ctypes as C
+import ctypes.util
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import sys
+import traceback
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SHADERS = ROOT / "engine/res/olr/gamedata/shaders/gl"
+VARIANTS = ("", "_detail", "_vertex", "_vertex_detail", "_point", "_spot")
+SOURCES = {}
+
+
+def expand(path, stack=()):
+    """Engine-style include expansion, followed by driver preprocessing."""
+    path = path.resolve()
+    if path in stack:
+        raise RuntimeError("Recursive GLSL include: " + str(path))
+    raw = path.read_bytes()
+    SOURCES[str(path.relative_to(ROOT))] = hashlib.sha256(raw).hexdigest()
+    source = raw.decode("utf-8-sig")
+
+    def include(match):
+        name = match.group(1).replace("\\", "/")
+        local = path.parent / name
+        target = local if local.is_file() else SHADERS / name
+        if not target.is_file():
+            raise FileNotFoundError(f"GLSL include {name!r} from {path}")
+        return "\n" + expand(target, stack + (path,)) + "\n"
+
+    return re.sub(r'^\s*#\s*include\s+"([^"]+)"[^\n]*$', include,
+                  source, flags=re.MULTILINE)
+
+
+def shader_source(name, debug):
+    preamble = """#version 320 es
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp sampler3D;
+precision highp samplerCube;
+#define USE_SHOC_RESOURCES
+#define OLR_R1_NATIVE
+"""
+    return preamble + f"#define OLR_R1_DEBUG {debug}\n" + expand(SHADERS / name)
+
+
+def function(library, name, result, *arguments):
+    fn = getattr(library, name)
+    fn.restype = result
+    fn.argtypes = arguments
+    return fn
+
+
+class GLES:
+    def __init__(self):
+        os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+        os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
+        os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
+        self.egl = C.CDLL(ctypes.util.find_library("EGL") or "libEGL.so.1")
+        self.gl = C.CDLL(ctypes.util.find_library("GLESv2") or "libGLESv2.so.2")
+        ptr, integer, uint, floating = C.c_void_p, C.c_int, C.c_uint, C.c_float
+        self.get_error = function(self.egl, "eglGetError", uint)
+        get_display = function(self.egl, "eglGetDisplay", ptr, ptr)
+        initialize = function(self.egl, "eglInitialize", uint, ptr,
+                              C.POINTER(integer), C.POINTER(integer))
+        bind = function(self.egl, "eglBindAPI", uint, uint)
+        choose = function(self.egl, "eglChooseConfig", uint, ptr,
+                          C.POINTER(integer), C.POINTER(ptr), integer,
+                          C.POINTER(integer))
+        create_context = function(self.egl, "eglCreateContext", ptr, ptr, ptr,
+                                  ptr, C.POINTER(integer))
+        create_surface = function(self.egl, "eglCreatePbufferSurface", ptr,
+                                  ptr, ptr, C.POINTER(integer))
+        make_current = function(self.egl, "eglMakeCurrent", uint, ptr, ptr,
+                                ptr, ptr)
+        self.display = get_display(None)
+        major, minor = integer(), integer()
+        if not self.display or not initialize(self.display, C.byref(major), C.byref(minor)):
+            raise RuntimeError(f"eglInitialize failed: {self.get_error():#x}")
+        if not bind(0x30A0):  # EGL_OPENGL_ES_API
+            raise RuntimeError(f"eglBindAPI failed: {self.get_error():#x}")
+        attrs = (integer * 13)(0x3033, 1, 0x3040, 0x40,  # PBUFFER, ES3_BIT
+                               0x3024, 8, 0x3023, 8, 0x3022, 8, 0x3021, 8, 0x3038)
+        config, count = ptr(), integer()
+        if not choose(self.display, attrs, C.byref(config), 1, C.byref(count)) or count.value != 1:
+            raise RuntimeError(f"eglChooseConfig failed: {self.get_error():#x}")
+        ctx_attrs = (integer * 5)(0x3098, 3, 0x30FB, 2, 0x3038)
+        self.context = create_context(self.display, config, None, ctx_attrs)
+        surface_attrs = (integer * 5)(0x3057, 1, 0x3056, 1, 0x3038)
+        self.surface = create_surface(self.display, config, surface_attrs)
+        if not self.context or not self.surface or not make_current(
+                self.display, self.surface, self.surface, self.context):
+            raise RuntimeError(f"EGL ES 3.2 context failed: {self.get_error():#x}")
+
+        signatures = {
+            "glGetString": (C.c_char_p, uint),
+            "glGetError": (uint,),
+            "glCreateShader": (uint, uint),
+            "glShaderSource": (None, uint, integer, C.POINTER(C.c_char_p), C.POINTER(integer)),
+            "glCompileShader": (None, uint),
+            "glGetShaderiv": (None, uint, uint, C.POINTER(integer)),
+            "glGetShaderInfoLog": (None, uint, integer, C.POINTER(integer), ptr),
+            "glDeleteShader": (None, uint),
+            "glCreateProgram": (uint,),
+            "glAttachShader": (None, uint, uint),
+            "glLinkProgram": (None, uint),
+            "glGetProgramiv": (None, uint, uint, C.POINTER(integer)),
+            "glGetProgramInfoLog": (None, uint, integer, C.POINTER(integer), ptr),
+            "glUseProgram": (None, uint),
+            "glGetUniformLocation": (integer, uint, C.c_char_p),
+            "glUniform1i": (None, integer, integer),
+            "glUniform3f": (None, integer, floating, floating, floating),
+            "glUniform4f": (None, integer, floating, floating, floating, floating),
+            "glUniformMatrix4fv": (None, integer, integer, C.c_ubyte, C.POINTER(floating)),
+            "glGenTextures": (None, integer, C.POINTER(uint)),
+            "glBindTexture": (None, uint, uint),
+            "glTexParameteri": (None, uint, uint, integer),
+            "glTexImage2D": (None, uint, integer, integer, integer, integer, integer, uint, uint, ptr),
+            "glActiveTexture": (None, uint),
+            "glGenFramebuffers": (None, integer, C.POINTER(uint)),
+            "glBindFramebuffer": (None, uint, uint),
+            "glFramebufferTexture2D": (None, uint, uint, uint, uint, integer),
+            "glCheckFramebufferStatus": (uint, uint),
+            "glGenVertexArrays": (None, integer, C.POINTER(uint)),
+            "glBindVertexArray": (None, uint),
+            "glGenBuffers": (None, integer, C.POINTER(uint)),
+            "glBindBuffer": (None, uint, uint),
+            "glBufferData": (None, uint, C.c_ssize_t, ptr, uint),
+            "glVertexAttribPointer": (None, uint, integer, uint, C.c_ubyte, integer, ptr),
+            "glEnableVertexAttribArray": (None, uint),
+            "glVertexAttrib4f": (None, uint, floating, floating, floating, floating),
+            "glViewport": (None, integer, integer, integer, integer),
+            "glDisable": (None, uint),
+            "glEnable": (None, uint),
+            "glBlendFunc": (None, uint, uint),
+            "glClearColor": (None, floating, floating, floating, floating),
+            "glClear": (None, uint),
+            "glDrawArrays": (None, uint, integer, integer),
+            "glReadPixels": (None, integer, integer, integer, integer, uint, uint, ptr),
+            "glFinish": (None,),
+        }
+        for name, (result, *args) in signatures.items():
+            setattr(self, name, function(self.gl, name, result, *args))
+        self.info = {
+            "egl": f"{major.value}.{minor.value}",
+            "gl_version": self.glGetString(0x1F02).decode(),
+            "gl_renderer": self.glGetString(0x1F01).decode(),
+            "gl_vendor": self.glGetString(0x1F00).decode(),
+            "glsl": self.glGetString(0x8B8C).decode(),
+        }
+
+    def check(self, label):
+        error = self.glGetError()
+        if error:
+            raise RuntimeError(f"{label}: GL error {error:#x}")
+
+    def compile(self, stage, source):
+        shader = self.glCreateShader(stage)
+        raw = C.c_char_p(source.encode())
+        self.glShaderSource(shader, 1, C.byref(raw), None)
+        self.glCompileShader(shader)
+        status, length = C.c_int(), C.c_int()
+        self.glGetShaderiv(shader, 0x8B81, C.byref(status))
+        self.glGetShaderiv(shader, 0x8B84, C.byref(length))
+        log = C.create_string_buffer(max(1, length.value))
+        self.glGetShaderInfoLog(shader, len(log), None, log)
+        return shader, bool(status.value), log.value.decode(errors="replace")
+
+    def program(self, vertex, fragment):
+        vs, vok, vlog = self.compile(0x8B31, vertex)
+        ps, pok, plog = self.compile(0x8B30, fragment)
+        program = self.glCreateProgram()
+        self.glAttachShader(program, vs)
+        self.glAttachShader(program, ps)
+        self.glLinkProgram(program)
+        status, length = C.c_int(), C.c_int()
+        self.glGetProgramiv(program, 0x8B82, C.byref(status))
+        self.glGetProgramiv(program, 0x8B84, C.byref(length))
+        log = C.create_string_buffer(max(1, length.value))
+        self.glGetProgramInfoLog(program, len(log), None, log)
+        self.glDeleteShader(vs)
+        self.glDeleteShader(ps)
+        return program, {"vertex_compile": vok, "fragment_compile": pok,
+                         "link": bool(status.value), "vertex_log": vlog,
+                         "fragment_log": plog, "link_log": log.value.decode(errors="replace")}
+
+    def texture(self, pixel, width=1, height=1):
+        tex = C.c_uint()
+        self.glGenTextures(1, C.byref(tex))
+        self.glBindTexture(0x0DE1, tex.value)
+        if pixel is not None and len(pixel) != width * height * 4:
+            raise ValueError("RGBA8 texture fixture size does not match dimensions")
+        data = (C.c_ubyte * (width * height * 4))(*pixel) if pixel is not None else None
+        self.glTexImage2D(0x0DE1, 0, 0x8058, width, height, 0, 0x1908, 0x1401, data)
+        self.glTexParameteri(0x0DE1, 0x2801, 0x2601)  # LINEAR
+        self.glTexParameteri(0x0DE1, 0x2800, 0x2601)
+        self.glTexParameteri(0x0DE1, 0x2802, 0x812F)  # CLAMP_TO_EDGE
+        self.glTexParameteri(0x0DE1, 0x2803, 0x812F)
+        return tex.value
+
+    def draw_setup(self):
+        fbo = C.c_uint()
+        self.glGenFramebuffers(1, C.byref(fbo))
+        self.glBindFramebuffer(0x8D40, fbo.value)
+        self.target = self.texture(None)
+        self.glFramebufferTexture2D(0x8D40, 0x8CE0, 0x0DE1, self.target, 0)
+        if self.glCheckFramebufferStatus(0x8D40) != 0x8CD5:
+            raise RuntimeError("RGBA8 framebuffer incomplete")
+        vao, vbo = C.c_uint(), C.c_uint()
+        self.glGenVertexArrays(1, C.byref(vao))
+        self.glBindVertexArray(vao.value)
+        self.glGenBuffers(1, C.byref(vbo))
+        self.glBindBuffer(0x8892, vbo.value)
+        vertices = (C.c_float * 12)(-1, -1, 0, 1, 3, -1, 0, 1, -1, 3, 0, 1)
+        self.glBufferData(0x8892, C.sizeof(vertices), vertices, 0x88E4)
+        self.glVertexAttribPointer(3, 4, 0x1406, 0, 16, None)  # actual POSITION=3
+        self.glEnableVertexAttribArray(3)
+        self.glVertexAttrib4f(5, 1, .5, .5, .7)  # packed BGRA -> normal +Z
+        self.glVertexAttrib4f(4, 0, 0, 0, 0)
+        self.glVertexAttrib4f(6, 0, 0, 0, 0)
+        self.glVertexAttrib4f(8, 512, 512, 0, 1)
+        self.glVertexAttrib4f(9, 16384, 16384, 0, 1)
+        self.glVertexAttrib4f(0, .12, .10, .08, .3)
+        self.glViewport(0, 0, 1, 1)
+        for cap in (0x0B71, 0x0B44, 0x0BE2, 0x0BD0):  # depth,cull,blend,dither
+            self.glDisable(cap)
+        self.check("draw setup")
+
+    def use(self, program, textures):
+        self.glUseProgram(program)
+        loc = lambda name: self.glGetUniformLocation(program, name.encode())
+        identity = (C.c_float * 16)(1, 0, 0, 0, 0, 1, 0, 0,
+                                    0, 0, 1, 0, 0, 0, 0, 1)
+        self.glUniformMatrix4fv(loc("m_WVP"), 1, 0, identity)
+        self.glUniformMatrix4fv(loc("olr_r1_light_xform"), 1, 0, identity)
+        for name, value in {
+            "fog_plane": (0, 0, 0, 1), "fog_color": (0, 0, 0, 0),
+            "L_ambient": (.03, .04, .05, 0), "L_hemi_color": (.10, .15, .20, 0),
+            "dt_params": (1, 1, 0, 0), "olr_r1_dynamic_pos": (0, 0, 10, .05),
+            "olr_r1_dynamic_color": (.45, .45, .45, 1),
+        }.items():
+            self.glUniform4f(loc(name), *value)
+        self.glUniform3f(loc("L_sun_color"), .20, .15, .10)
+        self.glUniform3f(loc("L_sun_dir_w"), 0, 0, -1)
+        self.glUniform3f(loc("eye_position"), 0, 0, 0)
+        for unit, (name, pixel) in enumerate(textures.items()):
+            self.glActiveTexture(0x84C0 + unit)
+            self.texture(pixel)
+            self.glUniform1i(loc(name), unit)
+        self.check("program inputs")
+
+    def pixel(self, clear=True):
+        if clear:
+            self.glClearColor(0, 0, 0, 0)
+            self.glClear(0x4000)
+        self.glDrawArrays(0x0004, 0, 3)
+        self.glFinish()
+        result = (C.c_ubyte * 4)()
+        self.glReadPixels(0, 0, 1, 1, 0x1908, 0x1401, result)
+        self.check("draw/read RGBA8")
+        return list(result)
+
+
+def pixel_checks(gl, programs):
+    gl.draw_setup()
+    textures = {"s_base": (96, 128, 160, 51), "s_lmap": (20, 30, 40, 64),
+                "s_hemi": (32, 64, 96, 230), "s_detail": (90, 110, 130, 255)}
+    base = [x / 255 for x in textures["s_base"]]
+    lmap = [x / 255 for x in textures["s_lmap"]]
+    hemi = 64 / 255
+    ambient, sky, sun = (.03, .04, .05), (.1, .15, .2), (.2, .15, .1)
+    light = [ambient[i] / 1.5 + lmap[i] + sky[i] * .98 * hemi + sun[i] * lmap[3]
+             for i in range(3)]
+    expected = [2 * base[i] * light[i] for i in range(3)]
+    results = []
+
+    def record(label, actual, reference, tolerance=1):
+        rgba = [round(min(1, max(0, x)) * 255) for x in reference]
+        ok = all(abs(a - b) <= tolerance for a, b in zip(actual, rgba))
+        results.append({"name": label, "actual_rgba8": actual,
+                        "expected_rgba8": rgba, "tolerance_lsb": tolerance, "passed": ok})
+
+    gl.use(programs[("", 0)], textures)
+    record("lmap_original_formula_second_map_rgb_not_base_alpha", gl.pixel(), expected + [base[3]])
+    gl.use(programs[("_detail", 0)], textures)
+    detail = [x / 255 for x in textures["s_detail"]]
+    record("lmap_detail_modulation", gl.pixel(),
+           [expected[i] * 2 * detail[i] for i in range(3)] + [base[3]])
+
+    vertex_rgb = (.08, .10, .12)  # actual unpack_D3DCOLOR BGRA input
+    vertex_light = [vertex_rgb[i] + ambient[i] + sky[i] * .98 * .7 + sun[i] * .3
+                    for i in range(3)]
+    gl.use(programs[("_vertex", 0)], textures)
+    record("vertex_original_formula", gl.pixel(),
+           [base[i] * min(vertex_light[i], 1) * 2 for i in range(3)] + [base[3]])
+
+    # Draw the actual POINT program twice into an RGBA8 target. Constant lookup
+    # samples isolate real VS Gouraud lighting, base alpha and ONE+ONE saturation.
+    white = {"s_base": (255, 255, 255, 255), "s_lmap": (255, 255, 255, 255),
+             "s_r1_att": (255, 255, 255, 255)}
+    gl.use(programs[("_point", 0)], white)
+    gl.glEnable(0x0BE2)
+    gl.glBlendFunc(1, 1)
+    lambert = (.5 * 10 / math.sqrt(102) + .25 * 10 / math.sqrt(110)
+               + .25 * 10 / math.sqrt(110))
+    point = .45 * lambert * 2
+    first = gl.pixel()
+    record("point_gouraud_lookup_product", first, [point, point, point, 0])
+    record("additive_one_one_unorm_saturation", gl.pixel(clear=False), [1, 1, 1, 0])
+    gl.glDisable(0x0BE2)
+
+    # Nonconstant samplers make xy/w and the UNDIVIDED z coordinate observable
+    # independently. This intentionally specified homogeneous transform maps
+    # every vertex to s=(.5,1.5,.25,2): projector UV=(.25,.75), clip UV=(.25,.25).
+    # At the texel centers below, the 2x2 projector returns upper-left exactly;
+    # the 4x1 clip texture interpolates texels 0/1 equally. Dividing z by w would
+    # instead read texel 0. Omitting xy/w would read different projector RGB.
+    spot = programs[("_spot", 0)]
+    gl.use(spot, white)
+    gl.glActiveTexture(0x84C1)
+    gl.texture((12, 24, 36, 255, 48, 60, 72, 255,
+                64, 128, 192, 255, 192, 64, 32, 255), 2, 2)
+    gl.glActiveTexture(0x84C2)
+    gl.texture((64, 96, 128, 255, 192, 224, 255, 255,
+                10, 20, 30, 255, 210, 220, 230, 255), 4, 1)
+    xform_location = gl.glGetUniformLocation(spot, b"olr_r1_light_xform")
+    if xform_location < 0:
+        raise RuntimeError("Real SPOT transform uniform unexpectedly inactive")
+    xform = (C.c_float * 16)(0, 0, 0, 0, 0, 0, 0, 0,
+                              0, 0, 0, 0, .5, 1.5, .25, 2)
+    gl.glUniformMatrix4fv(xform_location, 1, 0, xform)
+    projector_rgb = (64 / 255, 128 / 255, 192 / 255)
+    clip_rgb = (128 / 255, 160 / 255, 191.5 / 255)
+    record("spot_projective_xy_over_w_and_unprojected_clip_z", gl.pixel(),
+           [point * projector_rgb[i] * clip_rgb[i] for i in range(3)] + [0])
+
+    # Preserve an explicit nonblack target to distinguish discard from a black
+    # output, which would still overwrite alpha and/or color without blending.
+    xform[15] = -2
+    gl.glUniformMatrix4fv(xform_location, 1, 0, xform)
+    sentinel = (17, 29, 43, 61)
+    gl.glClearColor(*(x / 255 for x in sentinel))
+    gl.glClear(0x4000)
+    record("spot_negative_projection_w_discards", gl.pixel(clear=False),
+           [x / 255 for x in sentinel], tolerance=0)
+    return results
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=ROOT / "logs/r1-gles-probe.json")
+    args = parser.parse_args()
+    report = {"description": "Real repository shader compile/link and RGBA8 pixel draws; software GLES, not device proof",
+              "defines": ["USE_SHOC_RESOURCES", "OLR_R1_NATIVE"],
+              "debug_values": list(range(7)), "compile_results": [], "pixel_results": []}
+    try:
+        gl = GLES()
+        report["environment"] = gl.info
+        programs = {}
+        for debug in range(7):
+            for variant in VARIANTS:
+                stem = "olr_r1_native" + variant
+                vertex, fragment = shader_source(stem + ".vs", debug), shader_source(stem + ".ps", debug)
+                program, result = gl.program(vertex, fragment)
+                result.update(variant=stem, debug=debug,
+                              vertex_expanded_sha256=hashlib.sha256(vertex.encode()).hexdigest(),
+                              fragment_expanded_sha256=hashlib.sha256(fragment.encode()).hexdigest())
+                report["compile_results"].append(result)
+                if all(result[key] for key in ("vertex_compile", "fragment_compile", "link")):
+                    programs[(variant, debug)] = program
+                else:
+                    print(json.dumps(result), file=sys.stderr)
+        if len(programs) == 42:
+            report["pixel_results"] = pixel_checks(gl, programs)
+        report["passed"] = len(programs) == 42 and bool(report["pixel_results"]) and all(
+            row["passed"] for row in report["pixel_results"])
+    except Exception:
+        report["error"] = traceback.format_exc()
+        report["passed"] = False
+        print(report["error"], file=sys.stderr)
+    report["source_sha256"] = dict(sorted(SOURCES.items()))
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"passed": report["passed"], "compiled_pairs": len(report["compile_results"]),
+                      "pixels": report["pixel_results"], "output": str(args.output)}, indent=2))
+    return 0 if report["passed"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

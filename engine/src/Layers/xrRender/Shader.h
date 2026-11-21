@@ -141,6 +141,7 @@ struct ECORE_API Shader : public xr_resource_flagged
     ref_selement olr_r1_lightmap;
     // Optional additive POINT/SPOT pass for the experimental forward R1 path.
     ref_selement olr_r1_lightmap_dynamic;
+    ref_selement olr_r1_lightmap_spot;
 #endif
     Shader() = default;
     ~Shader();

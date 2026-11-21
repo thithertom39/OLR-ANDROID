@@ -1,5 +1,12 @@
 # OLR 2.5 PC R1 vs Android GLES forward experiment
 
+> Historical comparison, corrected on 2026-11-21: the `impl.ps` observations
+> below are valid for that shader, but applying them to the level's `default`
+> materials was incorrect. Actual `shaders.xr`, level material strings and
+> `BlenderDefault` identify `default` as **lmap/lmap_dt**, using the second
+> hemisphere map and ambient/1.5. See `OLR25_R1_REFERENCE_20261121.md` and
+> `OLR25_R1_GLES_STATUS_20261121.md`. The old multipass remains an A/B baseline.
+
 This is a **source comparison**, not a claim of visual parity. The user supplied
 `shaders.zip` (unpacked original OLR 2.5 shaders) and `lvl1_escape.zip`
 (one full level directory) on 2026-11-18. **These third-party game assets

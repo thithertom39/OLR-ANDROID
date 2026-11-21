@@ -201,6 +201,9 @@ public:
     Shader* _cpp_Create(
         IBlender* B, LPCSTR s_shader = nullptr, LPCSTR s_textures = nullptr, LPCSTR s_constants = nullptr, LPCSTR s_matrices = nullptr);
     Shader* _lua_Create(LPCSTR s_shader, LPCSTR s_textures);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    void CompileOlrR1Native(Shader& shader, CBlender_Compile& compiler, bool vertexLit);
+#endif
     BOOL _lua_HasShader(LPCSTR s_shader);
 
     CResourceManager() : bDeferredLoad(TRUE)

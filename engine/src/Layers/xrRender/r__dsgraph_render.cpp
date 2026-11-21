@@ -8,10 +8,14 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "light.h"
 #include "xrRender_console.h"
+#include "olr_r1_mode.h"
 #include <cmath>
 #endif
 #include "SkeletonCustom.h"
 #include "FLOD.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "FHierrarhyVisual.h"
+#endif
 
 extern ENGINE_API float psHUD_FOV;
 
@@ -30,6 +34,102 @@ static bool olr_r1_multipass_enabled()
         strstr(Core.Params, "-olr_r1_multipass");
 }
 void olr_r1_forward_bind_visual_lights(CBackend& cmd_list, const Fsphere& bounds);
+
+static thread_local R_dsgraph_structure* g_olrR1LightContext = nullptr;
+static thread_local xr_map<const light*, xr_set<dxRender_Visual*>> g_olrR1LightVisuals;
+
+static void olr_r1_light_camera(const light& source, Fmatrix& combined, Fvector& origin)
+{
+    Fvector direction, up;
+    Fmatrix view, projection;
+    origin = source.position;
+    if (source.flags.type == IRender_Light::SPOT)
+    {
+        direction = source.direction;
+        direction.normalize();
+        up.set(0.f, 1.f, 0.f);
+        if (_abs(up.dotproduct(direction)) > .99f)
+            up.set(0.f, 0.f, 1.f);
+        projection.build_projection(source.cone, 1.f, .1f, source.range + EPS_S);
+    }
+    else
+    {
+        // LightPPA::render_point's original top-down visibility volume.
+        origin.y += 300.f;
+        direction.set(0.f, -1.f, 0.f);
+        up.set(0.f, 0.f, 1.f);
+        projection.build_projection(deg2rad(2.f), 1.f, 300.f - source.range, 300.f + source.range);
+    }
+    view.build_camera_dir(origin, direction, up);
+    combined.mul(projection, view);
+}
+
+static void olr_r1_collect_light_visuals(dxRender_Visual* visual, const CFrustum& frustum,
+    u32 mask, xr_set<dxRender_Visual*>& visible)
+{
+    auto& bounds = visual->vis;
+    if (frustum.testSAABB(bounds.sphere.P, bounds.sphere.R, bounds.box.data(), mask) == fcvNone)
+        return;
+    switch (visual->Type)
+    {
+    case MT_HIERRARHY:
+    case MT_LOD:
+        for (auto* child : static_cast<FHierrarhyVisual*>(visual)->children)
+            olr_r1_collect_light_visuals(child, frustum, mask, visible);
+        break;
+    case MT_SKELETON_ANIM:
+    case MT_SKELETON_RIGID:
+        for (auto* child : static_cast<CKinematics*>(visual)->children)
+            olr_r1_collect_light_visuals(child, frustum, mask, visible);
+        break;
+    default:
+        visible.insert(visual);
+        break;
+    }
+}
+
+static bool olr_r1_light_reaches_visual(const light& source, dxRender_Visual* visual)
+{
+    if (!g_olrR1LightContext)
+        return false;
+    auto& graph = *g_olrR1LightContext;
+    auto found = g_olrR1LightVisuals.find(&source);
+    if (found == g_olrR1LightVisuals.end())
+    {
+        auto& visible = g_olrR1LightVisuals[&source];
+        auto sector = source.spatial.sector_id;
+        if (sector == IRender_Sector::INVALID_SECTOR_ID)
+            sector = graph.detect_sector(source.position);
+        if (sector == IRender_Sector::INVALID_SECTOR_ID || sector >= graph.Sectors.size())
+            return false;
+        Fmatrix combined;
+        Fvector origin;
+        olr_r1_light_camera(source, combined, origin);
+        CFrustum frustum;
+        frustum.CreateFromMatrix(combined, FRUSTUM_P_ALL);
+        // These sectors/portals belong to a separately allocated CPU context.
+        // Never overwrite the camera traversal or another shadow worker's lists.
+        for (auto* portal : graph.Portals)
+            portal->bDualRender = FALSE;
+        if (source.flags.type == IRender_Light::SPOT && RImplementation.rmPortals)
+        {
+            Fvector radius;
+            radius.set(EPS_L * 20.f, EPS_L * 20.f, EPS_L * 20.f);
+            graph.Sectors_xrc.box_query(CDB::OPT_FULL_TEST, RImplementation.rmPortals, origin, radius);
+            for (size_t i = 0; i < graph.Sectors_xrc.r_count(); ++i)
+            {
+                const auto portalId = RImplementation.rmPortals->get_tris()[graph.Sectors_xrc.r_begin()[i].id].dummy;
+                graph.Portals[portalId]->bDualRender = TRUE;
+            }
+        }
+        graph.PortalTraverser.traverse(graph.Sectors[sector], frustum, origin, combined, 0);
+        for (auto* reached : graph.PortalTraverser.r_sectors)
+            for (const auto& clipped : reached->r_frustums)
+                olr_r1_collect_light_visuals(reached->root(), clipped, clipped.getMask(), visible);
+        found = g_olrR1LightVisuals.find(&source);
+    }
+    return found->second.find(visual) != found->second.end();
+}
 #endif
 
 extern float r_ssaHZBvsTEX;
@@ -299,10 +399,15 @@ void __fastcall render_item(u32 context_id, const T& item)
             // r1_dlights_clip is not a hard cutoff at the light's own radius:
             // the original R1 fades contribution by camera-to-light volume
             // distance and lets users increase this budget.
-            const float clipDistance = Device.vCameraPosition.distance_to(source->position) - source->range;
+            const bool native = olr_r1_native_enabled();
+            const float clipDistance = native
+                ? Device.vCameraPosition.distance_to(source->spatial.sphere.P) - source->spatial.sphere.R
+                : Device.vCameraPosition.distance_to(source->position) - source->range;
             const float clipRange = _max(ps_r1_dlights_clip, EPS_L);
             const float lightScale = clampr(1.f - clipDistance / clipRange, 0.f, 1.f);
             if (lightScale <= EPS_L)
+                return;
+            if (native && !olr_r1_light_reaches_visual(*source, V))
                 return;
 
             Fvector4 pos, direction, color;
@@ -321,8 +426,33 @@ void __fastcall render_item(u32 context_id, const T& item)
                 direction.set(dir.x, dir.y, dir.z, std::cos(source->cone * 0.5f));
             }
 
+            if (native && source->flags.type == IRender_Light::SPOT)
+                extra = V->shader->olr_r1_lightmap_spot._get();
+            else
+                extra = V->shader->olr_r1_lightmap_dynamic._get();
+            if (!extra)
+                return;
             dsgraph.cmd_list.set_Element(extra);
             dsgraph.cmd_list.apply_lmaterial();
+            if (native)
+            {
+                // LightPPA::cl_light_PR and render_spot, including its
+                // authored 32-texel half-texel convention (not DDS width).
+                pos.w = .5f / source->range;
+                if (source->flags.type == IRender_Light::SPOT)
+                {
+                    Fmatrix combined, xform;
+                    Fvector origin;
+                    olr_r1_light_camera(*source, combined, origin);
+                    const Fmatrix adjust = {
+                        .5f, 0.f, 0.f, 0.f,
+                        0.f, -.5f, 0.f, 0.f,
+                        0.f, 0.f, 1.f / source->range, 0.f,
+                        .5f + .5f / 32.f, .5f + .5f / 32.f, 0.f, 1.f};
+                    xform.mul(adjust, combined);
+                    dsgraph.cmd_list.set_c("olr_r1_light_xform", xform);
+                }
+            }
             dsgraph.cmd_list.set_c("olr_r1_dynamic_pos", pos);
             dsgraph.cmd_list.set_c("olr_r1_dynamic_dir", direction);
             dsgraph.cmd_list.set_c("olr_r1_dynamic_color", color);
@@ -465,7 +595,9 @@ void R_dsgraph_structure::render_olr_r1_lightmaps()
         return;
 
     static const bool logged = [] {
-        if (strstr(Core.Params, "-olr_r1_forward"))
+        if (olr_r1_native_enabled())
+            Msg("* OLR R1 native: lmap/vertex base, original POINT/SPOT lookup, portal subspace, RGBA8 ONE+ONE; models/special materials remain deferred");
+        else if (strstr(Core.Params, "-olr_r1_forward"))
             Msg("* OLR R1 forward: rendering eligible static lightmapped geometry directly; dynamic geometry remains deferred");
         else
             Msg("* OLR R1 lightmaps: add baked light via %s; R2 dynamic lights preserved",
@@ -475,7 +607,21 @@ void R_dsgraph_structure::render_olr_r1_lightmaps()
     (void)logged;
     const bool previous = g_olrR1ForwardVisualPass;
     g_olrR1ForwardVisualPass = Core.Params && strstr(Core.Params, "-olr_r1_forward");
+    u32 lightContextId = R_dsgraph_structure::INVALID_CONTEXT_ID;
+    if (olr_r1_native_enabled())
+    {
+        g_olrR1LightVisuals.clear(); // moving/switched lights need a fresh subspace every frame.
+        lightContextId = RImplementation.alloc_context(false);
+        if (lightContextId != R_dsgraph_structure::INVALID_CONTEXT_ID)
+            g_olrR1LightContext = &RImplementation.get_context(lightContextId);
+        else
+            Msg("! OLR R1 native: no CPU context for light subspace traversal");
+    }
     sort_front_to_back_render_and_clean(context_id, mapOlrR1Lightmaps);
+    if (lightContextId != R_dsgraph_structure::INVALID_CONTEXT_ID)
+        RImplementation.release_context(lightContextId);
+    g_olrR1LightContext = nullptr;
+    g_olrR1LightVisuals.clear();
     g_olrR1ForwardVisualPass = previous;
 }
 #endif

@@ -12,7 +12,15 @@ float Contrast(float Input, float ContrastPower)
      return Output;
 }
 
-#ifdef USE_SHOC_RESOURCES
+#ifdef OLR_R1_NATIVE
+void tonemap(out float4 low, out float4 high, float3 rgb, float scale)
+{
+    // Shared sky / legacy-material shaders must not reintroduce exposure.
+    // The native base and local-light programs do not call this function.
+    low = float4(rgb, 1.0);
+    high = float4(0.0);
+}
+#elif defined(USE_SHOC_RESOURCES)
 void tonemap( out float4 low, out float4 high, float3 rgb, float scale)
 {
         rgb	= rgb*scale;
@@ -35,7 +43,12 @@ void tonemap( out float4 low, out float4 high, float3 rgb, float scale)
 
 float4 combine_bloom( float3  low, float4 high)	
 {
+#ifdef OLR_R1_NATIVE
+    // Original R1 target is UNORM; do not add R2 HDR/bloom a second time.
+    return float4(low, 1.0);
+#else
 	return float4( low + high.rgb*high.a, 1.0 );
+#endif
 }
 
 float calc_fogging( float4 w_pos )      

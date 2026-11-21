@@ -6,6 +6,9 @@
 #include <cstring>
 #endif
 #include "Layers/xrRender/dxEnvironmentRender.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRender/olr_r1_mode.h"
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "Layers/xrRenderGL/glGpuProfiler.h"
 #endif
@@ -334,7 +337,11 @@ void CRenderTarget::phase_combine()
 
     //	Igor: for volumetric lights
     //	combine light volume here
-    if (m_bHasActiveVolumetric)
+    if (m_bHasActiveVolumetric
+#if defined(XR_PLATFORM_ANDROID)
+        && !olr_r1_native_enabled()
+#endif
+        )
         phase_combine_volumetric();
 
     // Perform blooming filter and distortion if needed
@@ -352,7 +359,10 @@ void CRenderTarget::phase_combine()
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
         GLGpuProfiler::Scope bloomScope(GLGpuProfiler::Stage::BloomLuminance);
 #endif
-        phase_bloom(); // HDR RT invalidated here
+#if defined(XR_PLATFORM_ANDROID)
+        if (!olr_r1_native_enabled())
+#endif
+            phase_bloom(); // R1 has no HDR bloom or exposure adaptation.
     }
 
     // RImplementation.rmNormal();

@@ -58,6 +58,13 @@ Workflow: [Build OLR Android APK](../.github/workflows/android-apk.yml)
 
 ## Experimental original-R1-style multi-pass lighting (WIP)
 
+The 2026-11-21 follow-up adds `-olr_r1_native` on top of both flags below.
+It implements original lookup POINT/SPOT, lmap/vertex base materials and
+direct UNORM additive color. See `OLR25_R1_REFERENCE_20261121.md` for the
+corrected material identification and remaining renderer gaps. The older
+forward and multipass experiments remain available for A/B tests.
+This remains an incomplete R1 port; NDK/CI success is not a visual test.
+
 This work-in-progress path is independent of the existing single-pass R1-forward prototype. Enable it **only** with both `-olr_r1_forward -olr_r1_multipass` on the OLR renderer. Omitting the second flag preserves the previous, tested R1-forward behavior.
 
 - Base opaque world lightmapped geometry is drawn once from baked lightmap + ambient/hemi/sun.

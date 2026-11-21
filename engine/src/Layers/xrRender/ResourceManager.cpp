@@ -11,9 +11,69 @@
 #include "tss.h"
 #include "Blender.h"
 #include "Blender_Recorder.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "olr_r1_mode.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool vertexLit)
+{
+    // Original BlenderDefault/Blender_Vertex: lmap[_dt] / vert[_dt].
+    // impl[_dt] is the separate implicit-lightmap material, not B_DEFAULT.
+    bool diffuseDetail = false, bumpDetail = false;
+    C.detail_texture = nullptr;
+    C.detail_scaler = nullptr;
+    const bool hasDetail = m_textures_description.GetDetailTexture(
+        C.L_textures[0], C.detail_texture, C.detail_scaler);
+    m_textures_description.GetTextureUsage(C.L_textures[0], diffuseDetail, bumpDetail);
+    const bool detail = hasDetail && diffuseDetail && C.detail_texture && C.detail_scaler;
+    pcstr vs = vertexLit ? (detail ? "olr_r1_native_vertex_detail" : "olr_r1_native_vertex") :
+        (detail ? "olr_r1_native_detail" : "olr_r1_native");
+    ShaderElement base;
+    C.SH = &base;
+    C.RS.Invalidate();
+    C.SetParams(S.E[0]->flags.iPriority, false);
+    C.r_Pass(vs, vs, FALSE, TRUE, TRUE, FALSE);
+    C.r_Sampler("s_base", C.L_textures[0]);
+    if (!vertexLit)
+    {
+        C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+        C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+    }
+    if (detail)
+        C.r_Sampler("s_detail", C.detail_texture);
+    C.r_End();
+    S.olr_r1_lightmap = _CreateElement(std::move(base));
+
+    for (bool spot : {false, true})
+    {
+        ShaderElement additive;
+        C.SH = &additive;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        pcstr dynamic = spot ? "olr_r1_native_spot" : "olr_r1_native_point";
+        C.r_Pass(dynamic, dynamic, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
+        C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
+        C.r_ColorWriteEnable(true, true, true, false);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        C.r_Sampler_clf("s_lmap", spot ? "internal\\internal_light_att" : "internal\\internal_light_attpoint");
+        C.r_Sampler_clf("s_r1_att", spot ? "internal\\internal_light_attclip" : "internal\\internal_light_attpoint");
+        // add_point / add_spot intentionally have no detail modulation.
+        C.r_End();
+        if (spot)
+            S.olr_r1_lightmap_spot = _CreateElement(std::move(additive));
+        else
+            S.olr_r1_lightmap_dynamic = _CreateElement(std::move(additive));
+    }
+    static u32 logged = 0;
+    if (logged++ < 8)
+        Msg("* OLR R1 native: %s material '%s', detail=%u, original lookup POINT/SPOT, direct UNORM color",
+            vertexLit ? "vertex" : "lightmap", C.L_textures[0].c_str(), unsigned(detail));
+}
+#endif
+
 //	Already defined in Texture.cpp
 void fix_texture_name(pstr fn);
 /*
@@ -240,6 +300,8 @@ Shader* CResourceManager::_cpp_Create(
         ShaderElement E;
         C._cpp_Compile(&E);
         S.olr_r1_lightmap = _CreateElement(std::move(E));
+        if (olr_r1_native_enabled() && S.E[0])
+            CompileOlrR1Native(S, C, blenderClass == B_VERT);
     }
 #endif
 
