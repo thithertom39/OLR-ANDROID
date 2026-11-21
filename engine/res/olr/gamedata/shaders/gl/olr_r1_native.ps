@@ -88,7 +88,11 @@ void main()
     color *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
 #endif
 #if OLR_R1_DEBUG == 0
+#ifdef OLR_R1_SCENE
+    color = mix(fog_color.rgb, color, saturate(fog_visibility));
+#else
     color = mix(fog_color.rgb, color, fog_visibility);
+#endif
 #endif
     out_color = float4(color, base.a);
 #endif

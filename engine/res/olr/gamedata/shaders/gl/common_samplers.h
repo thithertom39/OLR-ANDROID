@@ -48,14 +48,14 @@ Texture2D 	s_dn_a;                	//
 
 //uniform sampler2D       s_depth;                //
 #ifdef USE_MSAA
-#if defined(GL_ES) && defined(OXR_HIGH_PRECISION_POSITION)
+#if defined(GL_ES) && (defined(OXR_HIGH_PRECISION_POSITION) || defined(OLR_R1_SCENE))
 uniform highp sampler2DMS s_position;
 #else
 Texture2DMS	s_position;	//	smp_nofilter or Load
 #endif
 Texture2DMS	s_normal;	//	smp_nofilter or Load
 #else
-#if defined(GL_ES) && defined(OXR_HIGH_PRECISION_POSITION)
+#if defined(GL_ES) && (defined(OXR_HIGH_PRECISION_POSITION) || defined(OLR_R1_SCENE))
 uniform highp sampler2D s_position;
 #else
 Texture2D	s_position;	//	smp_nofilter or Load

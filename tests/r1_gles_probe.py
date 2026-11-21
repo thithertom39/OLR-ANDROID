@@ -51,7 +51,7 @@ def expand(path, stack=()):
                   source, flags=re.MULTILINE)
 
 
-def shader_source(name, debug):
+def shader_source(name, debug, scene=False, vtf=False):
     preamble = """#version 320 es
 precision highp float;
 precision highp int;
@@ -61,7 +61,8 @@ precision highp samplerCube;
 #define USE_SHOC_RESOURCES
 #define OLR_R1_NATIVE
 """
-    return preamble + f"#define OLR_R1_DEBUG {debug}\n" + expand(SHADERS / name)
+    options = ("#define OLR_R1_SCENE\n" if scene else "") + ("#define USE_VTF\n" if vtf else "")
+    return preamble + options + f"#define OLR_R1_DEBUG {debug}\n" + expand(SHADERS / name)
 
 
 def function(library, name, result, *arguments):
@@ -246,6 +247,18 @@ class GLES:
             self.glDisable(cap)
         self.check("draw setup")
 
+    def cube(self, unit, pixel):
+        tex = C.c_uint()
+        self.glActiveTexture(0x84C0 + unit)
+        self.glGenTextures(1, C.byref(tex))
+        self.glBindTexture(0x8513, tex.value)
+        data = (C.c_ubyte * 4)(*pixel)
+        for face in range(6):
+            self.glTexImage2D(0x8515 + face, 0, 0x8058, 1, 1, 0, 0x1908, 0x1401, data)
+        for key, value in ((0x2801, 0x2601), (0x2800, 0x2601),
+                           (0x2802, 0x812F), (0x2803, 0x812F), (0x8072, 0x812F)):
+            self.glTexParameteri(0x8513, key, value)
+
     def use(self, program, textures):
         self.glUseProgram(program)
         loc = lambda name: self.glGetUniformLocation(program, name.encode())
@@ -390,9 +403,77 @@ def main():
                     programs[(variant, debug)] = program
                 else:
                     print(json.dumps(result), file=sys.stderr)
-        if len(programs) == 42:
+        legacy_ok = len(programs) == 42
+        if legacy_ok:
             report["pixel_results"] = pixel_checks(gl, programs)
-        report["passed"] = len(programs) == 42 and bool(report["pixel_results"]) and all(
+        scene_programs = {}
+        for debug in range(7):
+            for variant in VARIANTS:
+                stem = "olr_r1_native" + variant
+                program, result = gl.program(shader_source(stem + ".vs", debug, scene=True),
+                                             shader_source(stem + ".ps", debug, scene=True))
+                result.update(variant=stem, debug=debug, scene=True)
+                report["compile_results"].append(result)
+                if all(result[key] for key in ("vertex_compile", "fragment_compile", "link")):
+                    scene_programs[(variant, debug)] = program
+                else:
+                    print(json.dumps(result), file=sys.stderr)
+        scene_ok = len(scene_programs) == 42
+        if scene_ok:
+            # Existing light/material equations must survive the scene variant.
+            rows = pixel_checks(gl, scene_programs)
+            for row in rows:
+                row["name"] = "scene_" + row["name"]
+            report["pixel_results"].extend(rows)
+            gl.glDisable(0x0BE2)
+            gl.use(scene_programs[("", 0)], {"s_base": (0, 0, 0, 255),
+                   "s_lmap": (0, 0, 0, 0), "s_hemi": (0, 0, 0, 0)})
+            program = scene_programs[("", 0)]
+            gl.glUniform4f(gl.glGetUniformLocation(program, b"fog_plane"), 1, 0, 0, .6)
+            gl.glUniform4f(gl.glGetUniformLocation(program, b"fog_color"), .2, .4, .6, 0)
+            actual = gl.pixel()
+            expected = [round(v * .4 * 255) for v in (.2, .4, .6)] + [255]
+            report["pixel_results"].append(dict(name="scene_fog_interpolate_before_clamp",
+                actual_rgba8=actual, expected_rgba8=expected,
+                passed=all(abs(a-b) <= 1 for a, b in zip(actual, expected))))
+        environment_ok = True
+        for stem in ("sky2", "clouds"):
+            for vtf in (False, True):
+                _, result = gl.program(shader_source(stem + ".vs", 0, True, vtf),
+                                       shader_source(stem + ".ps", 0, True, vtf))
+                result.update(variant=stem, scene=True, vtf=vtf)
+                report["compile_results"].append(result)
+                environment_ok &= all(result[key] for key in ("vertex_compile", "fragment_compile", "link"))
+                if not environment_ok:
+                    print(json.dumps(result), file=sys.stderr)
+        for stem, varyings, expected, textures in (
+            ("sky2", "layout(location=0) out vec4 c; layout(location=8) out vec3 t0; "
+             "layout(location=9) out vec3 t1; void main(){gl_Position=p; "
+             "c=vec4(.2,.3,.4,.25); t0=t1=vec3(0,0,1);}",
+             [2 * f * ((1-.25)*a + .25*b) / 255 for f,a,b in
+              zip((.2,.3,.4),(64,96,128),(128,160,192))] + [1],
+             {"s_sky0": (64,96,128,255), "s_sky1": (128,160,192,255)}),
+            ("clouds", "layout(location=0) out vec4 c; layout(location=8) out vec2 t0; "
+             "layout(location=9) out vec2 t1; void main(){gl_Position=p; "
+             "c=vec4(.2,.3,.4,.5); t0=t1=vec2(.5);}",
+             [f*(a+b)/255 for f,a,b in zip((.2,.3,.4,.5),
+                (64,96,128,32),(128,160,192,64))],
+             {"s_clouds0": (64,96,128,32), "s_clouds1": (128,160,192,64)})):
+            vertex = "#version 320 es\nprecision highp float; layout(location=3) in vec4 p; " + varyings
+            program, result = gl.program(vertex, shader_source(stem+".ps", 0, True))
+            if not all(result[key] for key in ("vertex_compile", "fragment_compile", "link")):
+                raise RuntimeError(f"{stem} pixel fixture: {result}")
+            gl.use(program, {} if stem == "sky2" else textures)
+            if stem == "sky2":
+                for unit, (name, pixel) in enumerate(textures.items()):
+                    gl.cube(unit, pixel)
+                    gl.glUniform1i(gl.glGetUniformLocation(program, name.encode()), unit)
+            actual = gl.pixel()
+            expected = [round(min(1,x)*255) for x in expected]
+            report["pixel_results"].append(dict(name="scene_"+stem+"_original_color_alpha",
+                actual_rgba8=actual, expected_rgba8=expected,
+                passed=all(abs(a-b) <= 1 for a,b in zip(actual,expected))))
+        report["passed"] = legacy_ok and scene_ok and environment_ok and bool(report["pixel_results"]) and all(
             row["passed"] for row in report["pixel_results"])
     except Exception:
         report["error"] = traceback.format_exc()

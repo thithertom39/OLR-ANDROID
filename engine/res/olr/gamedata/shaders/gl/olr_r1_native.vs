@@ -38,7 +38,12 @@ void main()
     float3 normal = unpack_normal(normal_packed);
     base_uv = unpack_tc_base(vertex_uv, unpack_D3DCOLOR(vertex_tangent).w,
         unpack_D3DCOLOR(vertex_binormal).w);
+#if defined(OLR_R1_SCENE) && !defined(OLR_R1_LOCAL)
+    // Preserve the vertex fog output until rasterization, as r1/lmap.vs.
+    fog_visibility = calc_fogging(vertex_position);
+#else
     fog_visibility = saturate(calc_fogging(vertex_position));
+#endif
     gl_Position = mul(m_WVP, vertex_position);
 #ifdef OLR_R1_LOCAL
     // OLR r1/common.h calc_point/calc_spot: calculate Gouraud light at

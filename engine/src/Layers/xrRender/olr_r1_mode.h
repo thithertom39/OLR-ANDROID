@@ -9,3 +9,10 @@ inline bool olr_r1_native_enabled()
         strstr(Core.Params, "-olr_r1_native");
     return enabled;
 }
+
+// Progressive scene-material port. Keep the 2026-11-21 hybrid selectable for A/B.
+inline bool olr_r1_scene_enabled()
+{
+    static const bool enabled = olr_r1_native_enabled() && strstr(Core.Params, "-olr_r1_scene");
+    return enabled;
+}

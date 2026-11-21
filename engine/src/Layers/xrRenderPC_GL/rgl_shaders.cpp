@@ -325,6 +325,8 @@ HRESULT CRender::shader_compile(pcstr name, IReader* fs, pcstr pFunctionName,
     const bool nativeR1 = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward") &&
         strstr(Core.Params, "-olr_r1_multipass") && strstr(Core.Params, "-olr_r1_native");
     appendShaderOption(nativeR1 ? 1u : 0u, "OLR_R1_NATIVE", "1");
+    const bool sceneR1 = nativeR1 && strstr(Core.Params, "-olr_r1_scene");
+    appendShaderOption(sceneR1 ? 1u : 0u, "OLR_R1_SCENE", "1");
     // Diagnostic branches and samples compile away in the normal variant.
     u32 r1Debug = 0;
     if (nativeR1)
