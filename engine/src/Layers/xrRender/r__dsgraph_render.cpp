@@ -8,6 +8,7 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "light.h"
 #include "xrRender_console.h"
+#include "olr_r1_mode.h"
 #include <cmath>
 #endif
 #include "SkeletonCustom.h"
@@ -299,7 +300,10 @@ void __fastcall render_item(u32 context_id, const T& item)
             // r1_dlights_clip is not a hard cutoff at the light's own radius:
             // the original R1 fades contribution by camera-to-light volume
             // distance and lets users increase this budget.
-            const float clipDistance = Device.vCameraPosition.distance_to(source->position) - source->range;
+            const bool native = olr_r1_native_enabled();
+            const float clipDistance = native
+                ? Device.vCameraPosition.distance_to(source->spatial.sphere.P) - source->spatial.sphere.R
+                : Device.vCameraPosition.distance_to(source->position) - source->range;
             const float clipRange = _max(ps_r1_dlights_clip, EPS_L);
             const float lightScale = clampr(1.f - clipDistance / clipRange, 0.f, 1.f);
             if (lightScale <= EPS_L)
@@ -321,8 +325,40 @@ void __fastcall render_item(u32 context_id, const T& item)
                 direction.set(dir.x, dir.y, dir.z, std::cos(source->cone * 0.5f));
             }
 
+            if (native && source->flags.type == IRender_Light::SPOT)
+                extra = V->shader->olr_r1_lightmap_spot._get();
+            else
+                extra = V->shader->olr_r1_lightmap_dynamic._get();
+            if (!extra)
+                return;
             dsgraph.cmd_list.set_Element(extra);
             dsgraph.cmd_list.apply_lmaterial();
+            if (native)
+            {
+                // LightPPA::cl_light_PR and calculate_spot, including its
+                // authored 32-texel half-texel convention (not DDS width).
+                pos.w = .5f / source->range;
+                if (source->flags.type == IRender_Light::SPOT)
+                {
+                    Fvector dir = source->direction;
+                    dir.normalize();
+                    Fvector up;
+                    up.set(0.f, 1.f, 0.f);
+                    if (_abs(up.dotproduct(dir)) > .99f)
+                        up.set(0.f, 0.f, 1.f);
+                    Fmatrix view, projection, combined, xform;
+                    view.build_camera_dir(source->position, dir, up);
+                    projection.build_projection(source->cone, 1.f, .1f, source->range + EPS_S);
+                    const Fmatrix adjust = {
+                        .5f, 0.f, 0.f, 0.f,
+                        0.f, -.5f, 0.f, 0.f,
+                        0.f, 0.f, 1.f / source->range, 0.f,
+                        .5f + .5f / 32.f, .5f + .5f / 32.f, 0.f, 1.f};
+                    combined.mul(projection, view);
+                    xform.mul(adjust, combined);
+                    dsgraph.cmd_list.set_c("olr_r1_light_xform", xform);
+                }
+            }
             dsgraph.cmd_list.set_c("olr_r1_dynamic_pos", pos);
             dsgraph.cmd_list.set_c("olr_r1_dynamic_dir", direction);
             dsgraph.cmd_list.set_c("olr_r1_dynamic_color", color);

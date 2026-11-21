@@ -5,6 +5,9 @@
 #include "tss.h"
 #include "Blender.h"
 #include "Blender_Recorder.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "olr_r1_mode.h"
+#endif
 #include "xrScriptEngine/script_engine.hpp"
 #include "xrScriptEngine/script_space.hpp"
 #include "xrCore/Threading/ScopeLock.hpp"
@@ -17,6 +20,62 @@
 
 namespace xray::render::RENDER_NAMESPACE
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool vertexLit)
+{
+    // Original BlenderDefault/Blender_Vertex: lmap[_dt] / vert[_dt].
+    // impl[_dt] is the separate implicit-lightmap material, not B_DEFAULT.
+    bool diffuseDetail = false, bumpDetail = false;
+    C.detail_texture = nullptr;
+    C.detail_scaler = nullptr;
+    const bool hasDetail = m_textures_description.GetDetailTexture(
+        C.L_textures[0], C.detail_texture, C.detail_scaler);
+    m_textures_description.GetTextureUsage(C.L_textures[0], diffuseDetail, bumpDetail);
+    const bool detail = hasDetail && diffuseDetail && C.detail_texture && C.detail_scaler;
+    pcstr vs = vertexLit ? (detail ? "olr_r1_native_vertex_detail" : "olr_r1_native_vertex") :
+        (detail ? "olr_r1_native_detail" : "olr_r1_native");
+    ShaderElement base;
+    C.SH = &base;
+    C.RS.Invalidate();
+    C.SetParams(S.E[0]->flags.iPriority, false);
+    C.r_Pass(vs, vs, FALSE, TRUE, TRUE, FALSE);
+    C.r_Sampler("s_base", C.L_textures[0]);
+    if (!vertexLit)
+    {
+        C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+        C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+    }
+    if (detail)
+        C.r_Sampler("s_detail", C.detail_texture);
+    C.r_End();
+    S.olr_r1_lightmap = _CreateElement(std::move(base));
+
+    for (bool spot : {false, true})
+    {
+        ShaderElement additive;
+        C.SH = &additive;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        pcstr dynamic = spot ? "olr_r1_native_spot" : "olr_r1_native_point";
+        C.r_Pass(dynamic, dynamic, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
+        C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
+        C.r_ColorWriteEnable(true, true, true, false);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        C.r_Sampler_clf("s_lmap", spot ? "internal\\internal_light_att" : "internal\\internal_light_attpoint");
+        C.r_Sampler_clf("s_r1_att", spot ? "internal\\internal_light_attclip" : "internal\\internal_light_attpoint");
+        // add_point / add_spot intentionally have no detail modulation.
+        C.r_End();
+        if (spot)
+            S.olr_r1_lightmap_spot = _CreateElement(std::move(additive));
+        else
+            S.olr_r1_lightmap_dynamic = _CreateElement(std::move(additive));
+    }
+    static u32 logged = 0;
+    if (logged++ < 8)
+        Msg("* OLR R1 native: %s material '%s', detail=%u, original lookup POINT/SPOT, direct UNORM color",
+            vertexLit ? "vertex" : "lightmap", C.L_textures[0].c_str(), unsigned(detail));
+}
+#endif
 // wrapper
 class adopt_sampler
 {
@@ -418,10 +477,11 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
     // lightmapped materials, never alpha-tested / transparent Lua shaders.
     static const bool olrR1Forward = Core.Params && strstr(Core.Params, "-olr ") &&
         strstr(Core.Params, "-olr_r1_forward");
-    if (olrR1Forward && xr_stricmp(s_shader, "default") == 0 &&
-        C.L_textures.size() == 3 &&
-        strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 &&
-        strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0 &&
+    const bool nativeVertex = olr_r1_native_enabled() && xr_stricmp(s_shader, "def_vertex") == 0;
+    const bool defaultLightmap = xr_stricmp(s_shader, "default") == 0 &&
+        C.L_textures.size() == 3 && strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 &&
+        strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0;
+    if (olrR1Forward && (defaultLightmap || nativeVertex) &&
         S.E[0] &&
         S.E[0]->flags.iPriority < 2 &&
         !S.E[0]->flags.bStrictB2F &&
@@ -429,6 +489,10 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
         !S.E[0]->flags.bDistort &&
         !S.E[0]->flags.bWmark)
     {
+        if (olr_r1_native_enabled())
+            CompileOlrR1Native(S, C, nativeVertex);
+        else
+        {
         // Build an additional, standalone GLES program; the original Lua
         // shader elements remain available as the deferred fallback.
         // Do not call _cpp_Compile(): there is no C++ blender attached here.
@@ -491,6 +555,7 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
         if (S.olr_r1_lightmap && logged++ < 8)
             Msg("* OLR R1 forward: compiled Lua default lightmap material '%s' (detail=%u)",
                 C.L_textures[0].c_str(), unsigned(useDetail));
+        }
     }
 #endif
 

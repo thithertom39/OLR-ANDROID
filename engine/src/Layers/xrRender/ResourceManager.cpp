@@ -11,6 +11,9 @@
 #include "tss.h"
 #include "Blender.h"
 #include "Blender_Recorder.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "olr_r1_mode.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -240,6 +243,8 @@ Shader* CResourceManager::_cpp_Create(
         ShaderElement E;
         C._cpp_Compile(&E);
         S.olr_r1_lightmap = _CreateElement(std::move(E));
+        if (olr_r1_native_enabled() && S.E[0])
+            CompileOlrR1Native(S, C, blenderClass == B_VERT);
     }
 #endif
 

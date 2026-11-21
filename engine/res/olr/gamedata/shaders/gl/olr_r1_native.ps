@@ -1,0 +1,95 @@
+#include "common.h"
+
+layout(location = TEXCOORD0) in float2 base_uv;
+layout(location = FOG) in float fog_visibility;
+layout(location = 0) out float4 out_color;
+#ifdef OLR_R1_LOCAL
+Texture2D s_r1_att;
+layout(location = COLOR0) in float3 local_color;
+layout(location = TEXCOORD1) in float4 attenuation_uv;
+layout(location = TEXCOORD2) in float2 clip_uv;
+#else
+layout(location = COLOR0) in float3 hemi_light;
+layout(location = COLOR1) in float3 sun_light;
+#ifdef OLR_R1_VERTEX
+layout(location = TEXCOORD1) in float3 baked_vertex;
+#else
+layout(location = TEXCOORD1) in float2 lightmap_uv;
+#endif
+#ifdef OLR_R1_DETAIL
+layout(location = TEXCOORD3) in float2 detail_uv;
+layout(location = TEXCOORD4) in float2 detail_weights;
+#endif
+#endif
+
+void main()
+{
+    float4 base = tex2D(s_base, base_uv);
+#ifdef OLR_R1_LOCAL
+#ifdef OLR_R1_SPOT
+    if (attenuation_uv.w <= 0.0)
+        discard;
+    float4 projector = tex2D(s_lmap, attenuation_uv.xy / attenuation_uv.w);
+#else
+    float4 projector = tex2D(s_lmap, attenuation_uv.xy);
+#endif
+    float4 attenuation = tex2D(s_r1_att, clip_uv);
+    // PS1.x COLOR input is clamped after interpolation. add_point/spot
+    // multiply base alpha and double RGB; detail applies only to the base.
+    float3 color = base.rgb * base.a * projector.rgb * attenuation.rgb *
+        saturate(local_color) * 2.0;
+#if OLR_R1_DEBUG == 1 || OLR_R1_DEBUG == 2
+    color = float3(0.0);
+#elif OLR_R1_DEBUG == 3
+#ifdef OLR_R1_SPOT
+    color = float3(0.0);
+#endif
+#elif OLR_R1_DEBUG == 4
+#ifndef OLR_R1_SPOT
+    color = float3(0.0);
+#endif
+#elif OLR_R1_DEBUG == 5
+    color = projector.rgb * attenuation.rgb;
+#elif OLR_R1_DEBUG == 6
+#ifdef OLR_R1_SPOT
+    color = projector.rgb;
+#else
+    color = float3(0.0);
+#endif
+#endif
+    // Direct ONE+ONE into RGBA8, as original R1. No exposure/delta/tone map.
+    out_color = float4(color, 0.0);
+#else
+#ifdef OLR_R1_VERTEX
+    float3 baked = baked_vertex;
+    float3 ambient_hemi = L_ambient.rgb + hemi_light;
+    float3 sunlight = sun_light;
+#else
+    float4 lmap = tex2D(s_lmap, lightmap_uv);
+    float3 baked = lmap.rgb;
+    // B_DEFAULT is lmap[_dt], NOT impl[_dt]. Preserve the second map RGB.
+    float3 hemi_map = tex2D(s_hemi, lightmap_uv).rgb;
+    float3 ambient_hemi = L_ambient.rgb / 1.5 + saturate(hemi_light) * dot(hemi_map, float3(1.0 / 3.0));
+    float3 sunlight = saturate(sun_light) * lmap.a;
+#endif
+    float3 light = baked + ambient_hemi + sunlight;
+#ifdef OLR_R1_VERTEX
+    light = saturate(light); // vert.vs writes the combined light to COLOR0.
+#endif
+    float3 color = base.rgb * light * 2.0;
+#if OLR_R1_DEBUG == 1
+    color = base.rgb * baked * 2.0;
+#elif OLR_R1_DEBUG == 2
+    color = base.rgb * ambient_hemi * 2.0;
+#elif OLR_R1_DEBUG >= 3
+    color = float3(0.0);
+#endif
+#ifdef OLR_R1_DETAIL
+    color *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+#endif
+#if OLR_R1_DEBUG == 0
+    color = mix(fog_color.rgb, color, fog_visibility);
+#endif
+    out_color = float4(color, base.a);
+#endif
+}

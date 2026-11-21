@@ -35,7 +35,12 @@ void tonemap( out float4 low, out float4 high, float3 rgb, float scale)
 
 float4 combine_bloom( float3  low, float4 high)	
 {
+#ifdef OLR_R1_NATIVE
+    // Original R1 target is UNORM; do not add R2 HDR/bloom a second time.
+    return float4(low, 1.0);
+#else
 	return float4( low + high.rgb*high.a, 1.0 );
+#endif
 }
 
 float calc_fogging( float4 w_pos )      
