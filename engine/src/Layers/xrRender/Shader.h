@@ -144,6 +144,7 @@ struct ECORE_API Shader : public xr_resource_flagged
     // Optional additive POINT/SPOT pass for the experimental forward R1 path.
     ref_selement olr_r1_lightmap_dynamic;
     ref_selement olr_r1_lightmap_spot;
+    int olr_r1_alpha_ref = -1; // authored 0..255 threshold; -1 means no alpha test
 #endif
     Shader() = default;
     ~Shader();

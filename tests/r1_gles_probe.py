@@ -26,7 +26,8 @@ import traceback
 
 ROOT = Path(__file__).resolve().parents[1]
 SHADERS = ROOT / "engine/res/olr/gamedata/shaders/gl"
-VARIANTS = ("", "_detail", "_vertex", "_vertex_detail", "_point", "_spot", "_implicit_detail")
+VARIANTS = ("", "_detail", "_vertex", "_vertex_detail", "_point", "_spot", "_implicit_detail",
+            "_aref", "_detail_aref", "_vertex_aref", "_vertex_detail_aref", "_point_aref", "_spot_aref")
 SOURCES = {}
 
 
@@ -358,6 +359,20 @@ def pixel_checks(gl, programs):
     gl.glUniform4f(gl.glGetUniformLocation(implicit,b"dt_params"),1,1,0,100)
     record("olr_implicit_detail_remains_at_distance",gl.pixel(),implicit_rgb+[1])
     gl.glVertexAttrib4f(8,512,512,0,1)
+
+    for variant in ("_aref", "_detail_aref", "_vertex_aref", "_vertex_detail_aref", "_point_aref", "_spot_aref"):
+        for threshold in (0,32,200,255):
+            for alpha in sorted({threshold, min(threshold+1,255)}):
+                program=programs[(variant,0)]
+                gl.use(program,dict(textures,s_base=(96,128,160,alpha),s_r1_att=(255,255,255,255)))
+                gl.glUniform4f(gl.glGetUniformLocation(program,b"olr_r1_alpha_ref"),threshold,0,0,0)
+                sentinel=(17,29,43,61)
+                gl.glClearColor(*(v/255 for v in sentinel))
+                gl.glClear(0x4000)
+                actual=gl.pixel(clear=False)
+                discarded=actual==list(sentinel)
+                results.append(dict(name=f"aref{variant}_ref{threshold}_alpha{alpha}",
+                    actual_rgba8=actual,expected_discard=alpha<=threshold,passed=discarded==(alpha<=threshold)))
 
     # Nonconstant samplers make xy/w and the UNDIVIDED z coordinate observable
     # independently. This intentionally specified homogeneous transform maps

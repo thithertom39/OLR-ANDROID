@@ -3,6 +3,9 @@
 layout(location = TEXCOORD0) in float2 base_uv;
 layout(location = FOG) in float fog_visibility;
 layout(location = 0) out float4 out_color;
+#ifdef OLR_R1_AREF
+uniform float4 olr_r1_alpha_ref;
+#endif
 #ifdef OLR_R1_LOCAL
 Texture2D s_r1_att;
 layout(location = COLOR0) in float3 local_color;
@@ -25,6 +28,11 @@ layout(location = TEXCOORD4) in float2 detail_weights;
 void main()
 {
     float4 base = tex2D(s_base, base_uv);
+#ifdef OLR_R1_AREF
+    // D3D's authored integer GREATER test, including the exact 8-bit boundary.
+    // Both the base and additive passes use the same source reference.
+    if (floor(base.a * 255.0 + 0.5) <= olr_r1_alpha_ref.x) discard;
+#endif
 #ifdef OLR_R1_TREE
     // Original tree blender: main tree alpha reference 200, rigid LOD 0;
     // additional lights reference 0, with exactly the same deformed depth.

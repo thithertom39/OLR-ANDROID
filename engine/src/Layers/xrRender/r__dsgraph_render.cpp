@@ -445,6 +445,8 @@ void __fastcall render_item(u32 context_id, const T& item)
         dsgraph.cmd_list.apply_lmaterial();
     hud_transform_helper::apply_custom_state(dsgraph.cmd_list);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (g_olrR1ForwardVisualPass && V->shader->olr_r1_alpha_ref >= 0)
+        dsgraph.cmd_list.set_c("olr_r1_alpha_ref", float(V->shader->olr_r1_alpha_ref), 0.f, 0.f, 0.f);
     // Must run after set_Element/apply_lmaterial: CBackend may cache the
     // previous shader and does not automatically rebind local light data.
     if (g_olrR1ForwardVisualPass && !olr_r1_multipass_enabled())
@@ -544,6 +546,8 @@ void __fastcall render_item(u32 context_id, const T& item)
             if (!extra)
                 return;
             dsgraph.cmd_list.set_Element(extra);
+            if (V->shader->olr_r1_alpha_ref >= 0)
+                dsgraph.cmd_list.set_c("olr_r1_alpha_ref", float(V->shader->olr_r1_alpha_ref), 0.f, 0.f, 0.f);
             if (!cachedStatic)
                 dsgraph.cmd_list.apply_lmaterial();
             if (native)

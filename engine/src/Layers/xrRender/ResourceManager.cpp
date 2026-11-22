@@ -16,13 +16,14 @@
 #include "blenders/Blender_tree.h"
 #include "blenders/Blender_detail_still.h"
 #include "blenders/Blender_BmmD.h"
+#include "blenders/blender_deffer_aref.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool vertexLit,
-    bool implicit, pcstr detailOverride)
+    bool implicit, pcstr detailOverride, int alphaRef)
 {
     // Original BlenderDefault/Blender_Vertex: lmap[_dt] / vert[_dt].
     // impl[_dt] is the separate implicit-lightmap material, not B_DEFAULT.
@@ -40,22 +41,30 @@ void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool v
     if (implicit) C.detail_texture = detailOverride;
     pcstr vs = implicit ? "olr_r1_native_implicit_detail" : vertexLit ? (detail ? "olr_r1_native_vertex_detail" : "olr_r1_native_vertex") :
         (detail ? "olr_r1_native_detail" : "olr_r1_native");
-    ShaderElement base;
-    C.SH = &base;
-    C.RS.Invalidate();
-    C.SetParams(S.E[0]->flags.iPriority, false);
-    C.r_Pass(vs, vs, FALSE, TRUE, TRUE, FALSE);
-    C.r_Sampler("s_base", C.L_textures[0]);
-    if (!vertexLit)
+    const auto compileBase = [&](pcstr stem, bool withDetail)
     {
-        if (implicit) C.r_Sampler("s_lmap", C.L_textures[1]);
-        else C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
-        if (!implicit) C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
-    }
-    if (detail)
-        C.r_Sampler("s_detail", C.detail_texture);
-    C.r_End();
-    S.olr_r1_lightmap = _CreateElement(std::move(base));
+        string128 shaderName;
+        strconcat(sizeof(shaderName), shaderName, stem, alphaRef >= 0 ? "_aref" : "");
+        ShaderElement base;
+        C.SH = &base;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        C.r_Pass(shaderName, shaderName, FALSE, TRUE, TRUE, FALSE);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        if (!vertexLit)
+        {
+            if (implicit) C.r_Sampler("s_lmap", C.L_textures[1]);
+            else C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+            if (!implicit) C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        }
+        if (withDetail) C.r_Sampler("s_detail", C.detail_texture);
+        C.r_End();
+        return ref_selement(_CreateElement(std::move(base)));
+    };
+    S.olr_r1_lightmap = compileBase(vs, detail);
+    S.olr_r1_alpha_ref = alphaRef;
+    if (alphaRef >= 0 && detail)
+        S.olr_r1_lightmap_lq = compileBase(vertexLit ? "olr_r1_native_vertex" : "olr_r1_native", false);
 
     for (bool spot : {false, true})
     {
@@ -64,6 +73,7 @@ void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool v
         C.RS.Invalidate();
         C.SetParams(S.E[0]->flags.iPriority, false);
         pcstr dynamic = spot ? "olr_r1_native_spot" : "olr_r1_native_point";
+        if (alphaRef >= 0) dynamic = spot ? "olr_r1_native_spot_aref" : "olr_r1_native_point_aref";
         C.r_Pass(dynamic, dynamic, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
         C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
         C.r_ColorWriteEnable(true, true, true, false);
@@ -406,6 +416,16 @@ Shader* CResourceManager::_cpp_Create(
     }
     if (olr_r1_scene_enabled() && blenderClass == B_BmmD && S.E[0] && C.L_textures.size() >= 2)
         CompileOlrR1Native(S, C, false, true, static_cast<CBlender_BmmD*>(B)->detailTexture());
+    if (olr_r1_scene_enabled() && (blenderClass == B_DEFAULT_AREF || blenderClass == B_VERT_AREF) && S.E[0])
+    {
+        const auto* aref = static_cast<CBlender_deffer_aref*>(B);
+        const bool vertex = !aref->lmapped;
+        // Blended surfaces retain their existing ordering/fallback. Only
+        // depth-writing alpha-tested materials enter the opaque native queue.
+        if (!aref->oBlend.value && (vertex || (C.L_textures.size() == 3 &&
+            strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 && strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0)))
+            CompileOlrR1Native(S, C, vertex, false, nullptr, aref->oAREF.value);
+    }
     if (olr_r1_scene_enabled() && blenderClass == B_TREE && S.E[0])
     {
         const auto* tree = static_cast<CBlender_Tree*>(B);
