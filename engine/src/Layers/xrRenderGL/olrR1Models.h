@@ -1,5 +1,6 @@
 #pragma once
 class IRenderable;
+class ISpatial;
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -10,6 +11,8 @@ struct R_dsgraph_structure;
 namespace OlrR1Models
 {
 void BeginCollect();
+void Observe(IRenderable* object, ISpatial* spatial);
+ISpatial* SpatialOf(IRenderable* object);
 bool Collect(IRenderable* object);
 void CalculateProjector();
 void CaptureModels(R_dsgraph_structure& graph);

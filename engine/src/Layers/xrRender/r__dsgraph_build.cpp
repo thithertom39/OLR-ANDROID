@@ -1095,6 +1095,10 @@ void R_dsgraph_structure::build_subspace([[maybe_unused]] LocalShadowStaticCache
                             break; // exit loop on frustums
 
                         // update light-vis for selected entity
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                        if (OlrR1Pipeline::Independent())
+                            OlrR1Models::Observe(renderable,spatial);
+#endif
                         if (o_it == uID_LTRACK && renderable->renderable_ROS())
                         {
                             // track lighting environment

@@ -7,6 +7,7 @@
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
 #include "xrEngine/xr_object.h"
+#include "olrR1Models.h"
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -32,7 +33,8 @@ void CROS_impl::update_original_r1(IRenderable* object)
     if (dwFrame == Device.dwFrame) return;
     dwFrame = Device.dwFrame;
     if (!object || !object->GetRenderData().visual) return;
-    auto* gameObject = dynamic_cast<IGameObject*>(object);
+    auto* spatial = OlrR1Models::SpatialOf(object);
+    auto* gameObject = spatial ? spatial->dcast_GameObject() : dynamic_cast<IGameObject*>(object);
     const auto& sphere = object->GetRenderData().visual->getVisData().sphere;
     Fvector position;
     object->GetRenderData().xform.transform_tiny(position, sphere.P);

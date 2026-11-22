@@ -8,6 +8,7 @@
 #include "Layers/xrRender/LightTrack.h"
 #include "Layers/xrRender/Blender_Recorder.h"
 #include "Layers/xrRender/xrRender_console.h"
+#include <mutex>
 
 namespace xray::render::RENDER_NAMESPACE::OlrR1Models
 {
@@ -29,6 +30,8 @@ struct Projector : pureAppActivate
     ref_rt atlas, depth;
     std::array<Slot, slotCount> cache{};
     xr_vector<IRenderable*> receivers;
+    xr_map<IRenderable*,ISpatial*> spatialOwners;
+    std::mutex spatialMutex;
     bool registered = false;
     void OnAppActivate() override
     {
@@ -69,11 +72,47 @@ void Capture()
 }
 }
 
-void BeginCollect() { projector.receivers.clear(); }
+void BeginCollect()
+{
+    projector.receivers.clear();
+    std::lock_guard<std::mutex> lock(projector.spatialMutex);
+    projector.spatialOwners.clear();
+}
+
+void Observe(IRenderable* object, ISpatial* spatial)
+{
+    // The visibility query already provides this exact association through
+    // ISpatial::dcast_Renderable. Cross-library RTTI fails for these Android
+    // game objects; do not replace their real sector by an invented one.
+    std::lock_guard<std::mutex> lock(projector.spatialMutex);
+    projector.spatialOwners[object]=spatial;
+}
+
+ISpatial* SpatialOf(IRenderable* object)
+{
+    std::lock_guard<std::mutex> lock(projector.spatialMutex);
+    const auto found=projector.spatialOwners.find(object);
+    return found!=projector.spatialOwners.end() ? found->second : dynamic_cast<ISpatial*>(object);
+}
 unsigned Receivers() { return unsigned(projector.receivers.size()); }
 
 bool Collect(IRenderable* object)
 {
+    static const bool diagnose = Core.Params && strstr(Core.Params,"-olr_r1_projector_capture");
+    static unsigned reports = 0;
+    if (diagnose && reports++ < 12)
+    {
+        auto* visual=object ? object->GetRenderData().visual : nullptr;
+        Fvector center; center.set(0,0,0);
+        if (visual) object->GetRenderData().xform.transform_tiny(center,visual->getVisData().sphere.P);
+        const float radius=visual ? visual->getVisData().sphere.R : 0;
+        auto* spatial=SpatialOf(object);
+        Msg("* [olr_r1_projector_select] root=%u visual=%u receive=%u invisible=%u R=%f D=%f limit=%f spatial=%u sector=%u camera=%f,%f,%f frame=%u",
+            unsigned(object!=nullptr),unsigned(visual!=nullptr),unsigned(object && object->renderable_ShadowReceive()),
+            unsigned(object && object->renderable_Invisible()),radius,center.distance_to(Device.vCameraPosition)+radius,
+            clipDistance*radius,unsigned(spatial!=nullptr),spatial ? spatial->GetSpatialData().sector_id : u32(-1),
+            Device.vCameraPosition.x,Device.vCameraPosition.y,Device.vCameraPosition.z,Device.dwFrame);
+    }
     if (!object || !object->GetRenderData().visual || !object->renderable_ShadowReceive() || object->renderable_Invisible())
         return false;
     auto* ros = static_cast<CROS_impl*>(object->renderable_ROS());
@@ -86,7 +125,7 @@ bool Collect(IRenderable* object)
     object->GetRenderData().xform.transform_tiny(center, sphere.P);
     if (!_valid(sphere.R) || sphere.R*1.1f <= EPS_L || center.distance_to(Device.vCameraPosition)+sphere.R >= clipDistance*sphere.R)
         return false;
-    auto* spatial = dynamic_cast<ISpatial*>(object);
+    auto* spatial = SpatialOf(object);
     if (!spatial) return false;
     auto& graph = RImplementation.get_imm_context();
     if (spatial->GetSpatialData().type & STYPEFLAG_INVALIDSECTOR)
@@ -177,7 +216,7 @@ void CalculateProjector()
         box.vMax.set(slot.center.x+radius,slot.center.y,slot.center.z+radius);
         slot.clampMin.set(box.vMin).add(.05f);
         slot.clampMax.set(box.vMax).sub(.05f);
-        auto* spatial = dynamic_cast<ISpatial*>(object);
+        auto* spatial = SpatialOf(object);
         graph.render_R1_box(spatial->GetSpatialData().sector_id, box, SE_R1_LMODELS);
         ++updated;
     }
@@ -222,6 +261,7 @@ void Destroy()
     projector.registered = false;
     projector.atlas.destroy(); projector.depth.destroy();
     projector.receivers.clear();
+    { std::lock_guard<std::mutex> lock(projector.spatialMutex); projector.spatialOwners.clear(); }
     for (auto& slot : projector.cache) slot = Slot{};
 }
 
