@@ -1,5 +1,9 @@
+.github/gradle-central-mirror.init.gradle
+.github/workflows/android-apk.yml
 R1_CONTINUE_20261122.md
 R1_PAUSED_20261122.md
+docs/OLR25_R1_MODELS_PROJECTOR_20261122.md
+docs/OLR25_R1_MODELS_PROJECTOR_CHANGED_FILES_20261122.txt
 engine/res/olr/gamedata/shaders/gl/olr_r1_model.ps
 engine/res/olr/gamedata/shaders/gl/olr_r1_model.vs
 engine/res/olr/gamedata/shaders/gl/olr_r1_model_hq.ps
@@ -18,6 +22,7 @@ engine/res/olr/gamedata/shaders/gl/olr_r1_model_spot.ps
 engine/res/olr/gamedata/shaders/gl/olr_r1_model_spot.vs
 engine/res/olr/gamedata/shaders/gl/olr_r1_model_spot_aref.ps
 engine/res/olr/gamedata/shaders/gl/olr_r1_model_spot_aref.vs
+engine/res/olr/gamedata/shaders/gl/olr_r1_native.ps
 engine/res/olr/gamedata/shaders/gl/olr_r1_projector.ps
 engine/res/olr/gamedata/shaders/gl/olr_r1_projector.vs
 engine/res/olr/gamedata/shaders/gl/olr_r1_projector_implicit.ps
@@ -40,3 +45,4 @@ engine/src/Layers/xrRenderPC_GL/CMakeLists.txt
 engine/src/Layers/xrRender_R2/r2_R_calculate.cpp
 tests/r1_gles_probe.py
 tests/r1_model_probe.py
+tools/r1-capture-inspect.py

@@ -1,5 +1,11 @@
 # Native R1 model/projector checkpoint, 22 November 2026
 
+Update 23 November: see OLR25_R1_MODEL_LOCAL_RGBA_20261123.md for code 3576b19
+and current APK. CI 45070235018 below subsequently SUCCEEDED; its archive/APK
+was downloaded and hash-verified. The alpha gap noted below describes the old
+7280d31 checkpoint; model-local RGBA shaders are now ported, runtime LightPPA
+and non-model alpha/compositing coverage still require completion.
+
 Repository: R:/project/OLR-R1-parity, branch feature/olr-r1-gles-parity-20261121.
 Draft PR: https://github.com/thithertom39/OLR-ANDROID/pull/8.
 Full independent R1 goal remains active and incomplete. This is a component checkpoint.
