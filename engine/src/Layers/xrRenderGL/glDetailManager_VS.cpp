@@ -222,10 +222,10 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
         if (nativeR1DetailPass && !ported) continue;
         const bool mainPhase = RImplementation.get_context(cmd_list.context_id).o.phase == CRender::PHASE_NORMAL;
         if (!nativeR1DetailPass && ported && olr_r1_scene_enabled() && mainPhase) continue;
-        const auto& element = nativeR1DetailPass ? (lod_id == 0 ?
+        auto& element = nativeR1DetailPass ? (lod_id == 0 ?
             Object.shader->olr_r1_detail_wave : Object.shader->olr_r1_detail_still) : Object.shader->E[lod_id];
 #else
-        const auto& element = Object.shader->E[lod_id];
+        auto& element = Object.shader->E[lod_id];
 #endif
         xr_vector<SlotItemVec*>& vis = list [O];
         if (!vis.empty())
