@@ -76,6 +76,7 @@ extern ECORE_API Flags32 ps_r__common_flags;
 extern ECORE_API float ps_r1_ssaLOD_A;
 extern ECORE_API float ps_r1_ssaLOD_B;
 extern ECORE_API float ps_r1_lmodel_lerp;
+extern ECORE_API float ps_r1_dhemi_scale;
 extern ECORE_API float ps_r1_dlights_clip;
 extern ECORE_API float ps_r1_pps_u;
 extern ECORE_API float ps_r1_pps_v;

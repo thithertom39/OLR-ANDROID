@@ -166,6 +166,8 @@ float ps_r1_ssaLOD_A = 64.f;
 float ps_r1_ssaLOD_B = 48.f;
 Flags32 ps_r1_flags = {R1FLAG_DLIGHTS}; // r1-only
 float ps_r1_lmodel_lerp = 0.1f;
+// Original R1 ROS used r2_dhemi_scale=1, independently of R2's sky/cube model.
+float ps_r1_dhemi_scale = 1.f;
 float ps_r1_dlights_clip = 40.f;
 float ps_r1_pps_u = 0.f;
 float ps_r1_pps_v = 0.f;
@@ -794,6 +796,7 @@ void xrRender_initconsole()
     CMD4(CCC_Float, "r1_ssa_lod_a", &ps_r1_ssaLOD_A, 16, 96);
     CMD4(CCC_Float, "r1_ssa_lod_b", &ps_r1_ssaLOD_B, 16, 64);
     CMD4(CCC_Float, "r1_lmodel_lerp", &ps_r1_lmodel_lerp, 0, 0.333f);
+    CMD4(CCC_Float, "r1_dhemi_scale", &ps_r1_dhemi_scale, .5f, 3.f);
     CMD3(CCC_Mask, "r1_dlights", &ps_r1_flags, R1FLAG_DLIGHTS);
     CMD4(CCC_Float, "r1_dlights_clip", &ps_r1_dlights_clip, 10.f, 150.f);
     CMD4(CCC_Float, "r1_pps_u", &ps_r1_pps_u, -1.f, +1.f);

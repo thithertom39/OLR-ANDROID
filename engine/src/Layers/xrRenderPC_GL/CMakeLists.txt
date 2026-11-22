@@ -9,6 +9,7 @@ endif()
 target_sources(xrRender_GL PRIVATE
     ../xrRenderGL/olrR1Pipeline.cpp
     ../xrRenderGL/olrR1Pipeline.h
+    ../xrRenderGL/olrR1ObjectLighting.cpp
     gl_rendertarget_accum_direct.cpp
     gl_rendertarget_build_textures.cpp
     gl_rendertarget.h

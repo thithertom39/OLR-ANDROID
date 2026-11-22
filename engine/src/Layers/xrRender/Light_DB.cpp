@@ -70,7 +70,11 @@ void CLight_DB::Load(IReader* fs)
 #if RENDER == R_R1
                 L->set_shadow(false);
 #else
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                L->set_shadow(!OlrR1Pipeline::Independent());
+#else
                 L->set_shadow(true);
+#endif
 #endif
                 L->set_active(true);
 
@@ -86,6 +90,10 @@ void CLight_DB::Load(IReader* fs)
 #if RENDER != R_R1
 void CLight_DB::LoadHemi()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+        return; // R1 ROS traces actual level lights, not R2 build.lights proxies.
+#endif
     string_path fn_game;
     if (FS.exist(fn_game, "$level$", "build.lights"))
     {
@@ -168,7 +176,7 @@ void CLight_DB::add_light(light* L)
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     if (OlrR1Pipeline::Independent())
     {
-        if (L->flags.bStatic || strstr(Core.Params, "-nodlights")) return;
+        if (L->flags.bStatic || !ps_r1_flags.test(R1FLAG_DLIGHTS) || strstr(Core.Params, "-nodlights")) return;
         // The package is just a shared container here. Do not create R2
         // shadow cubemap faces, GI photons or atlas work for original R1.
         if (L->flags.type == IRender_Light::POINT) package.v_point.push_back(L);
