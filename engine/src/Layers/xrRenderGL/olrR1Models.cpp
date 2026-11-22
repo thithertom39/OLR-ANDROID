@@ -344,7 +344,7 @@ void Compile(CBlender_Compile& compiler, bool blend, unsigned alphaRef)
     {
         compiler.r_Pass(program,program,FALSE,TRUE,FALSE,TRUE,D3DBLEND_ONE,D3DBLEND_ONE);
         compiler.RS.SetRS(D3DRS_ZFUNC,D3DCMP_EQUAL);
-        compiler.r_ColorWriteEnable(true,true,true,false);
+        compiler.r_ColorWriteEnable(true,true,true,true);
     }
     else
         compiler.r_Pass(program,program,FALSE,TRUE,TRUE,blend,D3DBLEND_SRCALPHA,D3DBLEND_INVSRCALPHA);

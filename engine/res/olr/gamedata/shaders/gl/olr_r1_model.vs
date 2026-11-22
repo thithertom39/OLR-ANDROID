@@ -15,7 +15,7 @@ layout(location = FOG) out float fog_visibility;
 #ifdef OLR_R1_LOCAL
 uniform float4 olr_r1_dynamic_pos, olr_r1_dynamic_color;
 uniform float4x4 olr_r1_light_xform;
-layout(location = COLOR0) out float3 local_color;
+layout(location = COLOR0) out float4 local_color;
 layout(location = TEXCOORD1) out float4 attenuation_uv;
 layout(location = TEXCOORD2) out float2 clip_uv;
 #else
@@ -83,7 +83,7 @@ void main()
     fog_visibility = saturate(fog_visibility);
     float3 delta = position-olr_r1_dynamic_pos.xyz;
     float3 ray = delta*inversesqrt(max(dot(delta,delta),1e-12));
-    local_color = olr_r1_dynamic_color.rgb*dot(normal,-ray)*fog_visibility;
+    local_color = olr_r1_dynamic_color*dot(normal,-ray)*fog_visibility;
 #ifdef OLR_R1_SPOT
     float4 projected = mul(olr_r1_light_xform,float4(position,1.0));
     attenuation_uv = projected.xyww;

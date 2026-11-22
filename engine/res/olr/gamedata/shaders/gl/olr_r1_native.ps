@@ -8,7 +8,11 @@ uniform float4 olr_r1_alpha_ref;
 #endif
 #ifdef OLR_R1_LOCAL
 Texture2D s_r1_att;
+#ifdef OLR_R1_MODEL_LOCAL_RGBA
+layout(location = COLOR0) in float4 local_color;
+#else
 layout(location = COLOR0) in float3 local_color;
+#endif
 layout(location = TEXCOORD1) in float4 attenuation_uv;
 layout(location = TEXCOORD2) in float2 clip_uv;
 #else
@@ -28,7 +32,7 @@ layout(location = TEXCOORD4) in float2 detail_weights;
 void main()
 {
     float4 base = tex2D(s_base, base_uv);
-#ifdef OLR_R1_AREF
+#if defined(OLR_R1_AREF) && !defined(OLR_R1_MODEL_LOCAL_RGBA)
     // D3D's authored integer GREATER test, including the exact 8-bit boundary.
     // Both the base and additive passes use the same source reference.
     if (floor(base.a * 255.0 + 0.5) <= olr_r1_alpha_ref.x) discard;
@@ -54,7 +58,7 @@ void main()
     // PS1.x COLOR input is clamped after interpolation. add_point/spot
     // multiply base alpha and double RGB; detail applies only to the base.
     float3 color = base.rgb * base.a * projector.rgb * attenuation.rgb *
-        saturate(local_color) * 2.0;
+        saturate(local_color.rgb) * 2.0;
 #if OLR_R1_DEBUG == 1 || OLR_R1_DEBUG == 2
     color = float3(0.0);
 #elif OLR_R1_DEBUG == 3
@@ -75,7 +79,23 @@ void main()
 #endif
 #endif
     // Direct ONE+ONE into RGBA8, as original R1. No exposure/delta/tone map.
+#ifdef OLR_R1_MODEL_LOCAL_RGBA
+    // Original add_point/add_spot return final_color*2 in all four channels.
+    // Local COLOR alpha is dot(normal,-ray)*fog, multiplied by each texture A.
+    float local_alpha = base.a * projector.a * attenuation.a * saturate(local_color.a) * 2.0;
+#ifdef OLR_R1_AREF
+    // D3D9 alpha testing follows the pixel shader: a local model pass compares
+    // final_color.a*2, not just the diffuse texture alpha used by its base pass.
+    float model_alpha_reference = olr_r1_alpha_ref.x;
+#else
+    // Original opaque B_MODEL POINT/SPOT also enables GREATER, reference 0.
+    float model_alpha_reference = 0.0;
+#endif
+    if (floor(saturate(local_alpha) * 255.0 + 0.5) <= model_alpha_reference) discard;
+    out_color = float4(color, local_alpha);
+#else
     out_color = float4(color, 0.0);
+#endif
 #else
 #if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
     float3 baked = baked_vertex;

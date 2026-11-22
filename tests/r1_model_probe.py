@@ -164,3 +164,58 @@ def model_projector_checks(gl, report, shader_source):
         record(f"model_{family}_skin2_original_bone_choice",gl.pixel(),
                [.4,.3,.2,1] if family=="lq" else [0,0,0,1])
     gl.draw_setup()
+    # Actual model POINT/SPOT programs, including the original alpha product.
+    # A distant source makes Gouraud N.L exactly one over this small triangle;
+    # constant lookup pixels isolate the authored material/attenuation/fog math.
+    for family in ("point","spot","point_aref","spot_aref"):
+        for alpha in ((120,128) if "aref" in family else (128,)):
+            p=programs[(family,"NONE")]
+            gl.use(p,{"s_base":(96,128,160,alpha),"s_lmap":(128,160,192,128),
+                      "s_r1_att":(192,128,64,64)})
+            loc=lambda name: gl.glGetUniformLocation(p,name.encode())
+            gl.glUniformMatrix4x3fv(loc("m_W"),1,0,world)
+            gl.glUniform4f(loc("olr_r1_dynamic_pos"),0,0,1e8,5e-9)
+            gl.glUniform4f(loc("olr_r1_dynamic_color"),.3,.4,.5,1)
+            gl.glUniform4f(loc("fog_plane"),0,0,0,.75)
+            gl.glUniform4f(loc("fog_color"),.8,.7,.6,0)
+            gl.glUniform4f(loc("olr_r1_alpha_ref"),23,0,0,0)
+            gl.glVertexAttrib4f(5,0,0,1,0)
+            gl.glVertexAttrib4f(8,.5,.5,0,0)
+            expected=[(96,128,160)[i]/255*(128,160,192)[i]/255*(192,128,64)[i]/255*
+                      (.3,.4,.5)[i]*.75*(alpha/255)*2 for i in range(3)]
+            expected.append(alpha/255*(128/255)*(64/255)*.75*2)
+            # Both diffuse alphas exceed reference 23. Only the completed
+            # lighting result distinguishes them (23 fails, 24 passes).
+            if "aref" in family and alpha==120: expected=[0,0,0,0]
+            record(f"model_{family}_original_rgba_alpha_{alpha}",gl.pixel(),expected)
+            if gl.glGetUniformLocation(p,b"s_position")!=-1:
+                raise RuntimeError("Model local shader still requires a G-buffer sampler")
+        # Opaque original passes also test final alpha > 0. RGB-positive lookup
+        # textures with A=0 must not contribute just because diffuse A is 255.
+        if "aref" not in family:
+            gl.glActiveTexture(0x84C1);gl.texture((128,160,192,0))
+            record(f"model_{family}_opaque_final_alpha_zero_discards",gl.pixel(),[0,0,0,0])
+    gl.draw_setup()
+
+
+if __name__=="__main__":
+    import json
+    import sys
+    import traceback
+    from pathlib import Path
+    from r1_gles_probe import GLES, SOURCES, shader_source
+    report={"compile_results":[],"pixel_results":[]}
+    try:
+        gl=GLES();gl.draw_setup()
+        report["environment"]=gl.info
+        model_projector_checks(gl,report,shader_source)
+        report["passed"]=all(row["passed"] for row in report["pixel_results"])
+    except Exception:
+        report["passed"]=False;report["error"]=traceback.format_exc()
+    report["source_sha256"]=dict(sorted(SOURCES.items()))
+    output=Path(sys.argv[1])
+    output.parent.mkdir(parents=True,exist_ok=True)
+    output.write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
+    print(json.dumps(dict(passed=report["passed"],pairs=len(report["compile_results"]),
+                         pixels=len(report["pixel_results"]),error=report.get("error"))))
+    sys.exit(0 if report["passed"] else 1)
