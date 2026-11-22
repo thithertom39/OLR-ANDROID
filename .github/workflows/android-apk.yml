@@ -123,6 +123,14 @@ jobs:
             echo "::warning::Using a new temporary signing key. Future CI APKs cannot update this installation unless a persistent key is configured."
           fi
 
+      - name: Validate real GLES programs and reference pixels
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libegl1 libgles2 libgl1-mesa-dri
+          LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=surfaceless python3 tests/r1_gles_probe.py --output out/r1-gles-probe.json
+
       - name: Build release APK
         shell: bash
         working-directory: engine/android
@@ -159,6 +167,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OLR-Android-arm64-${{ github.run_number }}
-          path: out/OLR-Android-arm64.apk
+          path: |
+            out/OLR-Android-arm64.apk
+            out/r1-gles-probe.json
           if-no-files-found: error
           retention-days: 7
