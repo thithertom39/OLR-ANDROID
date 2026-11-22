@@ -127,6 +127,7 @@ BOOL Shader::equal(Shader* S)
     }
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     if (olr_r1_lightmap != S->olr_r1_lightmap ||
+        olr_r1_lightmap_lq != S->olr_r1_lightmap_lq ||
         olr_r1_lightmap_dynamic != S->olr_r1_lightmap_dynamic ||
         olr_r1_lightmap_spot != S->olr_r1_lightmap_spot)
         return FALSE;

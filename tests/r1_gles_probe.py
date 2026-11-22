@@ -133,6 +133,7 @@ class GLES:
             "glUniform3f": (None, integer, floating, floating, floating),
             "glUniform4f": (None, integer, floating, floating, floating, floating),
             "glUniformMatrix4fv": (None, integer, integer, C.c_ubyte, C.POINTER(floating)),
+            "glUniformMatrix4x3fv": (None, integer, integer, C.c_ubyte, C.POINTER(floating)),
             "glGenTextures": (None, integer, C.POINTER(uint)),
             "glBindTexture": (None, uint, uint),
             "glTexParameteri": (None, uint, uint, integer),
@@ -265,6 +266,7 @@ class GLES:
         identity = (C.c_float * 16)(1, 0, 0, 0, 0, 1, 0, 0,
                                     0, 0, 1, 0, 0, 0, 0, 1)
         self.glUniformMatrix4fv(loc("m_WVP"), 1, 0, identity)
+        self.glUniformMatrix4fv(loc("m_VP"), 1, 0, identity)
         self.glUniformMatrix4fv(loc("olr_r1_light_xform"), 1, 0, identity)
         for name, value in {
             "fog_plane": (0, 0, 0, 1), "fog_color": (0, 0, 0, 0),
@@ -437,6 +439,62 @@ def main():
                 actual_rgba8=actual, expected_rgba8=expected,
                 passed=all(abs(a-b) <= 1 for a, b in zip(actual, expected))))
         environment_ok = True
+        material_programs = {}
+        for stem in ["olr_r1_tree"+v for v in ("", "_detail", "_rigid", "_rigid_detail",
+                     "_point", "_spot", "_rigid_point", "_rigid_spot")] + ["olr_r1_lod", "olr_r1_lod_depth"]:
+            for debug in range(7):
+                program, result = gl.program(shader_source(stem+".vs", debug, True),
+                                             shader_source(stem+".ps", debug, True))
+                result.update(variant=stem, scene=True, debug=debug)
+                report["compile_results"].append(result)
+                ok = all(result[key] for key in ("vertex_compile", "fragment_compile", "link"))
+                environment_ok &= ok
+                if not ok:
+                    print(json.dumps(result), file=sys.stderr)
+                elif debug == 0:
+                    material_programs[stem] = program
+        if len(material_programs) == 10:
+            gl.draw_setup()
+            program = material_programs["olr_r1_tree"]
+            gl.use(program, {"s_base": (96,128,160,255)})
+            loc = lambda name: gl.glGetUniformLocation(program, name.encode())
+            transform = (C.c_float*12)(1,0,0,0,1,0,0,0,1,0,0,0)
+            gl.glUniformMatrix4x3fv(loc("m_xform"),1,0,transform)
+            for name,value in {"consts": (1/1024,1/1024,0,0), "wave": (0,0,0,0),
+                    "wind": (0,0,0,0), "c_scale": (.1,.2,.3,.4), "c_bias": (.01,.02,.03,.04)}.items():
+                gl.glUniform4f(loc(name),*value)
+            glUniform2f = function(gl.gl,"glUniform2f",None,C.c_int,C.c_float,C.c_float)
+            glUniform2f(loc("c_sun"),.5,.1)
+            tree_light = [(i*.7+j) + sky*.75*(.4*.7+.04) + sun*(.7*.5+.1)
+                          for i,j,sky,sun in zip((.1,.2,.3),(.01,.02,.03),(.1,.15,.2),(.2,.15,.1))]
+            expected = [round(2*b*light) for b,light in zip((96,128,160),tree_light)] + [255]
+            actual = gl.pixel()
+            report["pixel_results"].append(dict(name="scene_tree_original_decompression_wrapped_hemi_flyer_sun",
+                actual_rgba8=actual,expected_rgba8=expected,
+                passed=all(abs(a-b)<=1 for a,b in zip(actual,expected))))
+            # Preserve the target when the source's 200/255 alpha test discards.
+            gl.use(program,{"s_base":(96,128,160,200)})
+            gl.glClearColor(17/255,29/255,43/255,61/255)
+            gl.glClear(0x4000)
+            actual=gl.pixel(clear=False)
+            report["pixel_results"].append(dict(name="scene_tree_alpha_200_discards",actual_rgba8=actual,
+                expected_rgba8=[17,29,43,61],passed=actual==[17,29,43,61]))
+            gl.glVertexAttrib4f(0,.9,.4,.2,0)
+            gl.glVertexAttrib4f(5,0,0,1,0)
+            gl.glVertexAttrib4f(6,0,0,1,0)
+            gl.glVertexAttrib4f(10,.12,.10,.08,.3)
+            gl.glVertexAttrib4f(11,.12,.10,.08,.3)
+            lod_light=[v*1.55 + sky*.3*1.55 + amb + sun*.2*1.55*(1-.7/math.sqrt(2))
+                       for v,sky,amb,sun in zip((.08,.10,.12),(.1,.15,.2),(.03,.04,.05),(.2,.15,.1))]
+            for stem,alpha in (("olr_r1_lod",64),("olr_r1_lod_depth",255),("olr_r1_lod_depth",64)):
+                gl.use(material_programs[stem],{"s_base":(96,128,160,alpha),"s_hemi":(0,0,0,230)})
+                gl.glClearColor(17/255,29/255,43/255,61/255)
+                gl.glClear(0x4000)
+                actual=gl.pixel(clear=False)
+                expected=([17,29,43,61] if stem.endswith("depth") and alpha==64 else
+                    [round(2*b*light*(.5+.5*230/255)) for b,light in zip((96,128,160),lod_light)]+[round(alpha*.9)])
+                report["pixel_results"].append(dict(name=f"scene_{stem}_alpha_{alpha}",actual_rgba8=actual,
+                    expected_rgba8=expected,passed=all(abs(a-b)<=1 for a,b in zip(actual,expected))))
         for stem in ("sky2", "clouds"):
             for vtf in (False, True):
                 _, result = gl.program(shader_source(stem + ".vs", 0, True, vtf),

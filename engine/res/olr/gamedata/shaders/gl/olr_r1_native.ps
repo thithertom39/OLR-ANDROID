@@ -11,7 +11,7 @@ layout(location = TEXCOORD2) in float2 clip_uv;
 #else
 layout(location = COLOR0) in float3 hemi_light;
 layout(location = COLOR1) in float3 sun_light;
-#ifdef OLR_R1_VERTEX
+#if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
 layout(location = TEXCOORD1) in float3 baked_vertex;
 #else
 layout(location = TEXCOORD1) in float2 lightmap_uv;
@@ -25,6 +25,15 @@ layout(location = TEXCOORD4) in float2 detail_weights;
 void main()
 {
     float4 base = tex2D(s_base, base_uv);
+#ifdef OLR_R1_TREE
+    // Original tree blender: main tree alpha reference 200, rigid LOD 0;
+    // additional lights reference 0, with exactly the same deformed depth.
+#if !defined(OLR_R1_LOCAL) && !defined(OLR_R1_TREE_RIGID)
+    if (floor(base.a * 255.0 + 0.5) <= 200.0) discard;
+#else
+    if (base.a <= 0.0) discard;
+#endif
+#endif
 #ifdef OLR_R1_LOCAL
 #ifdef OLR_R1_SPOT
     if (attenuation_uv.w <= 0.0)
@@ -60,9 +69,13 @@ void main()
     // Direct ONE+ONE into RGBA8, as original R1. No exposure/delta/tone map.
     out_color = float4(color, 0.0);
 #else
-#ifdef OLR_R1_VERTEX
+#if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
     float3 baked = baked_vertex;
+#ifdef OLR_R1_TREE
+    float3 ambient_hemi = hemi_light;
+#else
     float3 ambient_hemi = L_ambient.rgb + hemi_light;
+#endif
     float3 sunlight = sun_light;
 #else
     float4 lmap = tex2D(s_lmap, lightmap_uv);
@@ -73,7 +86,7 @@ void main()
     float3 sunlight = saturate(sun_light) * lmap.a;
 #endif
     float3 light = baked + ambient_hemi + sunlight;
-#ifdef OLR_R1_VERTEX
+#if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
     light = saturate(light); // vert.vs writes the combined light to COLOR0.
 #endif
     float3 color = base.rgb * light * 2.0;

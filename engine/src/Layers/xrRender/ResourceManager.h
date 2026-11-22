@@ -203,6 +203,8 @@ public:
     Shader* _lua_Create(LPCSTR s_shader, LPCSTR s_textures);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     void CompileOlrR1Native(Shader& shader, CBlender_Compile& compiler, bool vertexLit);
+    void CompileOlrR1Tree(Shader& shader, CBlender_Compile& compiler, bool rigid, bool blend);
+    void CompileOlrR1Lod(Shader& shader, CBlender_Compile& compiler);
 #endif
     BOOL _lua_HasShader(LPCSTR s_shader);
 

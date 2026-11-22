@@ -537,6 +537,8 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
         S.E[0]->flags.iPriority < 2 && !S.E[0]->flags.bStrictB2F &&
         !S.E[0]->flags.bEmissive && !S.E[0]->flags.bDistort && !S.E[0]->flags.bWmark)
         CompileOlrR1Native(S, C, vertex);
+    if (olr_r1_scene_enabled() && xr_stricmp(s_shader, "details_lod") == 0)
+        CompileOlrR1Lod(S, C);
 #endif
 
     ScopeLock scope(&v_shaders_lock);

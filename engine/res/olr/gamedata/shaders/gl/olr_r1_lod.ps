@@ -1,0 +1,19 @@
+#include "common.h"
+layout(location=TEXCOORD0) in float2 uv0;
+layout(location=TEXCOORD1) in float2 uv1;
+layout(location=COLOR0) in float4 lighting;
+layout(location=COLOR1) in float factor;
+layout(location=FOG) in float visibility;
+layout(location=0) out float4 out_color;
+void main()
+{
+    float4 base = mix(tex2D(s_base, uv0), tex2D(s_base, uv1), factor) * saturate(lighting);
+#ifdef OLR_R1_LOD_DEPTH
+    if (floor(base.a * 255.0 + 0.5) <= 200.0) discard;
+#else
+    if (floor(base.a * 255.0 + 0.5) <= 8.0) discard;
+#endif
+    float hemi = mix(tex2D(s_hemi, uv0).a, tex2D(s_hemi, uv1).a, factor);
+    float3 color = base.rgb * 2.0 * (0.5 + 0.5 * hemi);
+    out_color = float4(mix(fog_color.rgb, color, saturate(visibility)), base.a);
+}

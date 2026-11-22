@@ -242,6 +242,8 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
     if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
     {
         auto* lightmap = vis_sh->olr_r1_lightmap._get();
+        if (sh == vis_sh->E[1]._get() && vis_sh->olr_r1_lightmap_lq)
+            lightmap = vis_sh->olr_r1_lightmap_lq._get();
         if (lightmap)
         {
             // A real forward geometry path for opaque static lightmapped

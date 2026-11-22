@@ -1,0 +1,4 @@
+#define OLR_R1_TREE
+#define OLR_R1_TREE_RIGID
+#define OLR_R1_DETAIL
+#include "olr_r1_native.vs"

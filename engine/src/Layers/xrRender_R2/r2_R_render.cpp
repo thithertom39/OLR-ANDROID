@@ -7,6 +7,7 @@
 #include "xrEngine/xr_object.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "xrEngine/AndroidSceneCompare.h"
+#include "Layers/xrRender/olr_r1_mode.h"
 #endif
 
 #include "Layers/xrRender/FBasicVisual.h"
@@ -230,7 +231,10 @@ void CRender::Render()
         Target->phase_scene_begin();
         dsgraph.render_hud();
         dsgraph.render_graph(0);
-        dsgraph.render_lods(true, true);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (!olr_r1_scene_enabled())
+#endif
+            dsgraph.render_lods(true, true);
         if (Details)
             Details->Render(dsgraph.cmd_list);
         Target->phase_scene_end();
@@ -341,7 +345,10 @@ void CRender::Render()
         // level
         Target->phase_scene_begin();
         dsgraph.render_hud();
-        dsgraph.render_lods(true, true);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (!olr_r1_scene_enabled())
+#endif
+            dsgraph.render_lods(true, true);
         if (Details)
             Details->Render(dsgraph.cmd_list);
         Target->phase_scene_end();
@@ -542,7 +549,12 @@ void CRender::render_forward()
     //.todo: should be done inside "combine" with estimation of of luminance, tone-mapping, etc.
     {
         //	Igor: we don't want to render old lods on next frame.
-        dsgraph.mapLOD.clear();
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (olr_r1_scene_enabled())
+            dsgraph.render_lods(true, false);
+        else
+#endif
+            dsgraph.mapLOD.clear();
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
         // On devices without HDR float blending, preserve existing R2 light
         // by blending baked diffuse over the finished LDR image.
@@ -556,6 +568,10 @@ void CRender::render_forward()
         }
 #endif
         dsgraph.render_graph(1); // normal level, secondary priority
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (olr_r1_scene_enabled())
+            dsgraph.render_lods(false, true);
+#endif
         dsgraph.PortalTraverser.fade_render(); // faded-portals
         dsgraph.render_sorted(); // strict-sorted geoms
         g_pGamePersistent->Environment().RenderLast(); // rain/thunder-bolts
