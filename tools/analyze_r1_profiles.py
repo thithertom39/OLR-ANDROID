@@ -56,7 +56,7 @@ def summarize(path):
             item["stages"][name] = dict(cpu_wall_ms=distribution(cpu_times),gpu_ms=distribution(gpu_times))
         for key in ("draw_calls", "detail_instances_submitted"):
             item[key] = distribution([cpu[f].get(key) for f in frames])
-        for key in ("triangles","renderer_framebuffer_binds","fallback_draws","native_base_draws",
+        for key in ("triangles","renderer_framebuffer_binds","attachment_changes","fallback_draws","native_base_draws",
                     "native_point_draws","native_spot_draws"):
             item[key] = distribution([submissions.get(f,{}).get(key) for f in frames])
         totals = defaultdict(int)
@@ -67,6 +67,7 @@ def summarize(path):
                                                   key=lambda pair: -pair[1]))
         result.append(item)
     return dict(file=str(path),metadata=metadata,cpu_samples=len(cpu),gpu_samples=len(gpu),
+                gpu_drop_records=[r for r in records if r.get("record")=="gpu_drop"],
                 malformed_rows_ignored=incomplete,cameras=sorted(result,key=lambda x:-x["samples"]))
 
 

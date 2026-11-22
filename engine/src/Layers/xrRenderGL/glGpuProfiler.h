@@ -23,6 +23,7 @@ void EndGpuFrame();
 void FinishFrame();
 void RecordDraw(unsigned triangles);
 void RecordFramebuffer();
+void RecordAttachmentChange();
 // kind: 0 = fallback submission, 1 = native base, 2 = POINT, 3 = SPOT.
 void RecordR1Material(const char* shader, unsigned draws, unsigned kind);
 const char* MaterialName(const SPass* pass);

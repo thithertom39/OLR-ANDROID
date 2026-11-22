@@ -6,6 +6,7 @@ param(
     [string]$ArgumentsText,
     [switch]$Interact,
     [switch]$DirectionSweep,
+    [ValidateSet(-200,200)][int]$SweepStep = 200,
     [switch]$ConfigureOnly,
     [ValidateRange(20,180)][int]$Seconds = 80,
     [string]$LogDirectory = (Join-Path $PSScriptRoot '../logs')
@@ -77,7 +78,7 @@ try {
         if ($DirectionSweep -and $elapsed -in @(80,100,120,140,160)) {
             & $Adb shell screencap -p /sdcard/olr-r1-smoke.png
             & $Adb pull /sdcard/olr-r1-smoke.png (Join-Path $LogDirectory "$Tag-direction-$elapsed.png")
-            if ($elapsed -lt 160) { & $Adb shell input swipe 2100 800 2300 800 400 }
+            if ($elapsed -lt 160) { & $Adb shell input swipe 2100 800 (2100+$SweepStep) 800 400 }
         }
         if ($Interact -and $elapsed -eq 80) {
             & $Adb shell screencap -p /sdcard/olr-r1-smoke.png

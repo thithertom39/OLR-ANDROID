@@ -72,7 +72,7 @@ struct State
     std::uint64_t lastFlush = 0;
     double intervalMs = -1;
     unsigned draws = 0;
-    unsigned triangles = 0, framebufferBinds = 0;
+    unsigned triangles = 0, framebufferBinds = 0, attachmentChanges = 0;
     std::array<unsigned,4> r1Draws{};
     xr_map<xr_string,unsigned> r1Materials;
     unsigned detailInstances = 0;
@@ -180,11 +180,13 @@ void Poll()
 
     std::array<double, StageCount> milliseconds{};
     bool valid = packet.epoch == state.epoch && !packet.overflow;
+    unsigned unfinished = 0, invalidIntervals = 0;
     for (unsigned i = 0; i < packet.count; ++i)
     {
         const auto& event = packet.events[i];
         if (!event.ended)
         {
+            ++unfinished;
             valid = false;
             continue;
         }
@@ -193,7 +195,10 @@ void Poll()
         glGetQueryObjectui64vEXT(state.queries[oldest * state.queryStride + i * 2 + 1], GL_QUERY_RESULT_EXT, &end);
         // Drop wrap or impossible intervals rather than manufacturing timings.
         if (end < begin || end - begin > 1000000000ULL)
+        {
+            ++invalidIntervals;
             valid = false;
+        }
         else
             milliseconds[unsigned(event.stage)] += double(end - begin) * 1e-6;
     }
@@ -218,7 +223,13 @@ void Poll()
         Write(row);
     }
     else if (packet.pending)
+    {
         ++state.invalidDropped;
+        char row[512];
+        std::snprintf(row,sizeof(row),"{\"record\":\"gpu_drop\",\"frame\":%llu,\"overflow\":%s,\"unfinished\":%u,\"invalid_intervals\":%u}\n",
+            static_cast<unsigned long long>(packet.frame),packet.overflow ? "true" : "false",unfinished,invalidIntervals);
+        Write(row);
+    }
     packet.pending = false;
 }
 
@@ -344,7 +355,7 @@ void BeginFrame()
     state.start = start;
     state.threadStart = ThreadNow();
     state.draws = state.detailInstances = state.shadowDetailInstances = 0;
-    state.triangles = state.framebufferBinds = 0;
+    state.triangles = state.framebufferBinds = state.attachmentChanges = 0;
     state.r1Draws = {};
     state.r1Materials.clear();
     state.localDetails = {};
@@ -445,9 +456,9 @@ void FinishFrame()
         details.instanceCandidates - details.instancesSkipped, details.instancesSubmitted);
     Write(row);
     std::snprintf(row, sizeof(row),
-        "{\"record\":\"r1_submissions\",\"frame\":%llu,\"triangles\":%u,\"renderer_framebuffer_binds\":%u,"
+        "{\"record\":\"r1_submissions\",\"frame\":%llu,\"triangles\":%u,\"renderer_framebuffer_binds\":%u,\"attachment_changes\":%u,"
         "\"fallback_draws\":%u,\"native_base_draws\":%u,\"native_point_draws\":%u,\"native_spot_draws\":%u}\n",
-        static_cast<unsigned long long>(state.frame),state.triangles,state.framebufferBinds,
+        static_cast<unsigned long long>(state.frame),state.triangles,state.framebufferBinds,state.attachmentChanges,
         state.r1Draws[0],state.r1Draws[1],state.r1Draws[2],state.r1Draws[3]);
     Write(row);
     for (const auto& material : state.r1Materials)
@@ -478,6 +489,11 @@ void RecordDraw(unsigned triangles)
 void RecordFramebuffer()
 {
     if (state.inFrame) ++state.framebufferBinds;
+}
+
+void RecordAttachmentChange()
+{
+    if (state.inFrame) ++state.attachmentChanges;
 }
 
 void RecordR1Material(const char* shader, unsigned draws, unsigned kind)
