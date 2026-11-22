@@ -257,6 +257,11 @@ void CRender::Render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
 
+    // Native R1 needs the complete fallback receiver list, including the HUD
+    // and details in a split scene. Defer only its light selection until PART-1;
+    // keep the existing R2 overlap/scheduling unchanged.
+    const auto prepareLocalLights = [&]
+    {
     //******* Occlusion testing of volume-limited light-sources
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope visibilityScope(GLGpuProfiler::Stage::LightVisibility);
@@ -279,7 +284,7 @@ void CRender::Render()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
         // Skip only lights whose finite range misses every actual G-buffer
         // receiver. Preserve the original package for native POINT/SPOT.
-        const bool pruneR1Lights = olr_r1_scene_enabled() && !split_the_scene_to_minimize_wait &&
+        const bool pruneR1Lights = olr_r1_scene_enabled() &&
             dsgraph.olr_r1_receiver_bounds_valid && !ps_r2_ls_flags.test(R2FLAG_GI) &&
             !(Details && Details->HasR1DeferredMaterials()) &&
             !(g_pGameLevel->pHUD && g_pGameLevel->pHUD->RenderActiveItemUIQuery()) &&
@@ -357,6 +362,13 @@ void CRender::Render()
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     visibilityScope.Stop();
 #endif
+    };
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    const bool deferredR1Selection = olr_r1_scene_enabled();
+#else
+    const bool deferredR1Selection = false;
+#endif
+    if (!deferredR1Selection) prepareLocalLights();
 
     //******* Main render :: PART-1 (second)
     if (split_the_scene_to_minimize_wait)
@@ -394,6 +406,7 @@ void CRender::Render()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const u32 mainDraws = dsgraph.cmd_list.stat.render.calls - mainDrawStart;
 #endif
+    if (deferredR1Selection) prepareLocalLights();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope wallmarksScope(GLGpuProfiler::Stage::Wallmarks);
 #endif
