@@ -569,6 +569,8 @@ void CRender::render_forward()
 #endif
         dsgraph.render_graph(1); // normal level, secondary priority
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (olr_r1_scene_enabled() && Details)
+            Details->RenderNativeR1(dsgraph.cmd_list);
         if (olr_r1_scene_enabled())
             dsgraph.render_lods(false, true);
 #endif

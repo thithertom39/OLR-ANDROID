@@ -439,6 +439,32 @@ def main():
                 actual_rgba8=actual, expected_rgba8=expected,
                 passed=all(abs(a-b) <= 1 for a, b in zip(actual, expected))))
         environment_ok = True
+        for wave in (False,True):
+            for alpha_test in (False,True):
+                vs = "olr_r1_grass" if wave else "olr_r1_grass_still"
+                ps = "olr_r1_grass_aref" if alpha_test else "olr_r1_grass"
+                program,result=gl.program(shader_source(vs+".vs",0,True),shader_source(ps+".ps",0,True))
+                result.update(variant=vs+"/"+ps,scene=True)
+                report["compile_results"].append(result)
+                ok=all(result[key] for key in ("vertex_compile","fragment_compile","link"))
+                environment_ok &= ok
+                if not ok:
+                    print(json.dumps(result),file=sys.stderr)
+                    continue
+                gl.draw_setup()
+                gl.glVertexAttrib4f(8,.5,.5,.5,0)
+                gl.use(program,{"s_base":(96,128,160,255)})
+                loc=lambda name: gl.glGetUniformLocation(program,name.encode())
+                for name,value in {"consts":(1,1,.4,.6),"wave":(0,0,0,0),"dir2D":(0,0,0,0),
+                        "array[0]":(1,0,0,0),"array[1]":(0,1,0,0),
+                        "array[2]":(0,0,1,0),"array[3]":(.12,.23,.34,1)}.items():
+                    gl.glUniform4f(loc(name),*value)
+                actual=gl.pixel()
+                expected=[round(2*b*light*(.8 if wave else 1))
+                          for b,light in zip((96,128,160),(.12,.23,.34))]+[255]
+                report["pixel_results"].append(dict(name=f"scene_grass_wave_{wave}_alpha_test_{alpha_test}",
+                    actual_rgba8=actual,expected_rgba8=expected,
+                    passed=all(abs(a-b)<=1 for a,b in zip(actual,expected))))
         material_programs = {}
         for stem in ["olr_r1_tree"+v for v in ("", "_detail", "_rigid", "_rigid_detail",
                      "_point", "_spot", "_rigid_point", "_rigid_spot")] + ["olr_r1_lod", "olr_r1_lod_depth"]:

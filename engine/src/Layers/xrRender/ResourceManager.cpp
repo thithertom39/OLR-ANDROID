@@ -14,6 +14,7 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "olr_r1_mode.h"
 #include "blenders/Blender_tree.h"
+#include "blenders/Blender_detail_still.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE
@@ -144,6 +145,25 @@ void CResourceManager::CompileOlrR1Lod(Shader& S, CBlender_Compile& C)
         S.E[depth ? SE_R1_LMODELS : SE_R1_NORMAL_LQ] = _CreateElement(std::move(element));
     }
     Msg("* OLR R1 scene: native LOD '%s' two-pass alpha 200/8", C.L_textures[0].c_str());
+}
+
+void CResourceManager::CompileOlrR1Details(Shader& S, CBlender_Compile& C, bool alphaTest)
+{
+    for (bool still : {false,true})
+    {
+        ShaderElement element;
+        C.SH = &element;
+        C.RS.Invalidate();
+        C.SetParams(1,false);
+        C.r_Pass(still ? "olr_r1_grass_still" : "olr_r1_grass",
+            alphaTest ? "olr_r1_grass_aref" : "olr_r1_grass", FALSE, TRUE, TRUE, FALSE);
+        C.r_CullMode(D3DCULL_NONE);
+        C.r_Sampler("s_base",C.L_textures[0]);
+        C.r_End();
+        if (still) S.olr_r1_detail_still = _CreateElement(std::move(element));
+        else S.olr_r1_detail_wave = _CreateElement(std::move(element));
+    }
+    Msg("* OLR R1 scene: native detail '%s' alpha_test=%u",C.L_textures[0].c_str(),unsigned(alphaTest));
 }
 #endif
 
@@ -381,6 +401,8 @@ Shader* CResourceManager::_cpp_Create(
         const auto* tree = static_cast<CBlender_Tree*>(B);
         CompileOlrR1Tree(S, C, tree->isRigid(), tree->isBlended());
     }
+    if (olr_r1_scene_enabled() && blenderClass == B_DETAIL && S.E[0])
+        CompileOlrR1Details(S,C,static_cast<CBlender_Detail_Still*>(B)->isAlphaTested());
 #endif
 
     // Search equal in shaders array

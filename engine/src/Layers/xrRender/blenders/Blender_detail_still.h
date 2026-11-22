@@ -15,6 +15,7 @@ public:
     ~CBlender_Detail_Still() override = default;
 
     LPCSTR getComment() override;
+    bool isAlphaTested() const { return oBlend.value != FALSE; }
     void Save(IWriter& fs) override;
     void Load(IReader& fs, u16 version) override;
 

@@ -6,6 +6,9 @@
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
 #include "glDetailUniformBatch.h"
 #include "glDetailShadowCull.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRender/olr_r1_mode.h"
+#endif
 #include <cstring>
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
@@ -24,6 +27,7 @@ extern const int quant;
 
 namespace
 {
+thread_local bool nativeR1DetailPass = false;
 thread_local const GLDetailShadowCull::PlaneSet* detailLocalShadowPlanes = nullptr;
 thread_local const CBackend* detailLocalShadowBackend = nullptr;
 bool DetailLocalShadowCullRequested()
@@ -57,6 +61,19 @@ struct DetailLocalShadowScope
     }
 };
 }
+
+#if defined(XR_PLATFORM_ANDROID)
+void CDetailManager::RenderNativeR1(CBackend& cmd_list)
+{
+    struct Scope
+    {
+        bool previous = nativeR1DetailPass;
+        Scope() { nativeR1DetailPass = true; }
+        ~Scope() { nativeR1DetailPass = previous; }
+    } scope;
+    Render(cmd_list);
+}
+#endif
 
 void CDetailManager::RenderShadow(CBackend& cmd_list, const CFrustum& shadowFrustum)
 {
@@ -200,13 +217,23 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
     for (u32 O = 0; O < objects.size(); O++)
     {
         CDetail& Object = *objects [O];
+#if defined(XR_PLATFORM_ANDROID)
+        const bool ported = Object.shader->olr_r1_detail_wave && Object.shader->olr_r1_detail_still;
+        if (nativeR1DetailPass && !ported) continue;
+        const bool mainPhase = RImplementation.get_context(cmd_list.context_id).o.phase == CRender::PHASE_NORMAL;
+        if (!nativeR1DetailPass && ported && olr_r1_scene_enabled() && mainPhase) continue;
+        const auto& element = nativeR1DetailPass ? (lod_id == 0 ?
+            Object.shader->olr_r1_detail_wave : Object.shader->olr_r1_detail_still) : Object.shader->E[lod_id];
+#else
+        const auto& element = Object.shader->E[lod_id];
+#endif
         xr_vector<SlotItemVec*>& vis = list [O];
         if (!vis.empty())
         {
-            for (u32 iPass = 0; iPass < Object.shader->E[lod_id]->passes.size(); ++iPass)
+            for (u32 iPass = 0; iPass < element->passes.size(); ++iPass)
             {
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
-                const auto& detailPass = Object.shader->E[lod_id]->passes[iPass];
+                const auto& detailPass = element->passes[iPass];
                 const bool cullThisPass = detailLocalShadowPlanes && detailLocalShadowBackend == &cmd_list &&
                     detailPass->pp && GLDetailShadowCull::KnownProgram(detailPass->pp->cName.c_str(), var_id != 0);
                 const GLDetailShadowCull::Bounds* cellBounds = nullptr;
@@ -259,7 +286,7 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 #endif
                 // Setup matrices + colors (and flush it as necessary)
                 //RCache.set_Element				(Object.shader->E[lod_id]);
-                cmd_list.set_Element(Object.shader->E[lod_id], iPass);
+                cmd_list.set_Element(element, iPass);
                 cmd_list.apply_lmaterial();
 
                 //	This could be cached in the corresponding consatant buffer
@@ -355,6 +382,17 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                             float s = instance->c_sun;
                             cmd_list.set_ca(array_ptr, base + 3, s, s, s, h);
                         }
+#if defined(XR_PLATFORM_ANDROID)
+                        if (nativeR1DetailPass)
+                        {
+                            // Original R1 CPU instance color, not R2 sun/hemi channels.
+                            Fvector color = c_ambient;
+                            color.mad(c_hemi, instance->c_hemi);
+                            color.mad(c_sun, instance->c_sun);
+                            if (batchUniforms) rows[base+3].set(color.x,color.y,color.z,1.f);
+                            else cmd_list.set_ca(array_ptr,base+3,color.x,color.y,color.z,1.f);
+                        }
+#endif
                         dwBatch ++;
                         if (dwBatch == hw_BatchSize)
                         {

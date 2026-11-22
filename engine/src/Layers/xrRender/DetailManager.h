@@ -221,6 +221,9 @@ public:
     void Render(CBackend& cmd_list);
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
     void RenderShadow(CBackend& cmd_list, const CFrustum& shadowFrustum);
+#if defined(XR_PLATFORM_ANDROID)
+    void RenderNativeR1(CBackend& cmd_list);
+#endif
 #endif
 
     /// MT stuff

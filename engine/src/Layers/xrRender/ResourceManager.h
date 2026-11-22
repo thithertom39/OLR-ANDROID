@@ -205,6 +205,7 @@ public:
     void CompileOlrR1Native(Shader& shader, CBlender_Compile& compiler, bool vertexLit);
     void CompileOlrR1Tree(Shader& shader, CBlender_Compile& compiler, bool rigid, bool blend);
     void CompileOlrR1Lod(Shader& shader, CBlender_Compile& compiler);
+    void CompileOlrR1Details(Shader& shader, CBlender_Compile& compiler, bool alphaTest);
 #endif
     BOOL _lua_HasShader(LPCSTR s_shader);
 
