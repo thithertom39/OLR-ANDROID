@@ -63,9 +63,15 @@ against GitHub: a181c7a2d1a5361a3a72408a3dd5b093ff2113069f3300a5a03a7b04f8d3df1d
 CI .dev APK SHA256 E63F9D2E70455967431C10A3F87F95EB35EB5F5662C02BD99B6A599B6E564BD5.
 It was NOT installed over the regular app (different signing key).
 
-New CI for 3576b19 is running:
+New CI for 3576b19 SUCCEEDED:
 https://github.com/thithertom39/OLR-ANDROID/actions/runs/45074072056.
-Check this same run to completion; do not infer its outcome from the prior run.
+It independently passed NDK compilation and the full GLES suite: **313 pairs,
+151 pixel fixtures**, including the final opaque reference-0 correction.
+Artifact 14774823062 / OLR-Android-arm64-24 is saved in artifacts/CI-3576b19.
+ZIP SHA256 8d338ea930e22e1febb6d14921b2d999e27ff27d35e0118a152bac7f4cd03dc8
+matches GitHub's published artifact digest. CI .dev APK SHA256:
+8A024ACD1AB4CFAB64A83BDD9103E3C9DA5752E0AA22D7222788BE97F5EDAA18.
+This CI APK was not installed over the regular, device-tested APK.
 
 Logs: logs/20261122/models-projector. Final installed hash, saved-game/config
 hashes and screen/thermal state: rgba-final-integrity.json in that directory.
