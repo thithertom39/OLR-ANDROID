@@ -144,6 +144,7 @@ jobs:
             --console=plain
             --max-workers=2
             --init-script ../HANDOFF/vendor.init.gradle
+            --init-script ../../.github/gradle-central-mirror.init.gradle
           )
           if [[ "$TEST_BUILD" == "true" ]]; then
             args+=(-POXRAY_TEST_BUILD=true -POXRAY_TEST_VARIANT=cloud)
