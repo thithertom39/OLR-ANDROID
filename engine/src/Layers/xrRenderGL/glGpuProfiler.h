@@ -24,8 +24,9 @@ void FinishFrame();
 void RecordDraw(unsigned triangles);
 void RecordFramebuffer();
 void RecordAttachmentChange();
-// kind: 0 = fallback submission, 1 = native base, 2 = POINT, 3 = SPOT.
+// kind: 0 = other fallback, 1 = native base, 2 = POINT, 3 = SPOT, 4 = G-buffer.
 void RecordR1Material(const char* shader, unsigned draws, unsigned kind);
+void RecordR1LightCull(unsigned receivers, unsigned skipped);
 const char* MaterialName(const SPass* pass);
 bool SamplingShadowAtlas();
 void RecordDetails(unsigned instances);

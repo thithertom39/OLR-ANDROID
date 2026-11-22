@@ -223,6 +223,7 @@ public:
     void RenderShadow(CBackend& cmd_list, const CFrustum& shadowFrustum);
 #if defined(XR_PLATFORM_ANDROID)
     void RenderNativeR1(CBackend& cmd_list);
+    bool HasR1DeferredMaterials() const;
 #endif
 #endif
 

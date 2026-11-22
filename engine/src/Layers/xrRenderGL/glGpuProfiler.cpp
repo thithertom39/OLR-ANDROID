@@ -73,7 +73,8 @@ struct State
     double intervalMs = -1;
     unsigned draws = 0;
     unsigned triangles = 0, framebufferBinds = 0, attachmentChanges = 0;
-    std::array<unsigned,4> r1Draws{};
+    std::array<unsigned,5> r1Draws{};
+    unsigned r1Receivers = 0, r1LightsSkipped = 0;
     xr_map<xr_string,unsigned> r1Materials;
     unsigned detailInstances = 0;
     unsigned shadowDetailInstances = 0;
@@ -357,6 +358,7 @@ void BeginFrame()
     state.draws = state.detailInstances = state.shadowDetailInstances = 0;
     state.triangles = state.framebufferBinds = state.attachmentChanges = 0;
     state.r1Draws = {};
+    state.r1Receivers = state.r1LightsSkipped = 0;
     state.r1Materials.clear();
     state.localDetails = {};
     state.wallNs = {};
@@ -457,9 +459,11 @@ void FinishFrame()
     Write(row);
     std::snprintf(row, sizeof(row),
         "{\"record\":\"r1_submissions\",\"frame\":%llu,\"triangles\":%u,\"renderer_framebuffer_binds\":%u,\"attachment_changes\":%u,"
-        "\"fallback_draws\":%u,\"native_base_draws\":%u,\"native_point_draws\":%u,\"native_spot_draws\":%u}\n",
+        "\"fallback_draws\":%u,\"native_base_draws\":%u,\"native_point_draws\":%u,\"native_spot_draws\":%u,"
+        "\"deferred_draws\":%u,\"deferred_receivers\":%u,\"r2_lights_skipped\":%u}\n",
         static_cast<unsigned long long>(state.frame),state.triangles,state.framebufferBinds,state.attachmentChanges,
-        state.r1Draws[0],state.r1Draws[1],state.r1Draws[2],state.r1Draws[3]);
+        state.r1Draws[0]+state.r1Draws[4],state.r1Draws[1],state.r1Draws[2],state.r1Draws[3],
+        state.r1Draws[4],state.r1Receivers,state.r1LightsSkipped);
     Write(row);
     for (const auto& material : state.r1Materials)
     {
@@ -500,11 +504,18 @@ void RecordR1Material(const char* shader, unsigned draws, unsigned kind)
 {
     if (!state.inFrame || !draws || kind >= state.r1Draws.size()) return;
     state.r1Draws[kind] += draws;
-    xr_string name = kind == 0 ? "fallback/" : "native/";
+    xr_string name = kind == 4 ? "deferred/" : kind == 0 ? "fallback/" : "native/";
     name += shader ? shader : "unknown";
     // Resource names are diagnostic labels, not arbitrary JSON fragments.
     for (auto& c : name) if (c == '\\' || c == '"' || c < ' ') c = '/';
     state.r1Materials[name] += draws;
+}
+
+void RecordR1LightCull(unsigned receivers, unsigned skipped)
+{
+    if (!state.inFrame) return;
+    state.r1Receivers = receivers;
+    state.r1LightsSkipped = skipped;
 }
 
 const char* MaterialName(const SPass* pass)

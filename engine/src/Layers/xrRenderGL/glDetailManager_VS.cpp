@@ -76,6 +76,14 @@ void CDetailManager::RenderNativeR1(CBackend& cmd_list)
     } scope;
     Render(cmd_list);
 }
+
+bool CDetailManager::HasR1DeferredMaterials() const
+{
+    for (const auto* object : objects)
+        if (!object->shader || !object->shader->olr_r1_detail_wave || !object->shader->olr_r1_detail_still)
+            return true;
+    return false;
+}
 #endif
 
 void CDetailManager::RenderShadow(CBackend& cmd_list, const CFrustum& shadowFrustum)

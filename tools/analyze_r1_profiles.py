@@ -19,7 +19,7 @@ def distribution(values):
                 p50=percentile(.5), p95=percentile(.95), p99=percentile(.99))
 
 
-def summarize(path):
+def summarize(path, tail_samples=0):
     records = []
     incomplete = 0
     for line in path.read_text(encoding="utf-8-sig").splitlines():
@@ -45,6 +45,8 @@ def summarize(path):
     for camera, frames in groups.items():
         if len(frames)<4:
             continue
+        if tail_samples:
+            frames = frames[-tail_samples:]
         item = dict(camera=camera, samples=len(frames),
             interval_ms=distribution([cpu[f].get("interval_ms") for f in frames]),
             render_cpu_ms=distribution([cpu[f].get("render_thread_cpu_ms") for f in frames]),
@@ -53,11 +55,14 @@ def summarize(path):
             cpu_times = [cpu[f].get("inclusive_wall_ms", [])[index] for f in frames
                          if index < len(cpu[f].get("inclusive_wall_ms", []))]
             gpu_times = [gpu[f]["inclusive_ms"][index] for f in frames if f in gpu]
-            item["stages"][name] = dict(cpu_wall_ms=distribution(cpu_times),gpu_ms=distribution(gpu_times))
+            thread_times = [cpu[f]["inclusive_thread_cpu_ms"][index] for f in frames
+                            if index < len(cpu[f].get("inclusive_thread_cpu_ms", []))]
+            item["stages"][name] = dict(cpu_wall_ms=distribution(cpu_times),
+                                       cpu_thread_ms=distribution(thread_times),gpu_ms=distribution(gpu_times))
         for key in ("draw_calls", "detail_instances_submitted"):
             item[key] = distribution([cpu[f].get(key) for f in frames])
         for key in ("triangles","renderer_framebuffer_binds","attachment_changes","fallback_draws","native_base_draws",
-                    "native_point_draws","native_spot_draws"):
+                    "native_point_draws","native_spot_draws","deferred_draws","deferred_receivers","r2_lights_skipped"):
             item[key] = distribution([submissions.get(f,{}).get(key) for f in frames])
         totals = defaultdict(int)
         for frame in frames:
@@ -75,10 +80,13 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("files",nargs="+",type=Path)
     parser.add_argument("--output",required=True,type=Path)
+    parser.add_argument("--tail-samples",type=int,default=0,
+                        help="Use only the last N sampled frames of each stationary camera (exclude warm-up)")
     args=parser.parse_args()
     result=dict(note="Sampled diagnostic frames; nested pass times overlap. GPU gaps/drops are not zero time. "
                      "These short scenes do not establish sustained FPS or thermal behavior.",
-                profiles=[summarize(path) for path in args.files])
+                tail_samples_per_camera=args.tail_samples,
+                profiles=[summarize(path,args.tail_samples) for path in args.files])
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
     print(json.dumps({"output":str(args.output),"profiles":[dict(file=p["file"],cpu=p["cpu_samples"],
