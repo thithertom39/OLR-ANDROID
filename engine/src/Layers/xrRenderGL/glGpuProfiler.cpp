@@ -493,8 +493,10 @@ void RecordR1Material(const char* shader, unsigned draws, unsigned kind)
 
 const char* MaterialName(const SPass* pass)
 {
-    // Depth-only/vertex-only passes legitimately have no pixel shader.
+    // GLES monolithic linking deliberately clears pass.ps/pass.vs; the
+    // linked program owns their names. See glResourceManager_Resources.cpp.
     if (!pass) return "unknown";
+    if (pass->pp) return pass->pp->cName.c_str();
     if (pass->ps) return pass->ps->cName.c_str();
     if (pass->vs) return pass->vs->cName.c_str();
     return "fixed_state";
