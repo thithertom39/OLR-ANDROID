@@ -106,5 +106,10 @@ try {
 } finally {
     & $Adb shell am force-stop $Package
     & $Adb shell input keyevent 223
+    # Retain the app's bounded logcat capture on failure too; the global Android
+    # ring can lose the crash before the next diagnostic command is issued.
+    foreach ($name in @('openxray_logcat.log', 'openxray_app.log', 'frame_trace.log')) {
+        & $Adb pull "$GameRoot/$name" (Join-Path $LogDirectory "$Tag-$name") | Out-Null
+    }
     $measurements | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $LogDirectory "$Tag-thermals.json")
 }
