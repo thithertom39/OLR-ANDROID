@@ -411,6 +411,52 @@ def pixel_checks(gl, programs):
     return results
 
 
+def particle_checks(gl, report):
+    """Original R1 particle color/alpha, fog enable and all six blend modes."""
+    programs = {}
+    for stem in ("olr_r1_particle", "olr_r1_particle_set"):
+        program, result = gl.program(shader_source(stem+".vs", 0, True), shader_source(stem+".ps", 0, True))
+        result.update(variant=stem, scene=True)
+        report["compile_results"].append(result)
+        if not all(result[k] for k in ("vertex_compile", "fragment_compile", "link")):
+            raise RuntimeError(f"R1 particle compile/link: {result}")
+        programs[stem] = program
+    gl.draw_setup()
+    color, texture, background = (.25,.5,.75,1), (128,64,192,128), (.2,.3,.4,.5)
+    # Vertex color is packed BGRA in the engine stream.
+    gl.glVertexAttrib4f(0, color[2], color[1], color[0], color[3])
+    source = [c*t/255 for c,t in zip(color,texture)]
+    def record(name, actual, values):
+        expected = [round(min(1,max(0,v))*255) for v in values]
+        report["pixel_results"].append(dict(name=name,actual_rgba8=actual,expected_rgba8=expected,
+            passed=all(abs(a-b)<=1 for a,b in zip(actual,expected))))
+    # Source reference Blender_Particle, modes BLEND/ADD/MUL/MUL_2X/ALPHA-ADD.
+    blends = (("blend",0x0302,0x0303,source[3],1-source[3]),
+              ("add",1,1,1,1), ("mul",0x0306,0,background,0),
+              ("mul2x",0x0306,0x0300,background,source),
+              ("alpha_add",0x0302,1,source[3],1))
+    program = programs["olr_r1_particle"]
+    for label,src,dst,sfactor,dfactor in blends:
+        gl.use(program,{"s_base":texture})
+        # Non-SET modes must ignore fog, even at zero fog visibility.
+        gl.glUniform4f(gl.glGetUniformLocation(program,b"fog_plane"),0,0,0,0)
+        gl.glClearColor(*background); gl.glClear(0x4000)
+        gl.glEnable(0x0BE2); gl.glBlendFunc(src,dst)
+        expected = [source[i]*(sfactor[i] if isinstance(sfactor,tuple) else sfactor) +
+                    background[i]*(dfactor[i] if isinstance(dfactor,list) else dfactor) for i in range(4)]
+        record("particle_"+label+"_no_fog_rgba8",gl.pixel(clear=False),expected)
+    gl.glDisable(0x0BE2)
+    for alpha in (0,1,200,201,255):
+        program = programs["olr_r1_particle_set"]
+        gl.use(program,{"s_base":(128,64,192,alpha)})
+        gl.glUniform4f(gl.glGetUniformLocation(program,b"fog_plane"),0,0,0,.25)
+        gl.glUniform4f(gl.glGetUniformLocation(program,b"fog_color"),.2,.4,.6,0)
+        gl.glClearColor(*background); gl.glClear(0x4000)
+        expected = background if alpha <= 200 else [f*.75+c*t/255*.25 for f,c,t in
+            zip((.2,.4,.6),color,texture)] + [alpha/255]
+        record(f"particle_set_alpha_{alpha}_fog",gl.pixel(clear=False),expected)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "logs/r1-gles-probe.json")
@@ -587,6 +633,7 @@ def main():
             report["pixel_results"].append(dict(name="scene_"+stem+"_original_color_alpha",
                 actual_rgba8=actual, expected_rgba8=expected,
                 passed=all(abs(a-b) <= 1 for a,b in zip(actual,expected))))
+        particle_checks(gl, report)
         report["passed"] = legacy_ok and scene_ok and environment_ok and bool(report["pixel_results"]) and all(
             row["passed"] for row in report["pixel_results"])
     except Exception:

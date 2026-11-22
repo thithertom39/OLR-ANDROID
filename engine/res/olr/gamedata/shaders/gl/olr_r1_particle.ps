@@ -1,0 +1,21 @@
+#include "common.h"
+
+layout(location = TEXCOORD0) in float2 particle_uv;
+layout(location = COLOR0) in float4 particle_color;
+layout(location = FOG) in float fog_visibility;
+layout(location = 0) out float4 out_color;
+
+void main()
+{
+    float4 color = particle_color * tex2D(s_base, particle_uv);
+    // Original R1 Blender_Particle: GREATER 200 for SET, GREATER 0
+    // for BLEND/ADD/MUL/MUL_2X/ALPHA-ADD. Fog is enabled only for SET.
+#ifdef OLR_R1_PARTICLE_SET
+    if (floor(color.a * 255.0 + 0.5) <= 200.0) discard;
+    color.rgb = mix(fog_color.rgb, color.rgb, saturate(fog_visibility));
+#else
+    if (floor(color.a * 255.0 + 0.5) <= 0.0) discard;
+#endif
+    // No R2 soft-particle G-buffer reads or lighting/tone mapping.
+    out_color = color;
+}

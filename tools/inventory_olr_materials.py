@@ -160,7 +160,7 @@ def main():
               "BmmDold": "native_implicit_requires_detail_metadata", "D_TREE": "native_tree",
               "D_STILL": "native_detail", "MODEL": "missing_model_ros_projector_shadows",
               "MODELEbB": "missing_model_environment", "LmEbB": "forward_environment_unverified",
-              "PARTICLE": "forward_particles_unverified"}
+              "PARTICLE": "native_particle_cpp_independent_only_scene_unverified"}
     rows = []
     for shader in sorted(set(uses)|set(definitions)):
         desc = definitions.get(shader, {})

@@ -91,10 +91,19 @@ const char* ProgramName(const SPass* pass)
     return "fixed_state";
 }
 
+bool IndependentForward(const SPass* pass)
+{
+    // Only source-ported programs are admitted, never a generic R2 particle
+    // program which may sample s_position for soft intersections.
+    const char* name = ProgramName(pass);
+    return xr_strcmp(name, "olr_r1_particle|olr_r1_particle|null") == 0 ||
+        xr_strcmp(name, "olr_r1_particle_set|olr_r1_particle_set|null") == 0;
+}
+
 unsigned UnsupportedMaterials(R_dsgraph_structure& graph)
 {
     xr_map<xr_string, unsigned> unsupported;
-    unsigned total = 0;
+    unsigned total = 0, forward = 0;
     // Native static materials already have their own queue. Anything still
     // in these graphs must be migrated or explicitly proven shared-forward.
     for (unsigned priority = 0; priority != 2; ++priority)
@@ -105,6 +114,7 @@ unsigned UnsupportedMaterials(R_dsgraph_structure& graph)
             for (auto* group : normals)
             {
                 const unsigned count = unsigned(group->second.size());
+                if (IndependentForward(group->first)) { forward += count; continue; }
                 unsupported[ProgramName(group->first)] += count;
                 total += count;
             }
@@ -113,6 +123,7 @@ unsigned UnsupportedMaterials(R_dsgraph_structure& graph)
             for (auto* group : models)
             {
                 const unsigned count = unsigned(group->second.size());
+                if (IndependentForward(group->first)) { forward += count; continue; }
                 unsupported[ProgramName(group->first)] += count;
                 total += count;
             }
@@ -123,7 +134,17 @@ unsigned UnsupportedMaterials(R_dsgraph_structure& graph)
     };
     countQueue(graph.mapHUD, "HUD/models: projected lighting and ROS");
     countQueue(graph.mapHUDSorted, "HUD blended models");
-    countQueue(graph.mapSorted, "sorted forward: source material validation pending");
+    xr_vector<R_dsgraph::mapSorted_T::value_type*> sorted;
+    graph.mapSorted.get_any_p(sorted);
+    for (auto* item : sorted)
+    {
+        const auto* element = item->second.se;
+        bool ready = element && !element->passes.empty();
+        if (element)
+            for (const auto& pass : element->passes) ready &= IndependentForward(pass._get());
+        if (ready) ++forward;
+        else { ++unsupported["sorted forward: source material validation pending"]; ++total; }
+    }
     countQueue(graph.mapEmissive, "emissive");
     countQueue(graph.mapHUDEmissive, "HUD emissive");
     countQueue(graph.mapWmark, "wallmark material");
@@ -136,6 +157,7 @@ unsigned UnsupportedMaterials(R_dsgraph_structure& graph)
     static bool reported = false;
     if (total && !reported)
     {
+        Msg("* [olr_r1_coverage] independent_forward_queued=%u unsupported_draws_or_queues=%u", forward, total);
         for (const auto& item : unsupported)
             Msg("! [olr_r1_missing_material] draws_or_queues=%u family=%s", item.second, item.first.c_str());
         Msg("! Independent R1 is not ready for this scene. Returning to menu; no R2 fallback and no partial world frame.");
@@ -268,12 +290,15 @@ void CRender::render_olr_r1()
     graph.o.phase = PHASE_NORMAL;
     rmNormal(RCache);
     graph.render_olr_r1_lightmaps();
+    graph.render_graph(0);
     if (Details) Details->RenderNativeR1(RCache);
     graph.render_lods(true, false);
     g_pGamePersistent->Environment().RenderSky();
     g_pGamePersistent->Environment().RenderClouds();
     graph.render_lods(false, true);
+    graph.render_graph(1);
     graph.PortalTraverser.fade_render();
+    graph.render_sorted();
     g_pGamePersistent->OnRenderPPUI_main();
     Target->present_olr_r1();
     OlrR1Pipeline::ReportFrame(0, RCache.stat.render.calls-beforeDraws);

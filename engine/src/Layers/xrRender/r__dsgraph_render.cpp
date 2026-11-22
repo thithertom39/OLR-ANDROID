@@ -12,6 +12,7 @@
 #include "light.h"
 #include "xrRender_console.h"
 #include "olr_r1_mode.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #include <cmath>
 #endif
 #include "SkeletonCustom.h"
@@ -25,6 +26,16 @@ extern ENGINE_API float psHUD_FOV;
 namespace xray::render::RENDER_NAMESPACE
 {
 using namespace R_dsgraph;
+
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+static unsigned r1_material_kind(unsigned controlKind)
+{
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent()) return 1;
+#endif
+    return controlKind;
+}
+#endif
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 // Per-visual local light constants are written only during the optional
@@ -277,6 +288,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
             for (const auto& it : nrmPasses)
             {
                 cmd_list.set_Pass(it->first);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                if (!OlrR1Pipeline::Independent())
+#endif
                 cmd_list.apply_lmaterial();
 
                 mapNormalItems& items = it->second;
@@ -303,7 +317,7 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 items.clear();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
-                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(it->first),cmd_list.stat.render.calls-beforeDraws,_priority == 0 ? 4 : 0);
+                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(it->first),cmd_list.stat.render.calls-beforeDraws,r1_material_kind(_priority == 0 ? 4 : 0));
 #endif
 
             }
@@ -344,6 +358,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
 #endif
                     cmd_list.set_xform_world(item.Matrix);
                     RImplementation.apply_object(cmd_list, item.pObject);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                    if (!OlrR1Pipeline::Independent())
+#endif
                     cmd_list.apply_lmaterial();
 
                     const float LOD = calcLOD(item.ssa, item.pVisual->vis.sphere.R);
@@ -358,7 +375,7 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 items.clear();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
-                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(it->first),cmd_list.stat.render.calls-beforeDraws,_priority == 0 ? 4 : 0);
+                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(it->first),cmd_list.stat.render.calls-beforeDraws,r1_material_kind(_priority == 0 ? 4 : 0));
 #endif
             }
             matPasses.clear();
@@ -468,7 +485,7 @@ void __fastcall render_item(u32 context_id, const T& item)
         dsgraph.cmd_list.set_xform_world(item.second.Matrix);
     RImplementation.apply_object(dsgraph.cmd_list, item.second.pObject);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-    if (!cachedStatic)
+    if (!cachedStatic && !OlrR1Pipeline::Independent())
 #endif
         dsgraph.cmd_list.apply_lmaterial();
     hud_transform_helper::apply_custom_state(dsgraph.cmd_list);
@@ -490,7 +507,7 @@ void __fastcall render_item(u32 context_id, const T& item)
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     if (dsgraph.o.is_main_pass && dsgraph.o.phase == CRender::PHASE_NORMAL && !item.second.se->passes.empty())
         GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(item.second.se->passes[0]._get()),
-            dsgraph.cmd_list.stat.render.calls-beforeDraws,g_olrR1ForwardVisualPass ? 1 : hud_transform_helper::active() ? 4 : 0);
+            dsgraph.cmd_list.stat.render.calls-beforeDraws,r1_material_kind(g_olrR1ForwardVisualPass ? 1 : hud_transform_helper::active() ? 4 : 0));
 #endif
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
