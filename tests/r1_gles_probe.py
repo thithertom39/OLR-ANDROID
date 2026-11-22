@@ -26,7 +26,7 @@ import traceback
 
 ROOT = Path(__file__).resolve().parents[1]
 SHADERS = ROOT / "engine/res/olr/gamedata/shaders/gl"
-VARIANTS = ("", "_detail", "_vertex", "_vertex_detail", "_point", "_spot")
+VARIANTS = ("", "_detail", "_vertex", "_vertex_detail", "_point", "_spot", "_implicit_detail")
 SOURCES = {}
 
 
@@ -344,6 +344,21 @@ def pixel_checks(gl, programs):
     record("additive_one_one_unorm_saturation", gl.pixel(clear=False), [1, 1, 1, 0])
     gl.glDisable(0x0BE2)
 
+    implicit = programs[("_implicit_detail", 0)]
+    gl.use(implicit, textures)
+    # Different base/lmap coordinates and a nonconstant map distinguish the
+    # source's tc1=tc0 from ordinary unpack_tc_lmap(v.uv1).
+    gl.glVertexAttrib4f(8, 256, 256, 0, 1)  # base UV=.25, lightmap UV remains .5
+    gl.glActiveTexture(0x84C1)
+    gl.texture((20,30,40,64, 180,160,140,255,
+                160,140,120,255, 140,120,100,255),2,2)
+    implicit_light = [ambient[i]+lmap[i]+sky[i]*.98*base[3]+sun[i]*lmap[3] for i in range(3)]
+    implicit_rgb = [2*base[i]*implicit_light[i]*2*detail[i] for i in range(3)]
+    record("implicit_base_uv_alpha_hemi_and_full_ambient",gl.pixel(),implicit_rgb+[1])
+    gl.glUniform4f(gl.glGetUniformLocation(implicit,b"dt_params"),1,1,0,100)
+    record("olr_implicit_detail_remains_at_distance",gl.pixel(),implicit_rgb+[1])
+    gl.glVertexAttrib4f(8,512,512,0,1)
+
     # Nonconstant samplers make xy/w and the UNDIVIDED z coordinate observable
     # independently. This intentionally specified homogeneous transform maps
     # every vertex to s=(.5,1.5,.25,2): projector UV=(.25,.75), clip UV=(.25,.25).
@@ -405,7 +420,7 @@ def main():
                     programs[(variant, debug)] = program
                 else:
                     print(json.dumps(result), file=sys.stderr)
-        legacy_ok = len(programs) == 42
+        legacy_ok = len(programs) == len(VARIANTS)*7
         if legacy_ok:
             report["pixel_results"] = pixel_checks(gl, programs)
         scene_programs = {}
@@ -420,7 +435,7 @@ def main():
                     scene_programs[(variant, debug)] = program
                 else:
                     print(json.dumps(result), file=sys.stderr)
-        scene_ok = len(scene_programs) == 42
+        scene_ok = len(scene_programs) == len(VARIANTS)*7
         if scene_ok:
             # Existing light/material equations must survive the scene variant.
             rows = pixel_checks(gl, scene_programs)

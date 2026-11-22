@@ -81,8 +81,12 @@ void main()
     float4 lmap = tex2D(s_lmap, lightmap_uv);
     float3 baked = lmap.rgb;
     // B_DEFAULT is lmap[_dt], NOT impl[_dt]. Preserve the second map RGB.
+#ifdef OLR_R1_IMPLICIT
+    float3 ambient_hemi = L_ambient.rgb + saturate(hemi_light) * base.a;
+#else
     float3 hemi_map = tex2D(s_hemi, lightmap_uv).rgb;
     float3 ambient_hemi = L_ambient.rgb / 1.5 + saturate(hemi_light) * dot(hemi_map, float3(1.0 / 3.0));
+#endif
     float3 sunlight = saturate(sun_light) * lmap.a;
 #endif
     float3 light = baked + ambient_hemi + sunlight;
@@ -98,7 +102,13 @@ void main()
     color = float3(0.0);
 #endif
 #ifdef OLR_R1_DETAIL
+#ifdef OLR_R1_IMPLICIT
+    // OLR's actual impl_dt.ps always multiplies the authored detail by 2;
+    // unlike its lmap_dt.ps it does NOT use the interpolated distance fade.
+    color *= tex2D(s_detail, detail_uv).rgb * 2.0;
+#else
     color *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+#endif
 #endif
 #if OLR_R1_DEBUG == 0
 #ifdef OLR_R1_SCENE
@@ -107,6 +117,10 @@ void main()
     color = mix(fog_color.rgb, color, fog_visibility);
 #endif
 #endif
+#ifdef OLR_R1_IMPLICIT
+    out_color = float4(color, 1.0);
+#else
     out_color = float4(color, base.a);
+#endif
 #endif
 }

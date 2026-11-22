@@ -104,7 +104,11 @@ void main()
     hemi_light *= normal_packed.w;
     sun_light *= color.a;
 #else
+#ifdef OLR_R1_IMPLICIT
+    lightmap_uv = base_uv; // Original impl.vs copies tc0, not v.uv1.
+#else
     lightmap_uv = unpack_tc_lmap(vertex_lightmap_uv);
+#endif
 #endif
 #ifdef OLR_R1_DETAIL
     float d = distance(world_position.xyz, eye_position) * dt_params.w;

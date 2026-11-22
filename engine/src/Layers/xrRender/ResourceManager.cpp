@@ -15,12 +15,14 @@
 #include "olr_r1_mode.h"
 #include "blenders/Blender_tree.h"
 #include "blenders/Blender_detail_still.h"
+#include "blenders/Blender_BmmD.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool vertexLit)
+void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool vertexLit,
+    bool implicit, pcstr detailOverride)
 {
     // Original BlenderDefault/Blender_Vertex: lmap[_dt] / vert[_dt].
     // impl[_dt] is the separate implicit-lightmap material, not B_DEFAULT.
@@ -30,8 +32,13 @@ void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool v
     const bool hasDetail = m_textures_description.GetDetailTexture(
         C.L_textures[0], C.detail_texture, C.detail_scaler);
     m_textures_description.GetTextureUsage(C.L_textures[0], diffuseDetail, bumpDetail);
-    const bool detail = hasDetail && diffuseDetail && C.detail_texture && C.detail_scaler;
-    pcstr vs = vertexLit ? (detail ? "olr_r1_native_vertex_detail" : "olr_r1_native_vertex") :
+    // BmmD uses its authored secondary texture; do not invent missing dt_params.
+    if (implicit && (!hasDetail || !C.detail_scaler || !detailOverride || !detailOverride[0] ||
+        xr_strcmp(detailOverride, "$null") == 0))
+        return;
+    const bool detail = implicit || (hasDetail && diffuseDetail && C.detail_texture && C.detail_scaler);
+    if (implicit) C.detail_texture = detailOverride;
+    pcstr vs = implicit ? "olr_r1_native_implicit_detail" : vertexLit ? (detail ? "olr_r1_native_vertex_detail" : "olr_r1_native_vertex") :
         (detail ? "olr_r1_native_detail" : "olr_r1_native");
     ShaderElement base;
     C.SH = &base;
@@ -41,8 +48,9 @@ void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool v
     C.r_Sampler("s_base", C.L_textures[0]);
     if (!vertexLit)
     {
-        C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
-        C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        if (implicit) C.r_Sampler("s_lmap", C.L_textures[1]);
+        else C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+        if (!implicit) C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
     }
     if (detail)
         C.r_Sampler("s_detail", C.detail_texture);
@@ -72,7 +80,7 @@ void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool v
     static u32 logged = 0;
     if (logged++ < 8)
         Msg("* OLR R1 native: %s material '%s', detail=%u, original lookup POINT/SPOT, direct UNORM color",
-            vertexLit ? "vertex" : "lightmap", C.L_textures[0].c_str(), unsigned(detail));
+            implicit ? "implicit" : vertexLit ? "vertex" : "lightmap", C.L_textures[0].c_str(), unsigned(detail));
 }
 void CResourceManager::CompileOlrR1Tree(Shader& S, CBlender_Compile& C, bool rigid, bool blend)
 {
@@ -396,6 +404,8 @@ Shader* CResourceManager::_cpp_Create(
         if (olr_r1_native_enabled() && S.E[0])
             CompileOlrR1Native(S, C, blenderClass == B_VERT);
     }
+    if (olr_r1_scene_enabled() && blenderClass == B_BmmD && S.E[0] && C.L_textures.size() >= 2)
+        CompileOlrR1Native(S, C, false, true, static_cast<CBlender_BmmD*>(B)->detailTexture());
     if (olr_r1_scene_enabled() && blenderClass == B_TREE && S.E[0])
     {
         const auto* tree = static_cast<CBlender_Tree*>(B);

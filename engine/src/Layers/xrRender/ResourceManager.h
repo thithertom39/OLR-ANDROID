@@ -202,7 +202,8 @@ public:
         IBlender* B, LPCSTR s_shader = nullptr, LPCSTR s_textures = nullptr, LPCSTR s_constants = nullptr, LPCSTR s_matrices = nullptr);
     Shader* _lua_Create(LPCSTR s_shader, LPCSTR s_textures);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-    void CompileOlrR1Native(Shader& shader, CBlender_Compile& compiler, bool vertexLit);
+    void CompileOlrR1Native(Shader& shader, CBlender_Compile& compiler, bool vertexLit,
+        bool implicit = false, pcstr detailOverride = nullptr);
     void CompileOlrR1Tree(Shader& shader, CBlender_Compile& compiler, bool rigid, bool blend);
     void CompileOlrR1Lod(Shader& shader, CBlender_Compile& compiler);
     void CompileOlrR1Details(Shader& shader, CBlender_Compile& compiler, bool alphaTest);
