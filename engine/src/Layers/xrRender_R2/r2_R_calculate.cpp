@@ -6,6 +6,7 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "xrEngine/AndroidSceneCompare.h"
 #include "Layers/xrRenderGL/olrR1Pipeline.h"
+#include "Layers/xrRenderGL/olrR1Models.h"
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "Layers/xrRenderGL/glGpuProfiler.h"
@@ -169,6 +170,7 @@ void CRender::Calculate()
     if (OlrR1Pipeline::Independent())
     {
         // Main scene visibility is shared. R2 sun/rain scheduling is not.
+        OlrR1Models::BeginCollect();
         r_main.run();
         return;
     }

@@ -634,6 +634,8 @@ def main():
                 actual_rgba8=actual, expected_rgba8=expected,
                 passed=all(abs(a-b) <= 1 for a,b in zip(actual,expected))))
         particle_checks(gl, report)
+        from r1_model_probe import model_projector_checks
+        model_projector_checks(gl, report, shader_source)
         report["passed"] = legacy_ok and scene_ok and environment_ok and bool(report["pixel_results"]) and all(
             row["passed"] for row in report["pixel_results"])
     except Exception:

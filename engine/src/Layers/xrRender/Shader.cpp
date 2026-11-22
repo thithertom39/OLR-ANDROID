@@ -126,7 +126,8 @@ BOOL Shader::equal(Shader* S)
             return FALSE;
     }
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-    if (olr_r1_alpha_ref != S->olr_r1_alpha_ref || olr_r1_lightmap != S->olr_r1_lightmap ||
+    if (olr_r1_alpha_ref != S->olr_r1_alpha_ref || olr_r1_model != S->olr_r1_model ||
+        olr_r1_projector_surface != S->olr_r1_projector_surface || olr_r1_lightmap != S->olr_r1_lightmap ||
         olr_r1_lightmap_lq != S->olr_r1_lightmap_lq ||
         olr_r1_detail_wave != S->olr_r1_detail_wave || olr_r1_detail_still != S->olr_r1_detail_still ||
         olr_r1_lightmap_dynamic != S->olr_r1_lightmap_dynamic ||

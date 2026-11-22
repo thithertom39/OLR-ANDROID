@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "LocalShadowStaticCache.h"
+#include "Layers/xrRenderGL/olrR1Models.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #endif
 
 #include "FHierrarhyVisual.h"
@@ -80,6 +82,10 @@ void R_dsgraph_structure::insert_dynamic(IRenderable* root, dxRender_Visual* pVi
 
     // Select shader
     ShaderElement* sh = RImplementation.rimp_select_sh_dynamic(pVisual, distSQ, o.phase);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent() && o.phase == CRender::PHASE_NORMAL && vis_sh->olr_r1_model)
+        sh = vis_sh->E[OlrR1Models::Collect(root) ? SE_R1_NORMAL_HQ : SE_R1_NORMAL_LQ]._get();
+#endif
     if (nullptr == sh)
         return;
     if (!o.pmask[sh->flags.iPriority / 2])

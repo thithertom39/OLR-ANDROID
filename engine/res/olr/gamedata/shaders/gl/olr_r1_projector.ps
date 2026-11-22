@@ -1,0 +1,21 @@
+#include "common.h"
+layout(location = TEXCOORD0) in float2 surface_uv;
+layout(location = COLOR0) in float4 surface_color;
+layout(location = 0) out float4 out_color;
+void main()
+{
+    // Original PS1.x COLOR interpolation clamps before use in the pixel stage.
+#ifdef OLR_R1_PROJECTOR_VERTEX
+    out_color = saturate(surface_color); // OLR vert_l: RGB lighting, A sun visibility.
+#else
+    float4 baked = tex2D(s_lmap, surface_uv);
+#ifdef OLR_R1_PROJECTOR_IMPLICIT
+    float hemi_mask = tex2D(s_base, surface_uv).a;
+    float3 ambient = L_ambient.rgb;
+#else
+    float hemi_mask = dot(tex2D(s_hemi, surface_uv).rgb, float3(1.0 / 3.0));
+    float3 ambient = L_ambient.rgb / 1.5;
+#endif
+    out_color = float4(ambient + baked.rgb + saturate(surface_color.rgb) * hemi_mask, baked.a);
+#endif
+}

@@ -10,6 +10,7 @@
 #include "Layers/xrRender/Shader.h"
 #include "Layers/xrRender/olr_r1_mode.h"
 #include "Layers/xrRenderGL/glBackendStateCache.h"
+#include "olrR1Models.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE::OlrR1Pipeline
@@ -229,6 +230,7 @@ void CRenderTarget::create_olr_r1_resources()
 
 void CRenderTarget::destroy_olr_r1_resources()
 {
+    OlrR1Models::Destroy();
     if (r1_read_framebuffer)
         glDeleteFramebuffers(1, &r1_read_framebuffer);
     r1_read_framebuffer = 0;
@@ -270,7 +272,9 @@ void CRender::render_olr_r1()
     }
     if (m_bFirstFrameAfterReset) { m_bFirstFrameAfterReset = false; return; }
     r_main.sync(); // shared visibility/sector/portal preparation, not R2 lighting
+    OlrR1Models::CalculateProjector();
     const unsigned unsupported = UnsupportedMaterials(graph);
+    OlrR1Models::CaptureModels(graph);
     if (unsupported)
     {
         OlrR1Pipeline::ReportFrame(unsupported, 0);

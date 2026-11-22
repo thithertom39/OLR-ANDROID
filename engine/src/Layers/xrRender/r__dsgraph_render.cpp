@@ -13,6 +13,7 @@
 #include "xrRender_console.h"
 #include "olr_r1_mode.h"
 #include "Layers/xrRenderGL/olrR1Pipeline.h"
+#include "Layers/xrRenderGL/olrR1Models.h"
 #include <cmath>
 #endif
 #include "SkeletonCustom.h"
@@ -363,6 +364,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
 #endif
                     cmd_list.apply_lmaterial();
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                    if (OlrR1Pipeline::Independent())
+                        OlrR1Models::Bind(cmd_list, item.pObject, item.pVisual);
+#endif
                     const float LOD = calcLOD(item.ssa, item.pVisual->vis.sphere.R);
 #ifdef USE_DX11
                     cmd_list.LOD.set_LOD(LOD);
@@ -496,6 +501,8 @@ void __fastcall render_item(u32 context_id, const T& item)
     // previous shader and does not automatically rebind local light data.
     if (g_olrR1ForwardVisualPass && !olr_r1_multipass_enabled())
         olr_r1_forward_bind_visual_lights(dsgraph.cmd_list, V->vis.sphere);
+    if (OlrR1Pipeline::Independent())
+        OlrR1Models::Bind(dsgraph.cmd_list, item.second.pObject, V);
 #endif
     //--#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
     //RCache.hemi.c_update(V);
@@ -865,11 +872,22 @@ void R_dsgraph_structure::render_R1_box(IRender_Sector::sector_id_t sector_id, F
         {
             // Renderable visual
             ShaderElement* E2 = V->shader->E[sh]._get();
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if (OlrR1Pipeline::Independent() && sh == SE_R1_LMODELS)
+                E2 = V->shader->olr_r1_projector_surface._get();
+#endif
             if (E2 && !(E2->flags.bDistort))
             {
                 for (u32 pass = 0; pass < E2->passes.size(); pass++)
                 {
                     cmd_list.set_Element(E2, pass);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                    if (OlrR1Pipeline::Independent() && sh == SE_R1_LMODELS)
+                    {
+                        cmd_list.set_CullMode(CULL_CW);
+                        cmd_list.set_c("olr_r1_projector_raster",1.f/51.f,1.f/51.f,0.f,0.f);
+                    }
+#endif
                     V->Render(cmd_list, -1.f, o.phase == CRender::PHASE_SMAP);
                 }
             }

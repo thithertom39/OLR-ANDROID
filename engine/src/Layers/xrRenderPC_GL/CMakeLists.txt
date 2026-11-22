@@ -10,6 +10,8 @@ target_sources(xrRender_GL PRIVATE
     ../xrRenderGL/olrR1Pipeline.cpp
     ../xrRenderGL/olrR1Pipeline.h
     ../xrRenderGL/olrR1ObjectLighting.cpp
+    ../xrRenderGL/olrR1Models.cpp
+    ../xrRenderGL/olrR1Models.h
     gl_rendertarget_accum_direct.cpp
     gl_rendertarget_build_textures.cpp
     gl_rendertarget.h

@@ -3,6 +3,10 @@
 
 #include "Layers/xrRender/blenders/uber_deffer.h"
 #include "blender_deffer_model.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#include "Layers/xrRenderGL/olrR1Models.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -65,6 +69,13 @@ void CBlender_deffer_model::Load(IReader& fs, u16 version)
 void CBlender_deffer_model::Compile(CBlender_Compile& C)
 {
     IBlender::Compile(C);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+    {
+        OlrR1Models::Compile(C,oBlend.value,oAREF.value);
+        return;
+    }
+#endif
 
 #if RENDER == R_R2
     BOOL bForward = FALSE;

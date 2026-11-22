@@ -13,10 +13,12 @@
 #include "Blender_Recorder.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "olr_r1_mode.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #include "blenders/Blender_tree.h"
 #include "blenders/Blender_detail_still.h"
 #include "blenders/Blender_BmmD.h"
 #include "blenders/blender_deffer_aref.h"
+#include "blenders/blender_deffer_model.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE
@@ -62,6 +64,26 @@ void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool v
         return ref_selement(_CreateElement(std::move(base)));
     };
     S.olr_r1_lightmap = compileBase(vs, detail);
+    // SE_R1_LMODELS is a separate lighting-only surface, without diffuse,
+    // detail, sun color or fog. Do not repurpose R2 E[4] (emissive/distortion).
+    if (OlrR1Pipeline::Independent())
+    {
+        ShaderElement surface;
+        C.SH = &surface;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        pcstr program = implicit ? "olr_r1_projector_implicit" : vertexLit ? "olr_r1_projector_vertex" : "olr_r1_projector_lmap";
+        C.r_Pass(program, program, FALSE, TRUE, TRUE, FALSE);
+        if (implicit) C.r_Sampler("s_base", C.L_textures[0]);
+        if (!vertexLit)
+        {
+            if (implicit) C.r_Sampler("s_lmap", C.L_textures[1]);
+            else C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+            if (!implicit) C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        }
+        C.r_End();
+        S.olr_r1_projector_surface = _CreateElement(std::move(surface));
+    }
     S.olr_r1_alpha_ref = alphaRef;
     if (alphaRef >= 0 && detail)
         S.olr_r1_lightmap_lq = compileBase(vertexLit ? "olr_r1_native_vertex" : "olr_r1_native", false);
@@ -404,6 +426,12 @@ Shader* CResourceManager::_cpp_Create(
     static const bool olrR1Lightmaps = olrR1Forward ||
         (strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_lightmaps"));
     const auto blenderClass = B->getDescription().CLS;
+    if (OlrR1Pipeline::Independent() && blenderClass == B_MODEL)
+    {
+        S.olr_r1_model = true;
+        const auto* model = static_cast<CBlender_deffer_model*>(B);
+        S.olr_r1_alpha_ref = model->oBlend.value ? model->oAREF.value : -1;
+    }
     if (olrR1Lightmaps && (blenderClass == B_DEFAULT || blenderClass == B_VERT))
     {
         C.iElement = SE_OLR_R1_LIGHTMAP;
