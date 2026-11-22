@@ -131,6 +131,11 @@ bool Collect(IRenderable* object)
     if (spatial->GetSpatialData().type & STYPEFLAG_INVALIDSECTOR)
         spatial->spatial_updatesector(graph.detect_sector(spatial->spatial_sector_point()));
     if (spatial->GetSpatialData().sector_id == IRender_Sector::INVALID_SECTOR_ID) return false;
+    // A newly created ROS has approximate=(0,0,0). The legacy one-object
+    // visibility update may not have visited it yet. Do the original initial
+    // ray/light update before caching its lighting for 30-90 seconds, rather
+    // than seeding a persistent black tile and updating ROS only at model draw.
+    if (ros->result_count == 0) ros->update(object);
     ros->shadow_recv_frame = Device.dwFrame;
     projector.receivers.push_back(object);
     return true;
