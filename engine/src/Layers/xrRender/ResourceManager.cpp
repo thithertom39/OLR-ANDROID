@@ -113,8 +113,8 @@ void CResourceManager::CompileOlrR1Tree(Shader& S, CBlender_Compile& C, bool rig
         if (spot) S.olr_r1_lightmap_spot = _CreateElement(std::move(additive));
         else S.olr_r1_lightmap_dynamic = _CreateElement(std::move(additive));
     }
-    Msg("* OLR R1 scene: native tree '%s' rigid=%u blend=%u detail=%u", C.L_textures[0].c_str(),
-        unsigned(rigid), unsigned(blend), unsigned(detail));
+    Msg("* OLR R1 scene: native tree '%s' rigid=%u blend=%u detail=%u shared_r2_hq_lq=%u", C.L_textures[0].c_str(),
+        unsigned(rigid), unsigned(blend), unsigned(detail), unsigned(S.E[0] == S.E[1]));
     ShaderElement low;
     C.SH = &low;
     C.RS.Invalidate();

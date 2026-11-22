@@ -18,6 +18,9 @@
 namespace xray::render::RENDER_NAMESPACE
 {
 using namespace R_dsgraph;
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+extern float r_dtex_range;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scene graph actual insertion and sorting ////////////////////////////////////////////////////////
@@ -242,7 +245,10 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
     if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
     {
         auto* lightmap = vis_sh->olr_r1_lightmap._get();
-        if (sh == vis_sh->E[1]._get() && vis_sh->olr_r1_lightmap_lq)
+        // HQ/LQ R2 elements may be interned to the same pointer for flat
+        // materials. Select by the actual quality distance, as rimp_select_sh_static.
+        if (vis_sh->olr_r1_lightmap_lq &&
+            (_sqrt(distSQ) - pVisual->vis.sphere.R) >= r_dtex_range)
             lightmap = vis_sh->olr_r1_lightmap_lq._get();
         if (lightmap)
         {
