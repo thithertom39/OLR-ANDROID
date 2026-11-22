@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
@@ -69,6 +72,9 @@ bool gles_lighting_audit_current_frame()
 
 void CRenderTarget::phase_combine()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_combine");
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope combineScope(GLGpuProfiler::Stage::Combine);
 #endif
@@ -669,6 +675,9 @@ void CRenderTarget::phase_combine()
 
 void CRenderTarget::phase_wallmarks()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_wallmarks");
+#endif
     // Targets
     RCache.set_RT(0, 2);
     RCache.set_RT(0, 1);
@@ -681,6 +690,9 @@ void CRenderTarget::phase_wallmarks()
 
 void CRenderTarget::phase_combine_volumetric()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_combine_volumetric");
+#endif
     PIX_EVENT(phase_combine_volumetric);
     u32 Offset = 0;
 

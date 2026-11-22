@@ -2,6 +2,7 @@
 #include "light.h"
 #if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
 #include "Layers/xrRenderGL/glDetailShadowCull.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE
@@ -85,6 +86,14 @@ light::~light()
 #if (RENDER == R_R2) || (RENDER == R_R3) || (RENDER == R_R4) || (RENDER == R_GL)
 void light::set_texture(LPCSTR name)
 {
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    // Original R1 light::set_texture does not build per-light R2 accumulation
+    // shaders. Its SPOT material samples internal_light_att/attclip instead
+    // (Blender_Model/Default/Vertex and the native R1 material compiler).
+    // In particular CTorch calls this while spawning, before the first frame.
+    if (OlrR1Pipeline::Independent())
+        return;
+#endif
     if ((nullptr == name) || (0 == name[0]))
     {
         // default shaders

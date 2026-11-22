@@ -8,6 +8,7 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "xrEngine/AndroidSceneCompare.h"
 #include "Layers/xrRender/olr_r1_mode.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #endif
 
 #include "Layers/xrRender/FBasicVisual.h"
@@ -98,6 +99,21 @@ void CRender::RenderMenu()
 extern u32 g_r;
 void CRender::Render()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+    {
+        render_olr_r1();
+        return;
+    }
+#endif
+    render_deferred();
+}
+
+void CRender::render_deferred()
+{
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("frame");
+#endif
     ZoneScoped;
 #if defined(USE_DX11)
     TracyD3D11Zone(HW.profiler_ctx, "Render");

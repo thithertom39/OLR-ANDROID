@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #if defined(USE_OGL)
 #include "../xrRenderGL/glTextureBindings.h"
+#include "../xrRenderGL/olrR1Pipeline.h"
 #endif
 #include "Layers/xrRender/ResourceManager.h"
 #include "Layers/xrRender/blenders/blender_light_occq.h"
@@ -243,6 +244,14 @@ CRenderTarget::CRenderTarget()
 
     dwAccumulatorClearMark = 0;
     RImplementation.Resources->Evict();
+
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+    {
+        create_olr_r1_resources();
+        return;
+    }
+#endif
 
     // Blenders
     b_accum_spot = xr_new<CBlender_accum_spot>();
@@ -707,6 +716,13 @@ CRenderTarget::CRenderTarget()
 
 CRenderTarget::~CRenderTarget()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+    {
+        destroy_olr_r1_resources();
+        return;
+    }
+#endif
 #if defined(USE_DX11)
     _RELEASE(t_ss_async);
 #elif defined(USE_OGL)

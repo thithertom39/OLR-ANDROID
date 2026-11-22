@@ -485,6 +485,10 @@ public:
 
     void Calculate() override;
     void Render() override;
+    void render_deferred();
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    void render_olr_r1();
+#endif
     void RenderMenu() override;
 
     void Screenshot(ScreenshotMode mode = SM_NORMAL, pcstr name = nullptr) override;

@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -76,6 +79,9 @@ void audit_sun_shadow_framebuffer(const CBackend& cmd_list, u32 cascade, const C
 
 void CRenderTarget::phase_smap_direct(CBackend& cmd_list, light *L, u32 sub_phase)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_smap_direct");
+#endif
     if (sub_phase == SE_SUN_RAIN_SMAP)
     {
         u_setrt(cmd_list, nullptr, nullptr, nullptr, rt_smap_rain);
@@ -106,6 +112,9 @@ void CRenderTarget::phase_smap_direct(CBackend& cmd_list, light *L, u32 sub_phas
 
 void CRenderTarget::phase_smap_direct_tsh(CBackend& cmd_list, light *L, u32 sub_phase)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_smap_direct_tsh");
+#endif
     VERIFY(RImplementation.o.Tshadows);
     cmd_list.set_ColorWriteEnable();
     //	Prepare viewport for shadow map rendering

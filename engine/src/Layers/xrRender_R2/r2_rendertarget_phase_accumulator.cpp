@@ -1,9 +1,15 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
 void CRenderTarget::phase_accumulator(CBackend& cmd_list)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_accumulator");
+#endif
     // Targets
     if (dwAccumulatorClearMark == Device.dwFrame)
     {
@@ -57,6 +63,9 @@ void CRenderTarget::phase_accumulator(CBackend& cmd_list)
 
 void CRenderTarget::phase_vol_accumulator(CBackend& cmd_list)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_vol_accumulator");
+#endif
     u_setrt(cmd_list, rt_Generic_2, nullptr, nullptr, rt_MSAADepth);
 
     if (!m_bHasActiveVolumetric)

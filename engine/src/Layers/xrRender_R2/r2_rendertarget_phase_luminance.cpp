@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "Layers/xrRenderGL/glGpuProfiler.h"
 #endif
@@ -234,6 +237,9 @@ void Probe(u32 ticket, u32 gpu, pcstr phase, const CRT& target)
 
 void CRenderTarget::phase_luminance()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_luminance");
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope luminanceScope(GLGpuProfiler::Stage::Luminance);
 #endif
