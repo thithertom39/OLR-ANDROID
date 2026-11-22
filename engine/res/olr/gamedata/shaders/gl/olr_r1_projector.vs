@@ -30,10 +30,13 @@ void main()
 #else
     surface_uv = unpack_tc_lmap(vertex_lightmap_uv);
 #endif
-    float4 clip = mul(m_VP, vertex_position);
+    // Adreno's compiler rejects a variable sharing the compatibility macro
+    // name clip(x), although Mesa accepts it. Keep the projected value intact.
+    float4 projected_position = mul(m_VP, vertex_position);
     // This atlas emulates D3D9 raster coordinates for the original UVgen:
     // logical tile rows map to GLES bottom-up storage; integer pixel centers
     // map to GL half-integer centers. This is atlas-only, not world geometry.
-    gl_Position = float4(clip.x, -clip.y, 2.0 * clip.z - clip.w, clip.w);
-    gl_Position.xy += olr_r1_projector_raster.xy * clip.w;
+    gl_Position = float4(projected_position.x, -projected_position.y,
+                        2.0 * projected_position.z - projected_position.w, projected_position.w);
+    gl_Position.xy += olr_r1_projector_raster.xy * projected_position.w;
 }
