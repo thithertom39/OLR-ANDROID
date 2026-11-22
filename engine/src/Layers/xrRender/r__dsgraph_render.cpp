@@ -222,7 +222,7 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 items.clear();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
-                    GLGpuProfiler::RecordR1Material(it->first->ps->cName.c_str(),cmd_list.stat.render.calls-beforeDraws,0);
+                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(it->first),cmd_list.stat.render.calls-beforeDraws,0);
 #endif
 
             }
@@ -274,7 +274,7 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 items.clear();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
-                    GLGpuProfiler::RecordR1Material(it->first->ps->cName.c_str(),cmd_list.stat.render.calls-beforeDraws,0);
+                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(it->first),cmd_list.stat.render.calls-beforeDraws,0);
 #endif
             }
             matPasses.clear();
@@ -388,7 +388,7 @@ void __fastcall render_item(u32 context_id, const T& item)
     V->Render(dsgraph.cmd_list, visualLOD, dsgraph.o.phase == CRender::PHASE_SMAP);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     if (dsgraph.o.is_main_pass && dsgraph.o.phase == CRender::PHASE_NORMAL && !item.second.se->passes.empty())
-        GLGpuProfiler::RecordR1Material(item.second.se->passes[0]->ps->cName.c_str(),
+        GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(item.second.se->passes[0]._get()),
             dsgraph.cmd_list.stat.render.calls-beforeDraws,g_olrR1ForwardVisualPass ? 1 : 0);
 #endif
 
@@ -489,7 +489,7 @@ void __fastcall render_item(u32 context_id, const T& item)
 #endif
             V->Render(dsgraph.cmd_list, visualLOD, false);
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
-            GLGpuProfiler::RecordR1Material(extra->passes[0]->ps->cName.c_str(),
+            GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(extra->passes[0]._get()),
                 dsgraph.cmd_list.stat.render.calls-beforeLightDraws,source->flags.type == IRender_Light::SPOT ? 3 : 2);
 #endif
         };

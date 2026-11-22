@@ -415,7 +415,7 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                             cmd_list.Render(D3DPT_TRIANGLELIST, vOffset, 0, dwCNT_verts, iOffset, dwCNT_prims);
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                             if (RImplementation.get_context(cmd_list.context_id).o.phase == CRender::PHASE_NORMAL)
-                                GLGpuProfiler::RecordR1Material(element->passes[iPass]->ps->cName.c_str(),1,nativeR1DetailPass ? 1 : 0);
+                                GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(element->passes[iPass]._get()),1,nativeR1DetailPass ? 1 : 0);
 #endif
                             cmd_list.stat.r.s_details.add(dwCNT_verts);
 
@@ -452,7 +452,7 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                     cmd_list.Render(D3DPT_TRIANGLELIST, vOffset, 0, dwCNT_verts, iOffset, dwCNT_prims);
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                     if (RImplementation.get_context(cmd_list.context_id).o.phase == CRender::PHASE_NORMAL)
-                        GLGpuProfiler::RecordR1Material(element->passes[iPass]->ps->cName.c_str(),1,nativeR1DetailPass ? 1 : 0);
+                        GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(element->passes[iPass]._get()),1,nativeR1DetailPass ? 1 : 0);
 #endif
                     cmd_list.stat.r.s_details.add(dwCNT_verts);
                 }

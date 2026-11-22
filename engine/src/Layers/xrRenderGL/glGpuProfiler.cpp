@@ -491,6 +491,15 @@ void RecordR1Material(const char* shader, unsigned draws, unsigned kind)
     state.r1Materials[name] += draws;
 }
 
+const char* MaterialName(const SPass* pass)
+{
+    // Depth-only/vertex-only passes legitimately have no pixel shader.
+    if (!pass) return "unknown";
+    if (pass->ps) return pass->ps->cName.c_str();
+    if (pass->vs) return pass->vs->cName.c_str();
+    return "fixed_state";
+}
+
 bool SamplingShadowAtlas()
 {
     return state.inFrame && state.atlasOnly;

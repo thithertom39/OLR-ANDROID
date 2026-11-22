@@ -3,6 +3,7 @@
 // Diagnostics are absent from the normal renderer, including per-draw hooks.
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include <cstdint>
+namespace xray::render::RENDER_NAMESPACE { struct SPass; }
 
 namespace xray::render::RENDER_NAMESPACE::GLGpuProfiler
 {
@@ -24,6 +25,7 @@ void RecordDraw(unsigned triangles);
 void RecordFramebuffer();
 // kind: 0 = fallback submission, 1 = native base, 2 = POINT, 3 = SPOT.
 void RecordR1Material(const char* shader, unsigned draws, unsigned kind);
+const char* MaterialName(const SPass* pass);
 bool SamplingShadowAtlas();
 void RecordDetails(unsigned instances);
 

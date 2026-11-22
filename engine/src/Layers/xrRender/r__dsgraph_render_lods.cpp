@@ -150,7 +150,7 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
                     cmd_list.set_Geometry(firstV->geom);
                     cmd_list.Render(D3DPT_TRIANGLELIST, vCurOffset, 0, 4 * p_count, 0, 2 * p_count);
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
-                    GLGpuProfiler::RecordR1Material(lstLODs[current].pVisual->shader->E[shid]->passes[uiPass]->ps->cName.c_str(),
+                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(lstLODs[current].pVisual->shader->E[shid]->passes[uiPass]._get()),
                         p_count > 0 ? 1 : 0,
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
                         olr_r1_scene_enabled() ? 1 : 0

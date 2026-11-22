@@ -66,9 +66,13 @@ try {
     if ($back) { Tap-Node $back; $ui = Read-UI }
     if ($ConfigureOnly) { return }
     Tap-Node $ui.SelectSingleNode("//node[@resource-id='$($Package):id/btn_start_game']")
+    $runPid = (& $Adb shell pidof $Package).Trim()
+    if (!$runPid) { throw 'Game process did not start.' }
     for ($elapsed=10; $elapsed -le $Seconds; $elapsed+=10) {
         Start-Sleep -Seconds 10
         $measurements += Read-Thermals
+        $currentPid = (& $Adb shell pidof $Package) -join ' '
+        if ($currentPid.Trim() -ne $runPid) { throw 'Game process exited or restarted; ending capture immediately.' }
         Write-Output "elapsed=$elapsed battery=$($measurements[-1].battery_celsius) C thermal=$($measurements[-1].thermal_status)"
         if ($DirectionSweep -and $elapsed -in @(80,100,120,140,160)) {
             & $Adb shell screencap -p /sdcard/olr-r1-smoke.png
