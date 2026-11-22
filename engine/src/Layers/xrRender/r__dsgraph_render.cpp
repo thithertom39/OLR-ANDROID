@@ -40,6 +40,19 @@ void olr_r1_forward_bind_visual_lights(CBackend& cmd_list, const Fsphere& bounds
 
 static thread_local R_dsgraph_structure* g_olrR1LightContext = nullptr;
 static thread_local xr_map<const light*, xr_set<dxRender_Visual*>> g_olrR1LightVisuals;
+static bool olr_r1_cached_submission()
+{
+    static const bool enabled = olr_r1_native_enabled() && !strstr(Core.Params, "-olr_r1_light_cache_off");
+    return enabled;
+}
+
+struct OlrR1PreparedLight
+{
+    const light* source;
+    Fvector4 position, direction, color;
+    Fmatrix spotTransform;
+};
+static thread_local xr_vector<OlrR1PreparedLight> g_olrR1PreparedLights;
 
 static void olr_r1_light_camera(const light& source, Fmatrix& combined, Fvector& origin)
 {
@@ -65,6 +78,54 @@ static void olr_r1_light_camera(const light& source, Fmatrix& combined, Fvector&
     }
     view.build_camera_dir(origin, direction, up);
     combined.mul(projection, view);
+}
+
+static void olr_r1_prepare_lights()
+{
+    g_olrR1PreparedLights.clear();
+    // These values are invariant during this forward pass. Keep package order:
+    // RGBA8 rounds/saturates after EACH draw, so do not regroup light passes.
+    const auto append = [](const light* entry)
+    {
+        const light* source = entry && entry->shadow_parent ? entry->shadow_parent : entry;
+        if (!source || !source->flags.bActive || source->flags.bStatic || source->range <= EPS_L ||
+            (source->flags.type != IRender_Light::POINT && source->flags.type != IRender_Light::SPOT))
+            return;
+        for (const auto& prepared : g_olrR1PreparedLights)
+            if (prepared.source == source)
+                return;
+        const float distance = Device.vCameraPosition.distance_to(source->spatial.sphere.P) - source->spatial.sphere.R;
+        const float scale = clampr(1.f - distance / _max(ps_r1_dlights_clip, EPS_L), 0.f, 1.f);
+        if (scale <= EPS_L)
+            return;
+        OlrR1PreparedLight prepared;
+        prepared.spotTransform.identity();
+        prepared.source = source;
+        prepared.position.set(source->position.x, source->position.y, source->position.z, .5f / source->range);
+        prepared.color.set(source->color.r * scale, source->color.g * scale, source->color.b * scale, 1.f);
+        prepared.direction.set(0.f, 0.f, 0.f, -2.f);
+        if (source->flags.type == IRender_Light::SPOT)
+        {
+            Fvector dir = source->direction;
+            if (dir.square_magnitude() <= .0001f)
+                return;
+            dir.normalize();
+            prepared.direction.set(dir.x, dir.y, dir.z, std::cos(source->cone * .5f));
+            Fmatrix combined;
+            Fvector origin;
+            olr_r1_light_camera(*source, combined, origin);
+            const Fmatrix adjust = {
+                .5f, 0.f, 0.f, 0.f,
+                0.f, -.5f, 0.f, 0.f,
+                0.f, 0.f, 1.f / source->range, 0.f,
+                .5f + .5f / 32.f, .5f + .5f / 32.f, 0.f, 1.f};
+            prepared.spotTransform.mul(adjust, combined);
+        }
+        g_olrR1PreparedLights.push_back(prepared);
+    };
+    for (const light* source : RImplementation.Lights.package.v_point) append(source);
+    for (const light* source : RImplementation.Lights.package.v_spot) append(source);
+    for (const light* source : RImplementation.Lights.package.v_shadowed) append(source);
 }
 
 static void olr_r1_collect_light_visuals(dxRender_Visual* visual, const CFrustum& frustum,
@@ -369,9 +430,19 @@ void __fastcall render_item(u32 context_id, const T& item)
     dxRender_Visual* V = item.second.pVisual;
     VERIFY(V && V->shader._get());
     dsgraph.cmd_list.set_Element(item.second.se);
-    dsgraph.cmd_list.set_xform_world(item.second.Matrix);
+    // Native static shaders use authored/environment lighting, not R2 ROS
+    // material constants. Tree visuals may change W in Render(), so compare
+    // the actual backend transform rather than remembering the previous item.
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    const bool cachedStatic = g_olrR1ForwardVisualPass && olr_r1_cached_submission() && !item.second.pObject;
+    if (!cachedStatic || memcmp(&dsgraph.cmd_list.get_xform_world(), &item.second.Matrix, sizeof(Fmatrix)) != 0)
+#endif
+        dsgraph.cmd_list.set_xform_world(item.second.Matrix);
     RImplementation.apply_object(dsgraph.cmd_list, item.second.pObject);
-    dsgraph.cmd_list.apply_lmaterial();
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (!cachedStatic)
+#endif
+        dsgraph.cmd_list.apply_lmaterial();
     hud_transform_helper::apply_custom_state(dsgraph.cmd_list);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     // Must run after set_Element/apply_lmaterial: CBackend may cache the
@@ -405,19 +476,22 @@ void __fastcall render_item(u32 context_id, const T& item)
 
         static thread_local xr_vector<const light*> visited;
         visited.clear();
-        const auto drawLight = [&](const light* entry)
+        const auto drawLight = [&](const light* entry, const OlrR1PreparedLight* prepared)
         {
-            const light* source = entry && entry->shadow_parent ? entry->shadow_parent : entry;
-            if (!source || !source->flags.bActive || source->flags.bStatic ||
+            const light* source = prepared ? prepared->source : (entry && entry->shadow_parent ? entry->shadow_parent : entry);
+            if (!prepared && (!source || !source->flags.bActive || source->flags.bStatic ||
                 source->range <= EPS_L ||
                 (source->flags.type != IRender_Light::POINT &&
-                 source->flags.type != IRender_Light::SPOT))
+                 source->flags.type != IRender_Light::SPOT)))
                 return;
 
-            for (const light* alreadyDrawn : visited)
-                if (alreadyDrawn == source)
-                    return;
-            visited.push_back(source);
+            if (!prepared)
+            {
+                for (const light* alreadyDrawn : visited)
+                    if (alreadyDrawn == source)
+                        return;
+                visited.push_back(source);
+            }
 
             const float maxReach = source->range + V->vis.sphere.R;
             if (source->position.distance_to_sqr(V->vis.sphere.P) > maxReach * maxReach)
@@ -428,17 +502,25 @@ void __fastcall render_item(u32 context_id, const T& item)
             // the original R1 fades contribution by camera-to-light volume
             // distance and lets users increase this budget.
             const bool native = olr_r1_native_enabled();
-            const float clipDistance = native
+            const float clipDistance = prepared ? 0.f : native
                 ? Device.vCameraPosition.distance_to(source->spatial.sphere.P) - source->spatial.sphere.R
                 : Device.vCameraPosition.distance_to(source->position) - source->range;
             const float clipRange = _max(ps_r1_dlights_clip, EPS_L);
-            const float lightScale = clampr(1.f - clipDistance / clipRange, 0.f, 1.f);
+            const float lightScale = prepared ? 1.f : clampr(1.f - clipDistance / clipRange, 0.f, 1.f);
             if (lightScale <= EPS_L)
                 return;
             if (native && !olr_r1_light_reaches_visual(*source, V))
                 return;
 
             Fvector4 pos, direction, color;
+            if (prepared)
+            {
+                pos = prepared->position;
+                direction = prepared->direction;
+                color = prepared->color;
+            }
+            else
+            {
             pos.set(source->position.x, source->position.y, source->position.z,
                 1.f / (source->range * source->range));
             color.set(source->color.r * lightScale, source->color.g * lightScale,
@@ -453,6 +535,7 @@ void __fastcall render_item(u32 context_id, const T& item)
                 dir.normalize();
                 direction.set(dir.x, dir.y, dir.z, std::cos(source->cone * 0.5f));
             }
+            }
 
             if (native && source->flags.type == IRender_Light::SPOT)
                 extra = V->shader->olr_r1_lightmap_spot._get();
@@ -461,7 +544,8 @@ void __fastcall render_item(u32 context_id, const T& item)
             if (!extra)
                 return;
             dsgraph.cmd_list.set_Element(extra);
-            dsgraph.cmd_list.apply_lmaterial();
+            if (!cachedStatic)
+                dsgraph.cmd_list.apply_lmaterial();
             if (native)
             {
                 // LightPPA::cl_light_PR and render_spot, including its
@@ -469,6 +553,10 @@ void __fastcall render_item(u32 context_id, const T& item)
                 pos.w = .5f / source->range;
                 if (source->flags.type == IRender_Light::SPOT)
                 {
+                    if (prepared)
+                        dsgraph.cmd_list.set_c("olr_r1_light_xform", prepared->spotTransform);
+                    else
+                    {
                     Fmatrix combined, xform;
                     Fvector origin;
                     olr_r1_light_camera(*source, combined, origin);
@@ -479,6 +567,7 @@ void __fastcall render_item(u32 context_id, const T& item)
                         .5f + .5f / 32.f, .5f + .5f / 32.f, 0.f, 1.f};
                     xform.mul(adjust, combined);
                     dsgraph.cmd_list.set_c("olr_r1_light_xform", xform);
+                    }
                 }
             }
             dsgraph.cmd_list.set_c("olr_r1_dynamic_pos", pos);
@@ -494,12 +583,15 @@ void __fastcall render_item(u32 context_id, const T& item)
 #endif
         };
 
-        for (const light* source : RImplementation.Lights.package.v_point)
-            drawLight(source);
-        for (const light* source : RImplementation.Lights.package.v_spot)
-            drawLight(source);
-        for (const light* source : RImplementation.Lights.package.v_shadowed)
-            drawLight(source);
+        if (olr_r1_cached_submission())
+            for (const auto& prepared : g_olrR1PreparedLights)
+                drawLight(prepared.source, &prepared);
+        else
+        {
+            for (const light* source : RImplementation.Lights.package.v_point) drawLight(source, nullptr);
+            for (const light* source : RImplementation.Lights.package.v_spot) drawLight(source, nullptr);
+            for (const light* source : RImplementation.Lights.package.v_shadowed) drawLight(source, nullptr);
+        }
     }
 #endif
 }
@@ -648,6 +740,8 @@ void R_dsgraph_structure::render_olr_r1_lightmaps()
     u32 lightContextId = R_dsgraph_structure::INVALID_CONTEXT_ID;
     if (olr_r1_native_enabled())
     {
+        if (olr_r1_cached_submission())
+            olr_r1_prepare_lights();
         g_olrR1LightVisuals.clear(); // moving/switched lights need a fresh subspace every frame.
         lightContextId = RImplementation.alloc_context(false);
         if (lightContextId != R_dsgraph_structure::INVALID_CONTEXT_ID)
