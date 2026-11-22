@@ -151,7 +151,21 @@ jobs:
           if [[ "$GPU_PROFILE" == "true" ]]; then
             args+=(-POXRAY_GPU_PROFILE=true)
           fi
-          ./gradlew "${args[@]}"
+          # Maven Central can transiently rate-limit the shared runner IP.
+          # Retry only HTTP 429 dependency failures; compiler/test failures
+          # still fail immediately. Preserve each attempt in the job log.
+          for attempt in 1 2 3; do
+            set +e
+            ./gradlew "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/olr-gradle-$attempt.log"
+            result=${PIPESTATUS[0]}
+            set -e
+            if [[ "$result" == 0 ]]; then break; fi
+            if [[ "$attempt" == 3 ]] || ! grep -q 'Received status code 429' "$RUNNER_TEMP/olr-gradle-$attempt.log"; then
+              exit "$result"
+            fi
+            echo "Maven Central HTTP 429; retrying dependency resolution in 20 seconds."
+            sleep 20
+          done
 
       - name: Verify and name APK
         shell: bash
