@@ -5,6 +5,7 @@ param(
     [string]$Tag = 'r1-smoke',
     [string]$ArgumentsText,
     [switch]$Interact,
+    [switch]$DirectionSweep,
     [switch]$ConfigureOnly,
     [ValidateRange(20,180)][int]$Seconds = 80,
     [string]$LogDirectory = (Join-Path $PSScriptRoot '../logs')
@@ -69,6 +70,11 @@ try {
         Start-Sleep -Seconds 10
         $measurements += Read-Thermals
         Write-Output "elapsed=$elapsed battery=$($measurements[-1].battery_celsius) C thermal=$($measurements[-1].thermal_status)"
+        if ($DirectionSweep -and $elapsed -in @(80,100,120,140,160)) {
+            & $Adb shell screencap -p /sdcard/olr-r1-smoke.png
+            & $Adb pull /sdcard/olr-r1-smoke.png (Join-Path $LogDirectory "$Tag-direction-$elapsed.png")
+            if ($elapsed -lt 160) { & $Adb shell input swipe 2100 800 2300 800 400 }
+        }
         if ($Interact -and $elapsed -eq 80) {
             & $Adb shell screencap -p /sdcard/olr-r1-smoke.png
             & $Adb pull /sdcard/olr-r1-smoke.png (Join-Path $LogDirectory "$Tag-before-input.png")

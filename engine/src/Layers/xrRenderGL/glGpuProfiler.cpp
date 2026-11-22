@@ -26,7 +26,8 @@ constexpr const char* Names[StageCount] = {
     "bloom_luminance_inclusive", "luminance", "final_combine_aa", "extra_pp", "present_blit",
     "z_prefill", "sync_wait", "scene_prepare", "light_visibility", "wallmarks_hud_ui",
     "rain", "emissive", "light_flush", "calculate", "hom_wait",
-    "local_normal", "local_pending", "local_visibility_cpu", "local_pack_cpu", "local_task_wait_cpu", "local_shadow_setup", "local_shadow_geometry", "local_shadow_details", "local_shadow_special", "local_smapvis_end", "local_point_accum", "local_spot_accum", "local_indirect", "local_volumetric", "sun_shadow_geometry", "sun_details", "sun_special", "sun_accum", "local_shadow_atlas"
+    "local_normal", "local_pending", "local_visibility_cpu", "local_pack_cpu", "local_task_wait_cpu", "local_shadow_setup", "local_shadow_geometry", "local_shadow_details", "local_shadow_special", "local_smapvis_end", "local_point_accum", "local_spot_accum", "local_indirect", "local_volumetric", "sun_shadow_geometry", "sun_details", "sun_special", "sun_accum", "local_shadow_atlas",
+    "r1_forward_world", "r1_portal_traversal_cpu", "r1_lod", "r1_detail_instances"
 };
 
 struct Event
@@ -71,6 +72,9 @@ struct State
     std::uint64_t lastFlush = 0;
     double intervalMs = -1;
     unsigned draws = 0;
+    unsigned triangles = 0, framebufferBinds = 0;
+    std::array<unsigned,4> r1Draws{};
+    xr_map<xr_string,unsigned> r1Materials;
     unsigned detailInstances = 0;
     unsigned shadowDetailInstances = 0;
     LocalDetailCullStats localDetails;
@@ -205,7 +209,8 @@ void Poll()
             const auto stage = Stage(i);
             const bool cpuOnly = (stage == Stage::LocalShadowSetup && !state.atlasOnly) ||
                 stage == Stage::LocalSmapvisEnd || stage == Stage::LocalIndirect || stage == Stage::Details ||
-                stage == Stage::LocalVisibility || stage == Stage::LocalPack || stage == Stage::LocalTaskWait;
+                stage == Stage::LocalVisibility || stage == Stage::LocalPack || stage == Stage::LocalTaskWait ||
+                stage == Stage::R1Traversal;
             used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%.6f", i ? "," : "",
                 cpuOnly ? -1.0 : milliseconds[i]);
         }
@@ -339,6 +344,9 @@ void BeginFrame()
     state.start = start;
     state.threadStart = ThreadNow();
     state.draws = state.detailInstances = state.shadowDetailInstances = 0;
+    state.triangles = state.framebufferBinds = 0;
+    state.r1Draws = {};
+    state.r1Materials.clear();
     state.localDetails = {};
     state.wallNs = {};
     state.threadNs = {};
@@ -436,6 +444,18 @@ void FinishFrame()
         details.cellsTested, details.cellsRejected, details.instanceCandidates, details.instancesSkipped,
         details.instanceCandidates - details.instancesSkipped, details.instancesSubmitted);
     Write(row);
+    std::snprintf(row, sizeof(row),
+        "{\"record\":\"r1_submissions\",\"frame\":%llu,\"triangles\":%u,\"renderer_framebuffer_binds\":%u,"
+        "\"fallback_draws\":%u,\"native_base_draws\":%u,\"native_point_draws\":%u,\"native_spot_draws\":%u}\n",
+        static_cast<unsigned long long>(state.frame),state.triangles,state.framebufferBinds,
+        state.r1Draws[0],state.r1Draws[1],state.r1Draws[2],state.r1Draws[3]);
+    Write(row);
+    for (const auto& material : state.r1Materials)
+    {
+        std::snprintf(row,sizeof(row),"{\"record\":\"r1_material\",\"frame\":%llu,\"shader\":\"%s\",\"draws\":%u}\n",
+            static_cast<unsigned long long>(state.frame),material.first.c_str(),material.second);
+        Write(row);
+    }
     if (end - state.lastFlush >= 5000000000ULL)
     {
         if (state.writer)
@@ -446,10 +466,29 @@ void FinishFrame()
     }
 }
 
-void RecordDraw()
+void RecordDraw(unsigned triangles)
 {
     if (state.inFrame)
+    {
         ++state.draws;
+        state.triangles += triangles;
+    }
+}
+
+void RecordFramebuffer()
+{
+    if (state.inFrame) ++state.framebufferBinds;
+}
+
+void RecordR1Material(const char* shader, unsigned draws, unsigned kind)
+{
+    if (!state.inFrame || !draws || kind >= state.r1Draws.size()) return;
+    state.r1Draws[kind] += draws;
+    xr_string name = kind == 0 ? "fallback/" : "native/";
+    name += shader ? shader : "unknown";
+    // Resource names are diagnostic labels, not arbitrary JSON fragments.
+    for (auto& c : name) if (c == '\\' || c == '"' || c < ' ') c = '/';
+    state.r1Materials[name] += draws;
 }
 
 bool SamplingShadowAtlas()

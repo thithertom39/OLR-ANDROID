@@ -65,6 +65,9 @@ struct DetailLocalShadowScope
 #if defined(XR_PLATFORM_ANDROID)
 void CDetailManager::RenderNativeR1(CBackend& cmd_list)
 {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope detailsScope(GLGpuProfiler::Stage::R1Details);
+#endif
     struct Scope
     {
         bool previous = nativeR1DetailPass;
@@ -410,6 +413,10 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                                 cmd_list.set_ca(array_ptr, 0u, dwBatch * GLDetailUniformBatch::RowsPerInstance, rows.data());
 #endif
                             cmd_list.Render(D3DPT_TRIANGLELIST, vOffset, 0, dwCNT_verts, iOffset, dwCNT_prims);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                            if (RImplementation.get_context(cmd_list.context_id).o.phase == CRender::PHASE_NORMAL)
+                                GLGpuProfiler::RecordR1Material(element->passes[iPass]->ps->cName.c_str(),1,nativeR1DetailPass ? 1 : 0);
+#endif
                             cmd_list.stat.r.s_details.add(dwCNT_verts);
 
                             // restart
@@ -443,6 +450,10 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                         cmd_list.set_ca(array_ptr, 0u, dwBatch * GLDetailUniformBatch::RowsPerInstance, rows.data());
 #endif
                     cmd_list.Render(D3DPT_TRIANGLELIST, vOffset, 0, dwCNT_verts, iOffset, dwCNT_prims);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    if (RImplementation.get_context(cmd_list.context_id).o.phase == CRender::PHASE_NORMAL)
+                        GLGpuProfiler::RecordR1Material(element->passes[iPass]->ps->cName.c_str(),1,nativeR1DetailPass ? 1 : 0);
+#endif
                     cmd_list.stat.r.s_details.add(dwCNT_verts);
                 }
             }

@@ -5,6 +5,9 @@
 #include "xrCore/AndroidCpuProfile.h"
 
 #include "FBasicVisual.h"
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#endif
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "light.h"
 #include "xrRender_console.h"
@@ -90,6 +93,9 @@ static void olr_r1_collect_light_visuals(dxRender_Visual* visual, const CFrustum
 
 static bool olr_r1_light_reaches_visual(const light& source, dxRender_Visual* visual)
 {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope traversalScope(GLGpuProfiler::Stage::R1Traversal, false);
+#endif
     if (!g_olrR1LightContext)
         return false;
     auto& graph = *g_olrR1LightContext;
@@ -196,6 +202,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 cmd_list.apply_lmaterial();
 
                 mapNormalItems& items = it->second;
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                const u32 beforeDraws = cmd_list.stat.render.calls;
+#endif
                 items.ssa = 0;
 
                 sortItems(items, cmp_ssa<_NormalItem>);
@@ -211,6 +220,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                     item.pVisual->Render(cmd_list, LOD, o.phase == CRender::PHASE_SMAP);
                 }
                 items.clear();
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
+                    GLGpuProfiler::RecordR1Material(it->first->ps->cName.c_str(),cmd_list.stat.render.calls-beforeDraws,0);
+#endif
 
             }
             nrmPasses.clear();
@@ -237,6 +250,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 cmd_list.set_Pass(it->first);
 
                 mapMatrixItems& items = it->second;
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                const u32 beforeDraws = cmd_list.stat.render.calls;
+#endif
                 items.ssa = 0;
 
                 sortItems(items, cmp_ssa<_MatrixItem>);
@@ -256,6 +272,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                     item.pVisual->Render(cmd_list, LOD, o.phase == CRender::PHASE_SMAP);
                 }
                 items.clear();
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
+                    GLGpuProfiler::RecordR1Material(it->first->ps->cName.c_str(),cmd_list.stat.render.calls-beforeDraws,0);
+#endif
             }
             matPasses.clear();
             map.clear();
@@ -362,7 +382,15 @@ void __fastcall render_item(u32 context_id, const T& item)
     //--#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
     //RCache.hemi.c_update(V);
     const float visualLOD = calcLOD(item.first, V->vis.sphere.R);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    const u32 beforeDraws = dsgraph.cmd_list.stat.render.calls;
+#endif
     V->Render(dsgraph.cmd_list, visualLOD, dsgraph.o.phase == CRender::PHASE_SMAP);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    if (dsgraph.o.is_main_pass && dsgraph.o.phase == CRender::PHASE_NORMAL && !item.second.se->passes.empty())
+        GLGpuProfiler::RecordR1Material(item.second.se->passes[0]->ps->cName.c_str(),
+            dsgraph.cmd_list.stat.render.calls-beforeDraws,g_olrR1ForwardVisualPass ? 1 : 0);
+#endif
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     // Optional R1-like dynamic light traversal. One baked world draw above,
@@ -456,7 +484,14 @@ void __fastcall render_item(u32 context_id, const T& item)
             dsgraph.cmd_list.set_c("olr_r1_dynamic_pos", pos);
             dsgraph.cmd_list.set_c("olr_r1_dynamic_dir", direction);
             dsgraph.cmd_list.set_c("olr_r1_dynamic_color", color);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            const u32 beforeLightDraws = dsgraph.cmd_list.stat.render.calls;
+#endif
             V->Render(dsgraph.cmd_list, visualLOD, false);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            GLGpuProfiler::RecordR1Material(extra->passes[0]->ps->cName.c_str(),
+                dsgraph.cmd_list.stat.render.calls-beforeLightDraws,source->flags.type == IRender_Light::SPOT ? 3 : 2);
+#endif
         };
 
         for (const light* source : RImplementation.Lights.package.v_point)
@@ -591,6 +626,9 @@ void R_dsgraph_structure::render_distort()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 void R_dsgraph_structure::render_olr_r1_lightmaps()
 {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope worldScope(GLGpuProfiler::Stage::R1World);
+#endif
     if (mapOlrR1Lightmaps.empty())
         return;
 

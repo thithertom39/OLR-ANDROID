@@ -11,7 +11,8 @@ enum class Stage : unsigned
     RenderTotal, World, MainGeometry, Details, SunShadowAndDirect, LocalLights,
     Combine, Forward, BloomLuminance, Luminance, FinalCombineAA, ExtraPP, PresentBlit,
     ZPrefill, SyncWait, ScenePrepare, LightVisibility, Wallmarks, Rain, Emissive, LightFlush,
-    Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas, Count
+    Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas,
+    R1World, R1Traversal, R1LOD, R1Details, Count
 };
 
 void Initialize();
@@ -19,7 +20,10 @@ void Shutdown(bool contextCurrent);
 void BeginFrame();
 void EndGpuFrame();
 void FinishFrame();
-void RecordDraw();
+void RecordDraw(unsigned triangles);
+void RecordFramebuffer();
+// kind: 0 = fallback submission, 1 = native base, 2 = POINT, 3 = SPOT.
+void RecordR1Material(const char* shader, unsigned draws, unsigned kind);
 bool SamplingShadowAtlas();
 void RecordDetails(unsigned instances);
 
