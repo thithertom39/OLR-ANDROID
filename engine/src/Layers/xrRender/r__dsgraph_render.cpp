@@ -677,6 +677,10 @@ void R_dsgraph_structure::render_hud()
     {
         hud_transform_helper helper{ cmd_list };
         sort_front_to_back_render_and_clean(context_id, mapHUD);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (OlrR1Pipeline::Independent())
+            OlrR1Models::RenderLocalLights(cmd_list,true);
+#endif
     }
 
 #if RENDER == R_R1

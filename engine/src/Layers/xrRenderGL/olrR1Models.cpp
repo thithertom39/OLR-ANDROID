@@ -8,7 +8,13 @@
 #include "Layers/xrRender/LightTrack.h"
 #include "Layers/xrRender/Blender_Recorder.h"
 #include "Layers/xrRender/xrRender_console.h"
+#include "Layers/xrRender/light.h"
 #include <mutex>
+
+namespace xray::render::RENDER_NAMESPACE
+{
+extern float r_ssaGLOD_start, r_ssaGLOD_end;
+}
 
 namespace xray::render::RENDER_NAMESPACE::OlrR1Models
 {
@@ -39,6 +45,32 @@ struct Projector : pureAppActivate
     }
 };
 Projector projector;
+
+// LightPPA keeps the camera-visible base submissions alive after render_graph
+// consumes its maps. Depth-equal needs exactly those transforms/LODs. Additional
+// light-subspace geometry has no base depth and cannot contribute to the image.
+struct ModelDraw
+{
+    IRenderable* object;
+    dxRender_Visual* visual;
+    Fmatrix world;
+    float lod;
+};
+struct ModelLight
+{
+    const light* source;
+    Fvector4 position, color;
+    Fmatrix texture;
+    xr_vector<unsigned> worldDraws, hudDraws;
+};
+xr_vector<ModelDraw> worldModels, hudModels;
+xr_vector<ModelLight> modelLights;
+
+float ModelLOD(float ssa)
+{
+    // Same SSA-to-LOD mapping as the common base graph.
+    return _sqrt(clampr((ssa-r_ssaGLOD_end)/(r_ssaGLOD_start-r_ssaGLOD_end),0.f,1.f));
+}
 
 void EnsureResources()
 {
@@ -239,6 +271,171 @@ void CalculateProjector()
             Receivers(),updated,reused,commands.stat.render.calls-startDraws,unsigned(tasks.size()));
 }
 
+void PrepareLocalLights(R_dsgraph_structure& graph)
+{
+    worldModels.clear(); hudModels.clear(); modelLights.clear();
+    const auto appendModel = [](auto& list, const auto& item)
+    {
+        if (!item.pObject || !item.pVisual->shader->olr_r1_model) return;
+        // A material can have more than one base pass. Local lighting is once
+        // per visual/transform/light, not once per base-pass graph entry.
+        for (const auto& existing : list)
+            if (existing.object == item.pObject && existing.visual == item.pVisual &&
+                memcmp(&existing.world,&item.Matrix,sizeof(Fmatrix)) == 0) return;
+        list.push_back({item.pObject,item.pVisual,item.Matrix,ModelLOD(item.ssa)});
+    };
+    for (unsigned pass=0;pass<SHADER_PASSES_MAX;++pass)
+    {
+        xr_vector<R_dsgraph::mapMatrix_T::value_type*> groups;
+        graph.mapMatrixPasses[0][pass].get_any_p(groups);
+        for (const auto* group : groups)
+            for (const auto& item : group->second) appendModel(worldModels,item);
+    }
+    xr_vector<R_dsgraph::mapHUD_T::value_type*> hud;
+    graph.mapHUD.get_any_p(hud);
+    for (const auto* item : hud) appendModel(hudModels,item->second);
+    if (worldModels.empty() && hudModels.empty()) return;
+
+    const u32 contextId=RImplementation.alloc_context(false);
+    if (contextId == R_dsgraph_structure::INVALID_CONTEXT_ID)
+    {
+        // No silent sphere-only or R2 fallback when traversal is unavailable.
+        FATAL("R1 LightPPA: no CPU sector/portal context");
+        return;
+    }
+    auto& traversal=RImplementation.get_context(contextId);
+    xr_set<const light*> visited;
+    unsigned sectorRejects=0, frustumRejects=0, acceptedWorld=0, acceptedHud=0;
+    const auto prepare = [&](const light* entry)
+    {
+        const light* source=entry && entry->shadow_parent ? entry->shadow_parent : entry;
+        if (!source || !source->flags.bActive || source->flags.bStatic ||
+            !_valid(source->range) || source->range < .1f ||
+            (source->flags.type != IRender_Light::SPOT && source->flags.type != IRender_Light::POINT) ||
+            !visited.insert(source).second) return;
+        const float distance=Device.vCameraPosition.distance_to(source->spatial.sphere.P)-source->spatial.sphere.R;
+        const float scale=clampr(1.f-distance/_max(ps_r1_dlights_clip,EPS_L),0.f,1.f);
+        if (scale < EPS) return;
+        auto sector=source->spatial.sector_id;
+        if (sector == IRender_Sector::INVALID_SECTOR_ID) sector=traversal.detect_sector(source->position);
+        if (sector == IRender_Sector::INVALID_SECTOR_ID || sector >= traversal.Sectors.size()) return;
+        const bool spot=source->flags.type == IRender_Light::SPOT;
+        Fvector direction,up,origin=source->position;
+        Fmatrix view,projection,combined;
+        if (spot)
+        {
+            if (source->direction.square_magnitude() <= EPS_S) return;
+            direction.set(source->direction).normalize();
+            up.set(0,1,0);
+            if (_abs(up.dotproduct(direction)) > .99f) up.set(0,0,1);
+            // Original LightPPA::render_spot, not an R2 shadow projection.
+            Fvector right; right.crossproduct(up,direction).normalize();
+            up.crossproduct(direction,right).normalize();
+            projection.build_projection(source->cone,1.f,.1f,source->range+EPS_S);
+        }
+        else
+        {
+            origin.y+=300.f; direction.set(0,-1,0); up.set(0,0,1);
+            projection.build_projection(deg2rad(2.f),1.f,300.f-source->range,300.f+source->range);
+        }
+        view.build_camera_dir(origin,direction,up);
+        combined.mul(projection,view);
+        CFrustum frustum; frustum.CreateFromMatrix(combined,FRUSTUM_P_ALL);
+        for (auto* portal : traversal.Portals) portal->bDualRender=FALSE;
+        // Original SPOT subspace asks for precise portals when the light is
+        // on their boundary. POINT deliberately uses the non-precise path.
+        if (spot && RImplementation.rmPortals)
+        {
+            Fvector radius; radius.set(EPS_L*20.f,EPS_L*20.f,EPS_L*20.f);
+            traversal.Sectors_xrc.box_query(CDB::OPT_FULL_TEST,RImplementation.rmPortals,origin,radius);
+            for (size_t i=0;i<traversal.Sectors_xrc.r_count();++i)
+            {
+                const auto id=RImplementation.rmPortals->get_tris()[traversal.Sectors_xrc.r_begin()[i].id].dummy;
+                traversal.Portals[id]->bDualRender=TRUE;
+            }
+        }
+        traversal.PortalTraverser.traverse(traversal.Sectors[sector],frustum,origin,combined,0);
+        ModelLight selected;
+        selected.source=source;
+        selected.position.set(source->position.x,source->position.y,source->position.z,(spot ? 1.f : .5f)/source->range);
+        selected.color.set(source->color.r*scale,source->color.g*scale,source->color.b*scale,1.f);
+        const Fmatrix adjustment={
+            .5f,0.f,0.f,0.f, 0.f,-.5f,0.f,0.f,
+            0.f,0.f,1.f/source->range,0.f, .5f+.5f/32.f,.5f+.5f/32.f,0.f,1.f};
+        selected.texture.mul(adjustment,combined);
+        for (unsigned i=0;i<worldModels.size();++i)
+        {
+            const auto& draw=worldModels[i];
+            auto* spatial=SpatialOf(draw.object);
+            if (!spatial) { ++sectorRejects; continue; }
+            const auto& data=spatial->GetSpatialData();
+            if (data.sector_id == IRender_Sector::INVALID_SECTOR_ID || data.sector_id >= traversal.Sectors.size())
+            { ++sectorRejects; continue; }
+            const auto* reached=traversal.Sectors[data.sector_id];
+            if (reached->r_marker != traversal.PortalTraverser.i_marker)
+            { ++sectorRejects; continue; }
+            Fvector center; draw.world.transform_tiny(center,draw.visual->vis.sphere.P);
+            bool visible=false;
+            for (const auto& clipped : reached->r_frustums)
+                if (clipped.testSphere_dirty(data.sphere.P,data.sphere.R) &&
+                    clipped.testSphere_dirty(center,draw.visual->vis.sphere.R))
+                { visible=true; break; }
+            if (visible) { selected.worldDraws.push_back(i); ++acceptedWorld; }
+            else ++frustumRejects;
+        }
+        // LightPPA tests a radius-2 sphere at the camera for HUD, then renders
+        // Render_Last with its HUD projection. HUD has no independent sector.
+        if (frustum.testSphere_dirty(Device.vCameraPosition,2.f))
+            for (unsigned i=0;i<hudModels.size();++i) { selected.hudDraws.push_back(i); ++acceptedHud; }
+        modelLights.push_back(std::move(selected));
+    };
+    // R1 sums SPOT then POINT. Do not batch or merge contributions: RGBA8
+    // quantization/saturation and final-alpha testing occur after every draw.
+    for (const auto* source : RImplementation.Lights.package.v_spot) prepare(source);
+    for (const auto* source : RImplementation.Lights.package.v_shadowed)
+        if (source && (source->shadow_parent ? source->shadow_parent : source)->flags.type == IRender_Light::SPOT) prepare(source);
+    for (const auto* source : RImplementation.Lights.package.v_point) prepare(source);
+    for (const auto* source : RImplementation.Lights.package.v_shadowed)
+        if (source && (source->shadow_parent ? source->shadow_parent : source)->flags.type == IRender_Light::POINT) prepare(source);
+    RImplementation.release_context(contextId);
+    static unsigned reports=0;
+    if (reports++ < 8)
+        Msg("* [olr_r1_ppa] models=%u hud=%u lights=%u world_pairs=%u hud_pairs=%u sector_rejects=%u frustum_rejects=%u; original SPOT then POINT, no R2",
+            unsigned(worldModels.size()),unsigned(hudModels.size()),unsigned(modelLights.size()),acceptedWorld,acceptedHud,sectorRejects,frustumRejects);
+}
+
+void RenderLocalLights(CBackend& commands, bool hud)
+{
+    const auto& models=hud ? hudModels : worldModels;
+    unsigned pointDraws=0,spotDraws=0;
+    for (const auto& selected : modelLights)
+    {
+        const bool spot=selected.source->flags.type == IRender_Light::SPOT;
+        for (const auto index : (hud ? selected.hudDraws : selected.worldDraws))
+        {
+            const auto& draw=models[index];
+            const auto& element=draw.visual->shader->E[spot ? SE_R1_LSPOT : SE_R1_LPOINT];
+            if (!element || element->passes.empty())
+                FATAL("R1 LightPPA: selected model lacks original local shader element");
+            commands.set_Element(element._get());
+            commands.set_xform_world(draw.world);
+            // The skin renderer supplies its own bone palette on this actual
+            // visual submission, exactly as in the matching base pass.
+            commands.set_c("olr_r1_alpha_ref",float(draw.visual->shader->olr_r1_alpha_ref),0.f,0.f,0.f);
+            commands.set_c("olr_r1_dynamic_pos",selected.position);
+            commands.set_c("olr_r1_dynamic_color",selected.color);
+            if (spot) commands.set_c("olr_r1_light_xform",selected.texture);
+            const unsigned before=commands.stat.render.calls;
+            draw.visual->Render(commands,draw.lod,false);
+            (spot ? spotDraws : pointDraws)+=commands.stat.render.calls-before;
+        }
+    }
+    commands.set_xform_world(Fidentity);
+    static unsigned reports=0;
+    if (reports++ < 12)
+        Msg("* [olr_r1_ppa_submit] hud=%u POINT=%u SPOT=%u depth_equal=1 RGBA8_ONE_ONE=1",unsigned(hud),pointDraws,spotDraws);
+}
+
 void Bind(CBackend& commands, IRenderable* object, dxRender_Visual* visual)
 {
     if (!visual || !visual->shader->olr_r1_model) return;
@@ -262,6 +459,7 @@ void Bind(CBackend& commands, IRenderable* object, dxRender_Visual* visual)
 
 void Destroy()
 {
+    worldModels.clear(); hudModels.clear(); modelLights.clear();
     if (projector.registered) Device.seqAppActivate.Remove(&projector);
     projector.registered = false;
     projector.atlas.destroy(); projector.depth.destroy();
@@ -299,7 +497,7 @@ void CaptureModels(R_dsgraph_structure& graph)
                 commands.set_xform_world(item.Matrix);
                 RImplementation.apply_object(commands,item.pObject);
                 Bind(commands,item.pObject,item.pVisual);
-                item.pVisual->Render(commands,1.f,false);
+                item.pVisual->Render(commands,ModelLOD(item.ssa),false);
                 auto* ros=static_cast<CROS_impl*>(item.pObject->renderable_ROS());
                 if (ros && ros->shadow_recv_frame==Device.dwFrame) ++hq; else ++lq;
             }
@@ -315,8 +513,19 @@ void CaptureModels(R_dsgraph_structure& graph)
     {
         output->w_u32(Device.dwWidth);output->w_u32(Device.dwHeight);
         output->w(pixels.data(),pixels.size());FS.w_close(output);
-        Msg("* [olr_r1_models] diagnostic=%s HQ=%u LQ=%u draws=%u; local light and shadow integration pending",
+        Msg("* [olr_r1_models] diagnostic=%s HQ=%u LQ=%u draws=%u; isolated base, shadows pending",
             path,hq,lq,commands.stat.render.calls-before);
+    }
+    RenderLocalLights(commands);
+    CHK_GL(glReadPixels(0,0,Device.dwWidth,Device.dwHeight,GL_RGBA,GL_UNSIGNED_BYTE,pixels.data()));
+    xr_sprintf(name,"r1-models-local-%llu.rgba",static_cast<unsigned long long>(CPU::QPC()));
+    FS.update_path(path,"$logs$",name);
+    output=FS.w_open(path);
+    if (output)
+    {
+        output->w_u32(Device.dwWidth); output->w_u32(Device.dwHeight);
+        output->w(pixels.data(),pixels.size()); FS.w_close(output);
+        Msg("* [olr_r1_models] local lighting diagnostic=%s; isolated models, not a complete world frame",path);
     }
     commands.set_xform_world(Fidentity);
     target->u_setrt(commands,Device.dwWidth,Device.dwHeight,target->get_base_rt(),0,0,target->get_base_zb());

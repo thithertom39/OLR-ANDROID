@@ -273,6 +273,7 @@ void CRender::render_olr_r1()
     if (m_bFirstFrameAfterReset) { m_bFirstFrameAfterReset = false; return; }
     r_main.sync(); // shared visibility/sector/portal preparation, not R2 lighting
     OlrR1Models::CalculateProjector();
+    OlrR1Models::PrepareLocalLights(graph);
     const unsigned unsupported = UnsupportedMaterials(graph);
     OlrR1Models::CaptureModels(graph);
     if (unsupported)
@@ -295,6 +296,8 @@ void CRender::render_olr_r1()
     rmNormal(RCache);
     graph.render_olr_r1_lightmaps();
     graph.render_graph(0);
+    OlrR1Models::RenderLocalLights(RCache);
+    graph.render_hud();
     if (Details) Details->RenderNativeR1(RCache);
     graph.render_lods(true, false);
     g_pGamePersistent->Environment().RenderSky();
