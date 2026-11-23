@@ -322,6 +322,20 @@ HRESULT CRender::shader_compile(pcstr name, IReader* fs, pcstr pFunctionName,
     // Include both states in the cache key so a restart cannot reuse the other variant.
     const bool highPrecisionPosition = strstr(Core.Params, "-gles_highp_position") != nullptr;
     appendShaderOption(highPrecisionPosition ? 1u : 0u, "OXR_HIGH_PRECISION_POSITION", "1");
+    const bool nativeR1 = strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_forward") &&
+        strstr(Core.Params, "-olr_r1_multipass") && strstr(Core.Params, "-olr_r1_native");
+    appendShaderOption(nativeR1 ? 1u : 0u, "OLR_R1_NATIVE", "1");
+    const bool sceneR1 = nativeR1 && strstr(Core.Params, "-olr_r1_scene");
+    appendShaderOption(sceneR1 ? 1u : 0u, "OLR_R1_SCENE", "1");
+    // Diagnostic branches and samples compile away in the normal variant.
+    u32 r1Debug = 0;
+    if (nativeR1)
+        if (pcstr debug = strstr(Core.Params, "-olr_r1_debug="))
+            r1Debug = clampr(atoi(debug + strlen("-olr_r1_debug=")), 0, 6);
+    string16 r1DebugValue;
+    xr_itoa(r1Debug, r1DebugValue, 10);
+    options.add("OLR_R1_DEBUG", r1DebugValue);
+    sh_name.append(r1Debug);
 #else
     options.add("#version 410");
     options.add("#extension GL_ARB_separate_shader_objects : enable");

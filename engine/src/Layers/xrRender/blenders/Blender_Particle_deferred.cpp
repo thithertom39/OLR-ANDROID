@@ -2,6 +2,9 @@
 #pragma hdrstop
 
 #include "Blender_Particle.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 #define oBlendCount 6
 
@@ -68,6 +71,26 @@ LPCSTR CBlender_Particle::getComment()
 void CBlender_Particle::Compile(CBlender_Compile& C)
 {
     IBlender::Compile(C);
+
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+    {
+        // Original R1 Blender_Particle, all six authored blend modes. Unlike
+        // R2's normal element, SET has fog and none sample s_position.
+        constexpr D3DBLEND sources[] = {D3DBLEND_ONE, D3DBLEND_SRCALPHA, D3DBLEND_ONE,
+            D3DBLEND_DESTCOLOR, D3DBLEND_DESTCOLOR, D3DBLEND_SRCALPHA};
+        constexpr D3DBLEND destinations[] = {D3DBLEND_ZERO, D3DBLEND_INVSRCALPHA, D3DBLEND_ONE,
+            D3DBLEND_ZERO, D3DBLEND_SRCCOLOR, D3DBLEND_ONE};
+        const auto mode = oBlend.IDselected;
+        R_ASSERT2(mode < 6, "Unknown original R1 particle blend mode");
+        const bool set = mode == 0;
+        pcstr program = set ? "olr_r1_particle_set" : "olr_r1_particle";
+        C.r_Pass(program, program, set, TRUE, set, !set, sources[mode], destinations[mode], TRUE, set ? 200 : 0);
+        C.r_Sampler("s_base", C.L_textures[0], false, oClamp.value ? D3DTADDRESS_CLAMP : D3DTADDRESS_WRAP);
+        C.r_End();
+        return;
+    }
+#endif
 
     switch (C.iElement)
     {

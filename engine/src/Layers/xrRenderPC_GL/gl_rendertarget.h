@@ -200,6 +200,7 @@ private:
     float param_color_map_influence;
     float param_color_map_interpolate;
     ColorMapManager color_map_manager;
+    GLuint r1_read_framebuffer{};
 
     //	Igor: used for volumetric lights
     bool m_bHasActiveVolumetric;
@@ -207,6 +208,11 @@ private:
 public:
     CRenderTarget();
     ~CRenderTarget();
+#if defined(XR_PLATFORM_ANDROID)
+    void create_olr_r1_resources();
+    void destroy_olr_r1_resources();
+    void present_olr_r1();
+#endif
 
     void build_textures();
 

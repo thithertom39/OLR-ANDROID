@@ -1,9 +1,15 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
 void CRenderTarget::phase_ssao()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_ssao");
+#endif
     u32 Offset = 0;
 
     // Clear to zero
@@ -93,6 +99,9 @@ void CRenderTarget::phase_ssao()
 
 void CRenderTarget::phase_downsamp()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_downsamp");
+#endif
     // DON'T DO THIS!!!
     // IDirect3DSurface9 *source, *dest;
     // rt_Position->pSurface->GetSurfaceLevel(0, &source);

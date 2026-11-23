@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
@@ -6,6 +9,9 @@
 #include <cstring>
 #endif
 #include "Layers/xrRender/dxEnvironmentRender.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRender/olr_r1_mode.h"
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "Layers/xrRenderGL/glGpuProfiler.h"
 #endif
@@ -66,6 +72,9 @@ bool gles_lighting_audit_current_frame()
 
 void CRenderTarget::phase_combine()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_combine");
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope combineScope(GLGpuProfiler::Stage::Combine);
 #endif
@@ -334,7 +343,11 @@ void CRenderTarget::phase_combine()
 
     //	Igor: for volumetric lights
     //	combine light volume here
-    if (m_bHasActiveVolumetric)
+    if (m_bHasActiveVolumetric
+#if defined(XR_PLATFORM_ANDROID)
+        && !olr_r1_native_enabled()
+#endif
+        )
         phase_combine_volumetric();
 
     // Perform blooming filter and distortion if needed
@@ -352,7 +365,10 @@ void CRenderTarget::phase_combine()
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
         GLGpuProfiler::Scope bloomScope(GLGpuProfiler::Stage::BloomLuminance);
 #endif
-        phase_bloom(); // HDR RT invalidated here
+#if defined(XR_PLATFORM_ANDROID)
+        if (!olr_r1_native_enabled())
+#endif
+            phase_bloom(); // R1 has no HDR bloom or exposure adaptation.
     }
 
     // RImplementation.rmNormal();
@@ -659,6 +675,9 @@ void CRenderTarget::phase_combine()
 
 void CRenderTarget::phase_wallmarks()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_wallmarks");
+#endif
     // Targets
     RCache.set_RT(0, 2);
     RCache.set_RT(0, 1);
@@ -671,6 +690,9 @@ void CRenderTarget::phase_wallmarks()
 
 void CRenderTarget::phase_combine_volumetric()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_combine_volumetric");
+#endif
     PIX_EVENT(phase_combine_volumetric);
     u32 Offset = 0;
 

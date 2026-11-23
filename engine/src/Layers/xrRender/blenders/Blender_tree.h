@@ -17,6 +17,8 @@ public:
 
     LPCSTR getComment() override;
     BOOL canBeDetailed() override;
+    bool isRigid() const { return oNotAnTree.value != FALSE; }
+    bool isBlended() const { return oBlend.value != FALSE; }
     void Save(IWriter& fs) override;
     void Load(IReader& fs, u16 version) override;
 

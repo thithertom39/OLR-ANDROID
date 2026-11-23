@@ -90,6 +90,10 @@ struct R_dsgraph_structure
     bool legacy_sector_queries = false;
     u32 main_spatial_candidates = 0;
     u32 main_sector_queries = 0;
+    xr_vector<Fsphere> olr_r1_deferred_receivers;
+    bool olr_r1_receiver_bounds_valid = true;
+    bool olr_r1_shadow_only = false;
+    void record_olr_r1_receiver(dxRender_Visual* visual, const Fmatrix& world);
 #endif
 
     u32 counter_S{};
@@ -132,6 +136,7 @@ struct R_dsgraph_structure
         o.spatial_types = STYPE_RENDERABLE;
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
         o.point_shadow_range_sq = 0.f;
+        olr_r1_shadow_only = false;
 #endif
 
         val_recorder = nullptr;

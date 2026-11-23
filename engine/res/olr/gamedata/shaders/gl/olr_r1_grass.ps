@@ -1,0 +1,13 @@
+#include "common.h"
+layout(location=TEXCOORD0) in float2 uv;
+layout(location=COLOR0) in float3 color;
+layout(location=FOG) in float visibility;
+layout(location=0) out float4 out_color;
+void main()
+{
+    float4 base = tex2D(s_base,uv);
+#ifdef OLR_R1_GRASS_ALPHA
+    if (floor(base.a * 255.0 + 0.5) <= 200.0) discard;
+#endif
+    out_color = float4(mix(fog_color.rgb, base.rgb*saturate(color)*2.0,saturate(visibility)),base.a);
+}

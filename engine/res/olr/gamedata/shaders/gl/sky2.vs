@@ -11,7 +11,7 @@ v2p _main (vi v)
 	o.tc0			= v.tc0;                        					// copy tc
 	o.tc1			= v.tc1;                        					// copy tc
 
-#ifdef USE_VTF
+#if defined(USE_VTF) && !defined(OLR_R1_SCENE)
 	float scale		= texelFetch	(s_tonemap, int2(0,0), 0).x;
 	o.c			= float4	(v.c.rgb*(scale*2.0), v.c.a);				// copy color, pre-scale by tonemap
 #else // USE_VTF

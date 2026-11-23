@@ -1,5 +1,11 @@
 #include "stdafx.h"
 #include "FLOD.h"
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "olr_r1_mode.h"
+#endif
+#endif
 #include "xrCommon/xr_array.h"
 
 #ifdef _EDITOR
@@ -20,6 +26,9 @@ template <class T> IC bool cmp_first_h(const T &lhs, const T &rhs) { return (lhs
 
 void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
 {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope lodScope(GLGpuProfiler::Stage::R1LOD);
+#endif
     ZoneScoped;
     PIX_EVENT_CTX(cmd_list, dsgraph_render_lods);
 
@@ -140,6 +149,16 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
                     cmd_list.set_Element(lstLODs[current].pVisual->shader->E[shid], uiPass);
                     cmd_list.set_Geometry(firstV->geom);
                     cmd_list.Render(D3DPT_TRIANGLELIST, vCurOffset, 0, 4 * p_count, 0, 2 * p_count);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    GLGpuProfiler::RecordR1Material(GLGpuProfiler::MaterialName(lstLODs[current].pVisual->shader->E[shid]->passes[uiPass]._get()),
+                        p_count > 0 ? 1 : 0,
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                        olr_r1_scene_enabled() ? 1 : 0
+#else
+                        0
+#endif
+                        );
+#endif
                 }
                 cmd_list.stat.r.s_flora_lods.add(4 * p_count);
                 current += p_count;

@@ -44,6 +44,7 @@ public:
     u32 MODE;
     u32 dwFrame;
     u32 dwFrameSmooth;
+    bool original_r1 = false;
 
     //
     xr_vector<Item> track; // everything what touches
@@ -82,6 +83,8 @@ public:
     virtual void force_mode(u32 mode) { MODE = mode; };
     virtual float get_luminocity()
     {
+        if (original_r1)
+            return (approximate.x + approximate.y + approximate.z) / 3.f;
         float result_ = _max(approximate.x, _max(approximate.y, approximate.z));
         clamp(result_, 0.f, 1.f);
         return (result_);
@@ -90,6 +93,9 @@ public:
     virtual float* get_luminocity_hemi_cube() { return hemi_cube_smooth; }
     void add(light* L);
     void update(IRenderable* O);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    void update_original_r1(IRenderable* O);
+#endif
     void update_smooth(IRenderable* O = nullptr);
 
     ICF float get_hemi()

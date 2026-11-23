@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
@@ -74,6 +77,9 @@ void CalcGauss_wave(
 
 void CRenderTarget::phase_bloom()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_bloom");
+#endif
     using namespace phase_bloom;
 
     PIX_EVENT(phase_bloom);

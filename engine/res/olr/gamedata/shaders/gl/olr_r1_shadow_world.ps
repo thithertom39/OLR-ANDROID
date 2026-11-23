@@ -1,0 +1,10 @@
+#include "common.h"
+layout(location = COLOR0) in float4 shadow_color;
+layout(location = TEXCOORD0) in float2 shadow_uv;
+layout(location = 0) out float4 out_color;
+void main()
+{
+    // Blender_Shadow_World: fixed-function ADD texture + diffuse, saturated
+    // before DESTCOLOR,ZERO multiplication. This is not R2 shadow comparison.
+    out_color=saturate(tex2D(s_base,shadow_uv)+shadow_color);
+}

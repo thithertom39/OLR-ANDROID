@@ -212,11 +212,25 @@ _out _main ( _input I, uint iSample )
 ////////////////////////////////////////////////////////////////////////////////
 
         // here should be distance fog
+#ifdef OLR_R1_SCENE
+        float3 r1_unfogged_color = color;
+#endif
         float3        	pos        		= P.xyz;
         float         	distance		= length		(pos);
         float         	fog				= saturate		(distance*fog_params.w + fog_params.x); //
                       	color			= lerp     		(color,fog_color.rgb,fog);        			//
         float        	skyblend		= saturate		(fog*fog);
+#ifdef OLR_R1_SCENE
+        // Temporary deferred materials must share R1's planar fog and its
+        // single fog blend. R2's additional fog^2 sky crossfade otherwise
+        // gives neighbouring native/fallback surfaces different far colors.
+        float4 world_pos = float4(mul(m_v2w, float4(pos, 1.0)), 1.0);
+        float r1_fog = 1.0 - saturate(calc_fogging(world_pos));
+        // Undoing an already applied fog would lose precision near fog=1;
+        // retain the pre-fog lighting explicitly instead (see block above).
+        color = lerp(r1_unfogged_color, fog_color.rgb, r1_fog);
+        skyblend = 0.0;
+#endif
 
 #ifdef         DBG_TMAPPING
         color                        	= D.xyz;

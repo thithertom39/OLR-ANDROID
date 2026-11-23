@@ -3,6 +3,7 @@
 // Diagnostics are absent from the normal renderer, including per-draw hooks.
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include <cstdint>
+namespace xray::render::RENDER_NAMESPACE { struct SPass; }
 
 namespace xray::render::RENDER_NAMESPACE::GLGpuProfiler
 {
@@ -11,7 +12,8 @@ enum class Stage : unsigned
     RenderTotal, World, MainGeometry, Details, SunShadowAndDirect, LocalLights,
     Combine, Forward, BloomLuminance, Luminance, FinalCombineAA, ExtraPP, PresentBlit,
     ZPrefill, SyncWait, ScenePrepare, LightVisibility, Wallmarks, Rain, Emissive, LightFlush,
-    Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas, Count
+    Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas,
+    R1World, R1Traversal, R1LOD, R1Details, Count
 };
 
 void Initialize();
@@ -19,7 +21,13 @@ void Shutdown(bool contextCurrent);
 void BeginFrame();
 void EndGpuFrame();
 void FinishFrame();
-void RecordDraw();
+void RecordDraw(unsigned triangles);
+void RecordFramebuffer();
+void RecordAttachmentChange();
+// kind: 0 = other fallback, 1 = native base, 2 = POINT, 3 = SPOT, 4 = G-buffer.
+void RecordR1Material(const char* shader, unsigned draws, unsigned kind);
+void RecordR1LightCull(unsigned receivers, unsigned skipped);
+const char* MaterialName(const SPass* pass);
 bool SamplingShadowAtlas();
 void RecordDetails(unsigned instances);
 

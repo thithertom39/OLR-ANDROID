@@ -18,7 +18,12 @@ _out _main( v2p I )
 	// final tone-mapping
 	_out		o;
 
-#ifdef USE_VTF
+#ifdef OLR_R1_SCENE
+    // OLR r1/sky2.ps: weather sky color is halved by the old-style loader.
+    // This authored factor is independent of R2 exposure/tone mapping.
+    o.low = float4(sky * 2.0, 1.0);
+    o.high = float4(0.0);
+#elif defined(USE_VTF)
 	o.low        	=	sky.xyzz;
 	o.high        	=	o.low/def_hdr;
 #else // USE_VTF

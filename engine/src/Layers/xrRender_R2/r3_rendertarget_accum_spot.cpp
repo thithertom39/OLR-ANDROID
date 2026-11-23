@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 #include "Layers/xrRender/du_cone.h"
 
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
@@ -194,6 +197,9 @@ void audit_spot_shadow_sampling(CBackend& cmd_list, const light& source, const F
 
 void CRenderTarget::accum_spot(CBackend& cmd_list, light* L, bool allow_shadow)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_spot");
+#endif
     phase_accumulator(cmd_list);
     RImplementation.Stats.l_visible++;
 
@@ -508,6 +514,9 @@ void CRenderTarget::accum_spot(CBackend& cmd_list, light* L, bool allow_shadow)
 
 void CRenderTarget::accum_volumetric(CBackend& cmd_list, light* L)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_volumetric");
+#endif
     // if (L->flags.type != IRender_Light::SPOT) return;
     if (!L->flags.bVolumetric)
         return;

@@ -1,0 +1,154 @@
+#include "common.h"
+
+layout(location = TEXCOORD0) in float2 base_uv;
+layout(location = FOG) in float fog_visibility;
+layout(location = 0) out float4 out_color;
+#ifdef OLR_R1_AREF
+uniform float4 olr_r1_alpha_ref;
+#endif
+#ifdef OLR_R1_LOCAL
+Texture2D s_r1_att;
+#ifdef OLR_R1_MODEL_LOCAL_RGBA
+layout(location = COLOR0) in float4 local_color;
+#else
+layout(location = COLOR0) in float3 local_color;
+#endif
+layout(location = TEXCOORD1) in float4 attenuation_uv;
+layout(location = TEXCOORD2) in float2 clip_uv;
+#else
+layout(location = COLOR0) in float3 hemi_light;
+layout(location = COLOR1) in float3 sun_light;
+#if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
+layout(location = TEXCOORD1) in float3 baked_vertex;
+#else
+layout(location = TEXCOORD1) in float2 lightmap_uv;
+#endif
+#ifdef OLR_R1_DETAIL
+layout(location = TEXCOORD3) in float2 detail_uv;
+layout(location = TEXCOORD4) in float2 detail_weights;
+#endif
+#endif
+
+void main()
+{
+    float4 base = tex2D(s_base, base_uv);
+#if defined(OLR_R1_AREF) && !defined(OLR_R1_MODEL_LOCAL_RGBA)
+    // D3D's authored integer GREATER test, including the exact 8-bit boundary.
+    // Both the base and additive passes use the same source reference.
+    if (floor(base.a * 255.0 + 0.5) <= olr_r1_alpha_ref.x) discard;
+#endif
+#ifdef OLR_R1_TREE
+    // Original tree blender: main tree alpha reference 200, rigid LOD 0;
+    // additional lights reference 0, with exactly the same deformed depth.
+#if !defined(OLR_R1_LOCAL) && !defined(OLR_R1_TREE_RIGID)
+    if (floor(base.a * 255.0 + 0.5) <= 200.0) discard;
+#else
+    if (base.a <= 0.0) discard;
+#endif
+#endif
+#ifdef OLR_R1_LOCAL
+#ifdef OLR_R1_SPOT
+    if (attenuation_uv.w <= 0.0)
+        discard;
+    float4 projector = tex2D(s_lmap, attenuation_uv.xy / attenuation_uv.w);
+#else
+    float4 projector = tex2D(s_lmap, attenuation_uv.xy);
+#endif
+    float4 attenuation = tex2D(s_r1_att, clip_uv);
+    // PS1.x COLOR input is clamped after interpolation. add_point/spot
+    // multiply base alpha and double RGB; detail applies only to the base.
+    float3 color = base.rgb * base.a * projector.rgb * attenuation.rgb *
+        saturate(local_color.rgb) * 2.0;
+#if OLR_R1_DEBUG == 1 || OLR_R1_DEBUG == 2
+    color = float3(0.0);
+#elif OLR_R1_DEBUG == 3
+#ifdef OLR_R1_SPOT
+    color = float3(0.0);
+#endif
+#elif OLR_R1_DEBUG == 4
+#ifndef OLR_R1_SPOT
+    color = float3(0.0);
+#endif
+#elif OLR_R1_DEBUG == 5
+    color = projector.rgb * attenuation.rgb;
+#elif OLR_R1_DEBUG == 6
+#ifdef OLR_R1_SPOT
+    color = projector.rgb;
+#else
+    color = float3(0.0);
+#endif
+#endif
+    // Direct ONE+ONE into RGBA8, as original R1. No exposure/delta/tone map.
+#ifdef OLR_R1_MODEL_LOCAL_RGBA
+    // Original add_point/add_spot return final_color*2 in all four channels.
+    // Local COLOR alpha is dot(normal,-ray)*fog, multiplied by each texture A.
+    float local_alpha = base.a * projector.a * attenuation.a * saturate(local_color.a) * 2.0;
+#ifdef OLR_R1_AREF
+    // D3D9 alpha testing follows the pixel shader: a local model pass compares
+    // final_color.a*2, not just the diffuse texture alpha used by its base pass.
+    float model_alpha_reference = olr_r1_alpha_ref.x;
+#else
+    // Original opaque B_MODEL POINT/SPOT also enables GREATER, reference 0.
+    float model_alpha_reference = 0.0;
+#endif
+    if (floor(saturate(local_alpha) * 255.0 + 0.5) <= model_alpha_reference) discard;
+    out_color = float4(color, local_alpha);
+#else
+    out_color = float4(color, 0.0);
+#endif
+#else
+#if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
+    float3 baked = baked_vertex;
+#ifdef OLR_R1_TREE
+    float3 ambient_hemi = hemi_light;
+#else
+    float3 ambient_hemi = L_ambient.rgb + hemi_light;
+#endif
+    float3 sunlight = sun_light;
+#else
+    float4 lmap = tex2D(s_lmap, lightmap_uv);
+    float3 baked = lmap.rgb;
+    // B_DEFAULT is lmap[_dt], NOT impl[_dt]. Preserve the second map RGB.
+#ifdef OLR_R1_IMPLICIT
+    float3 ambient_hemi = L_ambient.rgb + saturate(hemi_light) * base.a;
+#else
+    float3 hemi_map = tex2D(s_hemi, lightmap_uv).rgb;
+    float3 ambient_hemi = L_ambient.rgb / 1.5 + saturate(hemi_light) * dot(hemi_map, float3(1.0 / 3.0));
+#endif
+    float3 sunlight = saturate(sun_light) * lmap.a;
+#endif
+    float3 light = baked + ambient_hemi + sunlight;
+#if defined(OLR_R1_VERTEX) || defined(OLR_R1_TREE)
+    light = saturate(light); // vert.vs writes the combined light to COLOR0.
+#endif
+    float3 color = base.rgb * light * 2.0;
+#if OLR_R1_DEBUG == 1
+    color = base.rgb * baked * 2.0;
+#elif OLR_R1_DEBUG == 2
+    color = base.rgb * ambient_hemi * 2.0;
+#elif OLR_R1_DEBUG >= 3
+    color = float3(0.0);
+#endif
+#ifdef OLR_R1_DETAIL
+#ifdef OLR_R1_IMPLICIT
+    // OLR's actual impl_dt.ps always multiplies the authored detail by 2;
+    // unlike its lmap_dt.ps it does NOT use the interpolated distance fade.
+    color *= tex2D(s_detail, detail_uv).rgb * 2.0;
+#else
+    color *= (tex2D(s_detail, detail_uv).rgb * detail_weights.x + detail_weights.y) * 2.0;
+#endif
+#endif
+#if OLR_R1_DEBUG == 0
+#ifdef OLR_R1_SCENE
+    color = mix(fog_color.rgb, color, saturate(fog_visibility));
+#else
+    color = mix(fog_color.rgb, color, fog_visibility);
+#endif
+#endif
+#ifdef OLR_R1_IMPLICIT
+    out_color = float4(color, 1.0);
+#else
+    out_color = float4(color, base.a);
+#endif
+#endif
+}

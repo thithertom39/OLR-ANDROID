@@ -5,6 +5,9 @@
 #include "Layers/xrRender/tss.h"
 #include "Layers/xrRender/Blender.h"
 #include "Layers/xrRender/Blender_Recorder.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRender/olr_r1_mode.h"
+#endif
 //	adopt_compiler don't have = operator And it can't have = operator
 #include "xrScriptEngine/script_engine.hpp"
 #include "xrScriptEngine/script_space.hpp"
@@ -522,6 +525,21 @@ Shader* CResourceManager::_lua_Create(LPCSTR d_shader, LPCSTR s_textures)
         S.E[4] = C._lua_Compile(s_shader, "l_special");
     }
     ScriptEngineLock.Leave();
+
+#if defined(XR_PLATFORM_ANDROID)
+    // GLES uses THIS Lua compiler; xrRender/ResourceManager_Scripting.cpp
+    // is not compiled into xrRender_GL. Preserve the old variants unchanged.
+    const bool vertex = xr_stricmp(s_shader, "def_vertex") == 0;
+    const bool lightmap = xr_stricmp(s_shader, "default") == 0 && C.L_textures.size() == 3 &&
+        strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 &&
+        strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0;
+    if (olr_r1_native_enabled() && (vertex || lightmap) && S.E[0] &&
+        S.E[0]->flags.iPriority < 2 && !S.E[0]->flags.bStrictB2F &&
+        !S.E[0]->flags.bEmissive && !S.E[0]->flags.bDistort && !S.E[0]->flags.bWmark)
+        CompileOlrR1Native(S, C, vertex);
+    if (olr_r1_scene_enabled() && xr_stricmp(s_shader, "details_lod") == 0)
+        CompileOlrR1Lod(S, C);
+#endif
 
     ScopeLock scope(&v_shaders_lock);
     // Search equal in shaders array

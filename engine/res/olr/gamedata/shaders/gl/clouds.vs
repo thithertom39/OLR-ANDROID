@@ -19,9 +19,13 @@ vf _main (vi v)
 	o.tc1		= _1;					// copy tc
 
 	o.color		=	v.color	;			// copy color, low precision, cannot prescale even by 2
+#ifdef OLR_R1_SCENE
+    if (length(v.p.xz) > CLOUD_FADE) o.color.w = 0.0;
+#else
 	o.color.w	*= 	pow		(v.p.y,25.0);
+#endif
 
-#ifdef USE_VTF
+#if defined(USE_VTF) && !defined(OLR_R1_SCENE)
 	float scale	=	texelFetch(s_tonemap, int2(0,0), 0).x;
 	o.color.rgb	*=	scale;		// high precision
 #endif // USE_VTF

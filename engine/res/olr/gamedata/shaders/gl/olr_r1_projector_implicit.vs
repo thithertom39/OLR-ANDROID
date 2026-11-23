@@ -1,0 +1,2 @@
+#define OLR_R1_PROJECTOR_IMPLICIT
+#include "olr_r1_projector.vs"

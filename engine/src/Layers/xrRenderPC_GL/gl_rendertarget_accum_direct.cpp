@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/Environment.h"
 
@@ -38,6 +41,9 @@ static u16 facetable[16][3] =
 
 void CRenderTarget::accum_direct(CBackend& cmd_list, u32 sub_phase)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_direct");
+#endif
     // Choose normal code-path or filtered
     phase_accumulator(RCache);
     if (RImplementation.o.sunfilter)
@@ -331,6 +337,9 @@ void CRenderTarget::accum_direct(CBackend& cmd_list, u32 sub_phase)
 
 void CRenderTarget::accum_direct_cascade(CBackend& cmd_list, u32 sub_phase, Fmatrix& xform, Fmatrix& xform_prev, float fBias)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_direct_cascade");
+#endif
     // Choose normal code-path or filtered
     phase_accumulator(cmd_list);
     if (RImplementation.o.sunfilter)
@@ -691,6 +700,9 @@ void CRenderTarget::accum_direct_cascade(CBackend& cmd_list, u32 sub_phase, Fmat
 
 void CRenderTarget::accum_direct_blend(CBackend& cmd_list)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_direct_blend");
+#endif
     PIX_EVENT(accum_direct_blend);
     // blend-copy
     if (!RImplementation.o.fp16_blend)
@@ -756,6 +768,9 @@ void CRenderTarget::accum_direct_blend(CBackend& cmd_list)
 
 void CRenderTarget::accum_direct_f(CBackend& cmd_list, u32 sub_phase)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_direct_f");
+#endif
     PIX_EVENT(accum_direct_f);
     // Select target
     if (SE_SUN_LUMINANCE == sub_phase)
@@ -961,6 +976,9 @@ void CRenderTarget::accum_direct_f(CBackend& cmd_list, u32 sub_phase)
 
 void CRenderTarget::accum_direct_lum(CBackend& cmd_list)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_direct_lum");
+#endif
     PIX_EVENT(accum_direct_lum);
     //	TODO: DX11: Remove half pixel offset
     // Select target
@@ -1095,6 +1113,9 @@ void CRenderTarget::accum_direct_lum(CBackend& cmd_list)
 
 void CRenderTarget::accum_direct_volumetric(u32 sub_phase, const u32 Offset, const Fmatrix& mShadow)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_direct_volumetric");
+#endif
     PIX_EVENT(accum_direct_volumetric);
 
     if (!need_to_render_sunshafts())

@@ -123,6 +123,14 @@ jobs:
             echo "::warning::Using a new temporary signing key. Future CI APKs cannot update this installation unless a persistent key is configured."
           fi
 
+      - name: Validate real GLES programs and reference pixels
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libegl1 libgles2 libgl1-mesa-dri
+          LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=surfaceless python3 tests/r1_gles_probe.py --output out/r1-gles-probe.json
+
       - name: Build release APK
         shell: bash
         working-directory: engine/android
@@ -136,6 +144,7 @@ jobs:
             --console=plain
             --max-workers=2
             --init-script ../HANDOFF/vendor.init.gradle
+            --init-script ../../.github/gradle-central-mirror.init.gradle
           )
           if [[ "$TEST_BUILD" == "true" ]]; then
             args+=(-POXRAY_TEST_BUILD=true -POXRAY_TEST_VARIANT=cloud)
@@ -143,7 +152,21 @@ jobs:
           if [[ "$GPU_PROFILE" == "true" ]]; then
             args+=(-POXRAY_GPU_PROFILE=true)
           fi
-          ./gradlew "${args[@]}"
+          # Maven Central can transiently rate-limit the shared runner IP.
+          # Retry only HTTP 429 dependency failures; compiler/test failures
+          # still fail immediately. Preserve each attempt in the job log.
+          for attempt in 1 2 3; do
+            set +e
+            ./gradlew "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/olr-gradle-$attempt.log"
+            result=${PIPESTATUS[0]}
+            set -e
+            if [[ "$result" == 0 ]]; then break; fi
+            if [[ "$attempt" == 3 ]] || ! grep -q 'Received status code 429' "$RUNNER_TEMP/olr-gradle-$attempt.log"; then
+              exit "$result"
+            fi
+            echo "Maven Central HTTP 429; retrying dependency resolution in 20 seconds."
+            sleep 20
+          done
 
       - name: Verify and name APK
         shell: bash
@@ -159,6 +182,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OLR-Android-arm64-${{ github.run_number }}
-          path: out/OLR-Android-arm64.apk
+          path: |
+            out/OLR-Android-arm64.apk
+            out/r1-gles-probe.json
           if-no-files-found: error
           retention-days: 7

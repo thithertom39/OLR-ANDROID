@@ -58,6 +58,28 @@ Workflow: [Build OLR Android APK](../.github/workflows/android-apk.yml)
 
 ## Experimental original-R1-style multi-pass lighting (WIP)
 
+The native scene continuation is selected with
+`-olr_r1_forward -olr_r1_multipass -olr_r1_native -olr_r1_scene`.
+It includes the original sky/cloud/vegetation/LOD/detail paths, authored
+implicit materials and opaque alpha-reference materials. This path uses
+direct RGBA8 additive blending; the tone-mapped-difference description below
+applies only to the older prototype without `-olr_r1_native`.
+
+Submission A/B controls: `-olr_r1_light_cache_off` disables per-frame native
+light-parameter caching; `-olr_r1_receiver_cull_off` retains all R2 local-light
+submissions. Receiver culling keeps GI, volumetric lights and incomplete
+coverage on the original path. G-buffer/model/shadow dependencies remain;
+this is not yet an independent R1 renderer. Diagnostic builds with
+`-gles_gpu_profile -gles_scene_compare` report actual deferred program names,
+receiver counts and skipped R2 lights. Normal builds omit profiling hooks.
+
+The 2026-11-21 follow-up adds `-olr_r1_native` on top of both flags below.
+It implements original lookup POINT/SPOT, lmap/vertex base materials and
+direct UNORM additive color. See `OLR25_R1_REFERENCE_20261121.md` for the
+corrected material identification and remaining renderer gaps. The older
+forward and multipass experiments remain available for A/B tests.
+This remains an incomplete R1 port; NDK/CI success is not a visual test.
+
 This work-in-progress path is independent of the existing single-pass R1-forward prototype. Enable it **only** with both `-olr_r1_forward -olr_r1_multipass` on the OLR renderer. Omitting the second flag preserves the previous, tested R1-forward behavior.
 
 - Base opaque world lightmapped geometry is drawn once from baked lightmap + ambient/hemi/sun.

@@ -115,15 +115,19 @@ c2_out _main( v2p_aa_AA I )
 	float3 	img 	= tex2D(s_image, center).rgb;
 #endif
 
+#ifndef OLR_R1_NATIVE
 		img	= dof(img, center);
+#endif
 
 	float4 	bloom	= tex2D		(s_bloom, center);
 	
 //			img 	= mblur		(center,tex2D(s_position,I.tc0),img.rgb);
 //			img 	= mblur( center, s_position.Sample( smp_nofilter, tc0), img.rgb);
+#ifndef OLR_R1_NATIVE
 			img 	= mblur( center, ( gbd ).P, img.rgb);
+#endif
 
-#ifdef 	USE_DISTORT
+#if defined(USE_DISTORT) && !defined(OLR_R1_NATIVE)
  	float3	blurred	= bloom.rgb*def_hdr	;
 			img		= lerp	(img,blurred,distort.z);
 #endif

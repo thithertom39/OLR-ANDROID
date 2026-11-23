@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "LocalShadowStaticCache.h"
+#include "Layers/xrRenderGL/olrR1Models.h"
+#include "Layers/xrRenderGL/olrR1Shadows.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #endif
 
 #include "FHierrarhyVisual.h"
@@ -18,6 +21,9 @@
 namespace xray::render::RENDER_NAMESPACE
 {
 using namespace R_dsgraph;
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+extern float r_dtex_range;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scene graph actual insertion and sorting ////////////////////////////////////////////////////////
@@ -61,6 +67,18 @@ void R_dsgraph_structure::insert_dynamic(IRenderable* root, dxRender_Visual* pVi
     if (SSA <= r_ssaDISCARD)
         return;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (olr_r1_shadow_only)
+    {
+        // Render_First uses the original game HUD eligibility/root rules.
+        // Unlike an R2 PHASE_SMAP traversal, this only registers original
+        // projected casters. Return before ANY color/distortion/HUD queue,
+        // irrespective of the shared GLES renderer's generation identifier.
+        OlrR1Shadows::Collect(root,pVisual,xform);
+        return;
+    }
+#endif
+
     // Distortive geometry should be marked and R2 special-cases it
     // a) Allow to optimize RT order
     // b) Should be rendered to special distort buffer in another pass
@@ -77,6 +95,10 @@ void R_dsgraph_structure::insert_dynamic(IRenderable* root, dxRender_Visual* pVi
 
     // Select shader
     ShaderElement* sh = RImplementation.rimp_select_sh_dynamic(pVisual, distSQ, o.phase);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent() && o.phase == CRender::PHASE_NORMAL && vis_sh->olr_r1_model)
+        sh = vis_sh->E[OlrR1Models::Collect(root) ? SE_R1_NORMAL_HQ : SE_R1_NORMAL_LQ]._get();
+#endif
     if (nullptr == sh)
         return;
     if (!o.pmask[sh->flags.iPriority / 2])
@@ -100,6 +122,10 @@ void R_dsgraph_structure::insert_dynamic(IRenderable* root, dxRender_Visual* pVi
     }
 
 // Shadows registering
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent() && o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
+        OlrR1Shadows::Collect(root,pVisual,xform);
+#endif
 #if RENDER == R_R1
     RI.L_Shadows->add_element(_MatrixItem{ SSA, root, pVisual, xform });
 #endif
@@ -242,6 +268,11 @@ void R_dsgraph_structure::insert_static(dxRender_Visual* pVisual)
     if (o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
     {
         auto* lightmap = vis_sh->olr_r1_lightmap._get();
+        // HQ/LQ R2 elements may be interned to the same pointer for flat
+        // materials. Select by the actual quality distance, as rimp_select_sh_static.
+        if (vis_sh->olr_r1_lightmap_lq &&
+            (_sqrt(distSQ) - pVisual->vis.sphere.R) >= r_dtex_range)
+            lightmap = vis_sh->olr_r1_lightmap_lq._get();
         if (lightmap)
         {
             // A real forward geometry path for opaque static lightmapped
@@ -998,6 +1029,10 @@ void R_dsgraph_structure::build_subspace([[maybe_unused]] LocalShadowStaticCache
                 IGameObject* O = g_pGameLevel->CurrentViewEntity();
                 if (O)
                 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                    if (OlrR1Pipeline::Independent())
+                        OlrR1Models::Observe(O,O);
+#endif
                     CROS_impl* R = (CROS_impl*)O->ROS();
                     if (R)
                         R->update(O);
@@ -1081,6 +1116,10 @@ void R_dsgraph_structure::build_subspace([[maybe_unused]] LocalShadowStaticCache
                             break; // exit loop on frustums
 
                         // update light-vis for selected entity
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                        if (OlrR1Pipeline::Independent())
+                            OlrR1Models::Observe(renderable,spatial);
+#endif
                         if (o_it == uID_LTRACK && renderable->renderable_ROS())
                         {
                             // track lighting environment
@@ -1138,7 +1177,24 @@ void R_dsgraph_structure::build_subspace([[maybe_unused]] LocalShadowStaticCache
 #endif
 
             if (o.is_main_pass)
+            {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                if (OlrR1Pipeline::Independent())
+                {
+                    // Independent R1 has no R2 shadow phase. Preserve the
+                    // game-side Render_First checks (HUD view, holder, root),
+                    // but route its body parts solely to LightShadows.
+                    const unsigned before=OlrR1Shadows::Parts();
+                    olr_r1_shadow_only=true;
+                    g_pGameLevel->pHUD->Render_First(context_id);
+                    olr_r1_shadow_only=false;
+                    static unsigned reports=0;
+                    if (reports++ < 8)
+                        Msg("* [olr_r1_actor_shadow] added_parts=%u color_submission=0 R2_shadow_phase=0",OlrR1Shadows::Parts()-before);
+                }
+#endif
                 g_pGameLevel->pHUD->Render_Last(context_id);
+            }
         }
     }
 

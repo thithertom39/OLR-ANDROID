@@ -6,6 +6,9 @@
 #include "LightTrack.h"
 #include "Include/xrRender/RenderVisual.h"
 #include "xrEngine/xr_object.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 #ifdef _EDITOR
 #include "IGame_Persistent.h"
@@ -24,6 +27,16 @@ CROS_impl::CROS_impl()
 {
     approximate.set(0, 0, 0);
     dwFrame = u32(-1);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    original_r1 = OlrR1Pipeline::Independent();
+    if (original_r1)
+    {
+        dwFrameSmooth = u32(-1);
+        shadow_gen_frame = u32(-1);
+        ZeroMemory(hemi_cube, sizeof(hemi_cube));
+        ZeroMemory(hemi_cube_smooth, sizeof(hemi_cube_smooth));
+    }
+#endif
     shadow_recv_frame = u32(-1);
     shadow_recv_slot = -1;
 
@@ -161,6 +174,13 @@ inline void CROS_impl::accum_hemi(float* hemi_cube, Fvector3& dir, float scale)
 //////////////////////////////////////////////////////////////////////////
 void CROS_impl::update(IRenderable* O)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (original_r1)
+    {
+        update_original_r1(O);
+        return;
+    }
+#endif
     ZoneScoped;
 
     // clip & verify
@@ -352,7 +372,13 @@ void CROS_impl::update_smooth(IRenderable* O)
     if (O && (0 == result_count))
         update(O); // First time only
 #else //	RENDER!=R_R1
-    smart_update(O);
+    if (original_r1)
+    {
+        if (O && result_count == 0)
+            update(O);
+    }
+    else
+        smart_update(O);
 #endif //	RENDER!=R_R1
 
     float l_f = Device.fTimeDelta * ps_r2_lt_smooth;
@@ -360,6 +386,8 @@ void CROS_impl::update_smooth(IRenderable* O)
     float l_i = 1.f - l_f;
     hemi_smooth = hemi_value * l_f + hemi_smooth * l_i;
     sun_smooth = sun_value * l_f + sun_smooth * l_i;
+    if (original_r1)
+        return; // R1 uses scalar sky visibility, not the R2 hemi light cube.
     for (size_t i = 0; i < NUM_FACES; ++i)
     {
         hemi_cube_smooth[i] = hemi_cube[i] * l_f + hemi_cube_smooth[i] * l_i;

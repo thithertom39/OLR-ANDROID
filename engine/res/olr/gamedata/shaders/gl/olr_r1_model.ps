@@ -1,0 +1,26 @@
+#include "common.h"
+layout(location = TEXCOORD0) in float2 base_uv;
+layout(location = FOG) in float fog_visibility;
+layout(location = COLOR0) in float3 sun_color;
+layout(location = COLOR1) in float4 model_color;
+layout(location = 0) out float4 out_color;
+#ifdef OLR_R1_MODEL_HQ
+layout(location = TEXCOORD1) in float4 projector_uv;
+#endif
+#ifdef OLR_R1_AREF
+uniform float4 olr_r1_alpha_ref;
+#endif
+void main()
+{
+    float4 base = tex2D(s_base,base_uv);
+#ifdef OLR_R1_AREF
+    if (floor(base.a*255.0+.5) <= olr_r1_alpha_ref.x) discard;
+#endif
+    float3 light = saturate(model_color.rgb);
+#ifdef OLR_R1_MODEL_HQ
+    float4 projected = tex2D(s_lmap,projector_uv.xy/projector_uv.w);
+    light = mix(projected.rgb+saturate(sun_color)*projected.a,light,saturate(model_color.w));
+#endif
+    float3 color = base.rgb*light*2.0;
+    out_color = float4(mix(fog_color.rgb,color,saturate(fog_visibility)),base.a);
+}

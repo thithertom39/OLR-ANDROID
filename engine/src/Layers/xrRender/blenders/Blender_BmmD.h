@@ -16,6 +16,7 @@ private:
     void CompileProgrammable(CBlender_Compile& C) const;
 
 public:
+    pcstr detailTexture() const { return oT2_Name; }
     LPCSTR getComment() override;
     BOOL canBeDetailed() override;
     BOOL canBeLMAPped() override;

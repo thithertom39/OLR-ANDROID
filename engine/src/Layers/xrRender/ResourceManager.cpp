@@ -11,9 +11,202 @@
 #include "tss.h"
 #include "Blender.h"
 #include "Blender_Recorder.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "olr_r1_mode.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#include "blenders/Blender_tree.h"
+#include "blenders/Blender_detail_still.h"
+#include "blenders/Blender_BmmD.h"
+#include "blenders/blender_deffer_aref.h"
+#include "blenders/blender_deffer_model.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+void CResourceManager::CompileOlrR1Native(Shader& S, CBlender_Compile& C, bool vertexLit,
+    bool implicit, pcstr detailOverride, int alphaRef)
+{
+    // Original BlenderDefault/Blender_Vertex: lmap[_dt] / vert[_dt].
+    // impl[_dt] is the separate implicit-lightmap material, not B_DEFAULT.
+    bool diffuseDetail = false, bumpDetail = false;
+    C.detail_texture = nullptr;
+    C.detail_scaler = nullptr;
+    const bool hasDetail = m_textures_description.GetDetailTexture(
+        C.L_textures[0], C.detail_texture, C.detail_scaler);
+    m_textures_description.GetTextureUsage(C.L_textures[0], diffuseDetail, bumpDetail);
+    // BmmD uses its authored secondary texture; do not invent missing dt_params.
+    if (implicit && (!hasDetail || !C.detail_scaler || !detailOverride || !detailOverride[0] ||
+        xr_strcmp(detailOverride, "$null") == 0))
+        return;
+    const bool detail = implicit || (hasDetail && diffuseDetail && C.detail_texture && C.detail_scaler);
+    if (implicit) C.detail_texture = detailOverride;
+    pcstr vs = implicit ? "olr_r1_native_implicit_detail" : vertexLit ? (detail ? "olr_r1_native_vertex_detail" : "olr_r1_native_vertex") :
+        (detail ? "olr_r1_native_detail" : "olr_r1_native");
+    const auto compileBase = [&](pcstr stem, bool withDetail)
+    {
+        string128 shaderName;
+        strconcat(sizeof(shaderName), shaderName, stem, alphaRef >= 0 ? "_aref" : "");
+        ShaderElement base;
+        C.SH = &base;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        C.r_Pass(shaderName, shaderName, FALSE, TRUE, TRUE, FALSE);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        if (!vertexLit)
+        {
+            if (implicit) C.r_Sampler("s_lmap", C.L_textures[1]);
+            else C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+            if (!implicit) C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        }
+        if (withDetail) C.r_Sampler("s_detail", C.detail_texture);
+        C.r_End();
+        return ref_selement(_CreateElement(std::move(base)));
+    };
+    S.olr_r1_lightmap = compileBase(vs, detail);
+    // SE_R1_LMODELS is a separate lighting-only surface, without diffuse,
+    // detail, sun color or fog. Do not repurpose R2 E[4] (emissive/distortion).
+    if (OlrR1Pipeline::Independent())
+    {
+        ShaderElement surface;
+        C.SH = &surface;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        pcstr program = implicit ? "olr_r1_projector_implicit" : vertexLit ? "olr_r1_projector_vertex" : "olr_r1_projector_lmap";
+        C.r_Pass(program, program, FALSE, TRUE, TRUE, FALSE);
+        if (implicit) C.r_Sampler("s_base", C.L_textures[0]);
+        if (!vertexLit)
+        {
+            if (implicit) C.r_Sampler("s_lmap", C.L_textures[1]);
+            else C.r_Sampler_clf("s_lmap", C.L_textures[1].c_str());
+            if (!implicit) C.r_Sampler_clf("s_hemi", C.L_textures[2].c_str());
+        }
+        C.r_End();
+        S.olr_r1_projector_surface = _CreateElement(std::move(surface));
+    }
+    S.olr_r1_alpha_ref = alphaRef;
+    if (alphaRef >= 0 && detail)
+        S.olr_r1_lightmap_lq = compileBase(vertexLit ? "olr_r1_native_vertex" : "olr_r1_native", false);
+
+    for (bool spot : {false, true})
+    {
+        ShaderElement additive;
+        C.SH = &additive;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        pcstr dynamic = spot ? "olr_r1_native_spot" : "olr_r1_native_point";
+        if (alphaRef >= 0) dynamic = spot ? "olr_r1_native_spot_aref" : "olr_r1_native_point_aref";
+        C.r_Pass(dynamic, dynamic, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
+        C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
+        C.r_ColorWriteEnable(true, true, true, false);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        C.r_Sampler_clf("s_lmap", spot ? "internal\\internal_light_att" : "internal\\internal_light_attpoint");
+        C.r_Sampler_clf("s_r1_att", spot ? "internal\\internal_light_attclip" : "internal\\internal_light_attpoint");
+        // add_point / add_spot intentionally have no detail modulation.
+        C.r_End();
+        if (spot)
+            S.olr_r1_lightmap_spot = _CreateElement(std::move(additive));
+        else
+            S.olr_r1_lightmap_dynamic = _CreateElement(std::move(additive));
+    }
+    static u32 logged = 0;
+    if (logged++ < 8)
+        Msg("* OLR R1 native: %s material '%s', detail=%u, original lookup POINT/SPOT, direct UNORM color",
+            implicit ? "implicit" : vertexLit ? "vertex" : "lightmap", C.L_textures[0].c_str(), unsigned(detail));
+}
+void CResourceManager::CompileOlrR1Tree(Shader& S, CBlender_Compile& C, bool rigid, bool blend)
+{
+    bool diffuse = false, bump = false;
+    C.detail_texture = nullptr;
+    C.detail_scaler = nullptr;
+    bool hasDetail = m_textures_description.GetDetailTexture(C.L_textures[0], C.detail_texture, C.detail_scaler);
+    m_textures_description.GetTextureUsage(C.L_textures[0], diffuse, bump);
+    const bool detail = hasDetail && diffuse && C.detail_texture && C.detail_scaler;
+    const char* stem = rigid ? "olr_r1_tree_rigid" : "olr_r1_tree";
+    string128 name;
+    xr_sprintf(name, "%s%s", stem, detail ? "_detail" : "");
+    ShaderElement base;
+    C.SH = &base;
+    C.RS.Invalidate();
+    C.SetParams(S.E[0]->flags.iPriority, false);
+    C.r_Pass(name, name, FALSE, TRUE, TRUE, blend,
+        blend ? D3DBLEND_SRCALPHA : D3DBLEND_ONE,
+        blend ? D3DBLEND_INVSRCALPHA : D3DBLEND_ZERO);
+    C.r_Sampler("s_base", C.L_textures[0]);
+    if (detail) C.r_Sampler("s_detail", C.detail_texture);
+    C.r_End();
+    S.olr_r1_lightmap = _CreateElement(std::move(base));
+    for (bool spot : {false, true})
+    {
+        xr_sprintf(name, "%s_%s", stem, spot ? "spot" : "point");
+        ShaderElement additive;
+        C.SH = &additive;
+        C.RS.Invalidate();
+        C.SetParams(S.E[0]->flags.iPriority, false);
+        C.r_Pass(name, name, FALSE, TRUE, FALSE, TRUE, D3DBLEND_ONE, D3DBLEND_ONE);
+        C.RS.SetRS(D3DRS_ZFUNC, D3DCMP_EQUAL);
+        C.r_ColorWriteEnable(true, true, true, false);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        C.r_Sampler_clf("s_lmap", spot ? "internal\\internal_light_att" : "internal\\internal_light_attpoint");
+        C.r_Sampler_clf("s_r1_att", spot ? "internal\\internal_light_attclip" : "internal\\internal_light_attpoint");
+        C.r_End();
+        if (spot) S.olr_r1_lightmap_spot = _CreateElement(std::move(additive));
+        else S.olr_r1_lightmap_dynamic = _CreateElement(std::move(additive));
+    }
+    Msg("* OLR R1 scene: native tree '%s' rigid=%u blend=%u detail=%u shared_r2_hq_lq=%u", C.L_textures[0].c_str(),
+        unsigned(rigid), unsigned(blend), unsigned(detail), unsigned(S.E[0] == S.E[1]));
+    ShaderElement low;
+    C.SH = &low;
+    C.RS.Invalidate();
+    C.SetParams(S.E[1] ? S.E[1]->flags.iPriority : S.E[0]->flags.iPriority, false);
+    C.r_Pass("olr_r1_tree_rigid", rigid ? "olr_r1_tree_rigid" : "olr_r1_tree",
+        FALSE, TRUE, TRUE, blend, blend ? D3DBLEND_SRCALPHA : D3DBLEND_ONE,
+        blend ? D3DBLEND_INVSRCALPHA : D3DBLEND_ZERO);
+    C.r_Sampler("s_base", C.L_textures[0]);
+    C.r_End();
+    S.olr_r1_lightmap_lq = _CreateElement(std::move(low));
+}
+
+void CResourceManager::CompileOlrR1Lod(Shader& S, CBlender_Compile& C)
+{
+    for (bool depth : {false, true})
+    {
+        ShaderElement element;
+        C.SH = &element;
+        C.RS.Invalidate();
+        C.SetParams(1, false);
+        pcstr name = depth ? "olr_r1_lod_depth" : "olr_r1_lod";
+        C.r_Pass(name, name, FALSE, TRUE, depth, !depth, D3DBLEND_SRCALPHA, D3DBLEND_INVSRCALPHA);
+        C.r_Sampler("s_base", C.L_textures[0]);
+        string_path hemi;
+        xr_sprintf(hemi, "%s_nm", C.L_textures[0].c_str());
+        C.r_Sampler("s_hemi", hemi);
+        C.r_End();
+        S.E[depth ? SE_R1_LMODELS : SE_R1_NORMAL_LQ] = _CreateElement(std::move(element));
+    }
+    Msg("* OLR R1 scene: native LOD '%s' two-pass alpha 200/8", C.L_textures[0].c_str());
+}
+
+void CResourceManager::CompileOlrR1Details(Shader& S, CBlender_Compile& C, bool alphaTest)
+{
+    for (bool still : {false,true})
+    {
+        ShaderElement element;
+        C.SH = &element;
+        C.RS.Invalidate();
+        C.SetParams(1,false);
+        C.r_Pass(still ? "olr_r1_grass_still" : "olr_r1_grass",
+            alphaTest ? "olr_r1_grass_aref" : "olr_r1_grass", FALSE, TRUE, TRUE, FALSE);
+        C.r_CullMode(D3DCULL_NONE);
+        C.r_Sampler("s_base",C.L_textures[0]);
+        C.r_End();
+        if (still) S.olr_r1_detail_still = _CreateElement(std::move(element));
+        else S.olr_r1_detail_wave = _CreateElement(std::move(element));
+    }
+    Msg("* OLR R1 scene: native detail '%s' alpha_test=%u",C.L_textures[0].c_str(),unsigned(alphaTest));
+}
+#endif
+
 //	Already defined in Texture.cpp
 void fix_texture_name(pstr fn);
 /*
@@ -233,6 +426,12 @@ Shader* CResourceManager::_cpp_Create(
     static const bool olrR1Lightmaps = olrR1Forward ||
         (strstr(Core.Params, "-olr ") && strstr(Core.Params, "-olr_r1_lightmaps"));
     const auto blenderClass = B->getDescription().CLS;
+    if (OlrR1Pipeline::Independent() && blenderClass == B_MODEL)
+    {
+        S.olr_r1_model = true;
+        const auto* model = static_cast<CBlender_deffer_model*>(B);
+        S.olr_r1_alpha_ref = model->oBlend.value ? model->oAREF.value : -1;
+    }
     if (olrR1Lightmaps && (blenderClass == B_DEFAULT || blenderClass == B_VERT))
     {
         C.iElement = SE_OLR_R1_LIGHTMAP;
@@ -240,7 +439,28 @@ Shader* CResourceManager::_cpp_Create(
         ShaderElement E;
         C._cpp_Compile(&E);
         S.olr_r1_lightmap = _CreateElement(std::move(E));
+        if (olr_r1_native_enabled() && S.E[0])
+            CompileOlrR1Native(S, C, blenderClass == B_VERT);
     }
+    if (olr_r1_scene_enabled() && blenderClass == B_BmmD && S.E[0] && C.L_textures.size() >= 2)
+        CompileOlrR1Native(S, C, false, true, static_cast<CBlender_BmmD*>(B)->detailTexture());
+    if (olr_r1_scene_enabled() && (blenderClass == B_DEFAULT_AREF || blenderClass == B_VERT_AREF) && S.E[0])
+    {
+        const auto* aref = static_cast<CBlender_deffer_aref*>(B);
+        const bool vertex = !aref->lmapped;
+        // Blended surfaces retain their existing ordering/fallback. Only
+        // depth-writing alpha-tested materials enter the opaque native queue.
+        if (!aref->oBlend.value && (vertex || (C.L_textures.size() == 3 &&
+            strncmp(C.L_textures[1].c_str(), "lmap#", 5) == 0 && strncmp(C.L_textures[2].c_str(), "lmap#", 5) == 0)))
+            CompileOlrR1Native(S, C, vertex, false, nullptr, aref->oAREF.value);
+    }
+    if (olr_r1_scene_enabled() && blenderClass == B_TREE && S.E[0])
+    {
+        const auto* tree = static_cast<CBlender_Tree*>(B);
+        CompileOlrR1Tree(S, C, tree->isRigid(), tree->isBlended());
+    }
+    if (olr_r1_scene_enabled() && blenderClass == B_DETAIL && S.E[0])
+        CompileOlrR1Details(S,C,static_cast<CBlender_Detail_Still*>(B)->isAlphaTested());
 #endif
 
     // Search equal in shaders array

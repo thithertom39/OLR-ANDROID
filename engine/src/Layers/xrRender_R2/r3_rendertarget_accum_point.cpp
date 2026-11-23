@@ -1,9 +1,15 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
 void CRenderTarget::accum_point(CBackend& cmd_list, light* L)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("accum_point");
+#endif
     phase_accumulator(cmd_list);
     RImplementation.Stats.l_visible++;
 

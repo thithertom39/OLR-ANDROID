@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "olr_r1_mode.h"
+#endif
 
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/IGame_Level.h"
@@ -151,9 +154,21 @@ void FTreeVisual::Render(CBackend& cmd_list, float /*LOD*/, bool use_fast_geo)
     cmd_list.tree.set_wave(tvs.wave); // wave
     cmd_list.tree.set_wind(tvs.wind); // wind
 #if RENDER != R_R1
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (olr_r1_scene_enabled())
+    {
+        const auto& desc = g_pGamePersistent->Environment().CurrentEnv;
+        cmd_list.tree.set_c_scale(s * c_scale.rgb.x, s * c_scale.rgb.y, s * c_scale.rgb.z, s * c_scale.hemi);
+        cmd_list.tree.set_c_bias(s * c_bias.rgb.x + desc.ambient.x, s * c_bias.rgb.y + desc.ambient.y,
+            s * c_bias.rgb.z + desc.ambient.z, s * c_bias.hemi);
+    }
+    else
+#endif
+    {
     s *= 1.3333f;
     cmd_list.tree.set_c_scale(s * c_scale.rgb.x, s * c_scale.rgb.y, s * c_scale.rgb.z, s * c_scale.hemi); // scale
     cmd_list.tree.set_c_bias(s * c_bias.rgb.x, s * c_bias.rgb.y, s * c_bias.rgb.z, s * c_bias.hemi); // bias
+    }
 #else
     const auto& desc = g_pGamePersistent->Environment().CurrentEnv;
     cmd_list.tree.set_c_scale(s * c_scale.rgb.x, s * c_scale.rgb.y, s * c_scale.rgb.z, s * c_scale.hemi); // scale

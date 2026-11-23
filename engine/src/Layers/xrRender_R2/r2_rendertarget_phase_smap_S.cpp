@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
 #include <cstring>
@@ -137,6 +140,9 @@ void gles_spot_shadow_audit_framebuffer(const CBackend& cmd_list, const light& s
 
 void CRenderTarget::phase_smap_spot_clear(CBackend& cmd_list)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_smap_spot_clear");
+#endif
     rt_smap_depth->set_slice_write(cmd_list.context_id, 0);
     cmd_list.set_pass_targets(
         OXR_SMAP_COLOR_ATTACHMENT,
@@ -153,6 +159,9 @@ void CRenderTarget::phase_smap_spot_clear(CBackend& cmd_list)
 
 void CRenderTarget::phase_smap_spot(CBackend& cmd_list, light* L)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_smap_spot");
+#endif
     const D3D_VIEWPORT viewport = { L->X.S.posX, L->X.S.posY, L->X.S.size, L->X.S.size, 0.f, 1.f };
     rt_smap_depth->set_slice_write(cmd_list.context_id, 0); // TODO: it is possible to increase lights batch size
                                                             // by rendering into different smap array slices in parallel
@@ -184,6 +193,9 @@ void CRenderTarget::phase_smap_spot(CBackend& cmd_list, light* L)
 
 void CRenderTarget::phase_smap_spot_tsh(CBackend& cmd_list, light* L)
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_smap_spot_tsh");
+#endif
     VERIFY(!"Implement clear of the buffer for tsh!");
     VERIFY(RImplementation.o.Tshadows);
     cmd_list.set_ColorWriteEnable();

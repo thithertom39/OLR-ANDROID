@@ -33,6 +33,9 @@ IC void CBackend::set_FB(GLuint FB)
     {
         PGO(Msg("PGO:set_FB"));
         CHK_GL(glBindFramebuffer(GL_FRAMEBUFFER, pFB));
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::RecordFramebuffer();
+#endif
         GLHardwareState::InvalidateDrawBuffers();
         GLHardwareState::InvalidateAttachments();
     }
@@ -49,6 +52,9 @@ IC void CBackend::set_RT(GLuint RT, u32 ID)
         stat.target_rt++;
         // TODO: OGL: Implement support for multi-sampled render targets
         CHK_GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + ID, GL_TEXTURE_2D, RT, 0));
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::RecordAttachmentChange();
+#endif
     }
 }
 
@@ -62,6 +68,9 @@ IC void CBackend::set_ZB(GLuint ZB)
         stat.target_zb++;
         // TODO: OGL: Implement support for multi-sampled render targets
         CHK_GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, ZB, 0));
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::RecordAttachmentChange();
+#endif
     }
 }
 
@@ -416,7 +425,7 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV,
 #endif
     CHK_GL(glDrawElements(Topology, iIndexCount, GL_UNSIGNED_SHORT, (void*)(startI * sizeof(GLushort))));
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
-    GLGpuProfiler::RecordDraw();
+    GLGpuProfiler::RecordDraw(T >= D3DPT_TRIANGLELIST ? PC : 0);
 #endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
     GLSpotWriterAudit::AfterDraw(spot_writer_sampled);
@@ -445,7 +454,7 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 startV, u32 PC)
 #endif
     CHK_GL(glDrawArrays(Topology, startV, iIndexCount));
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
-    GLGpuProfiler::RecordDraw();
+    GLGpuProfiler::RecordDraw(T >= D3DPT_TRIANGLELIST ? PC : 0);
 #endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
     GLSpotWriterAudit::AfterDraw(spot_writer_sampled);

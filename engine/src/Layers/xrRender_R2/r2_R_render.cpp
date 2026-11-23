@@ -7,6 +7,8 @@
 #include "xrEngine/xr_object.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "xrEngine/AndroidSceneCompare.h"
+#include "Layers/xrRender/olr_r1_mode.h"
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
 #endif
 
 #include "Layers/xrRender/FBasicVisual.h"
@@ -97,6 +99,21 @@ void CRender::RenderMenu()
 extern u32 g_r;
 void CRender::Render()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent())
+    {
+        render_olr_r1();
+        return;
+    }
+#endif
+    render_deferred();
+}
+
+void CRender::render_deferred()
+{
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("frame");
+#endif
     ZoneScoped;
 #if defined(USE_DX11)
     TracyD3D11Zone(HW.profiler_ctx, "Render");
@@ -127,6 +144,8 @@ void CRender::Render()
     //.	VERIFY					(g_pGameLevel && g_pGameLevel->pHUD);
     auto& dsgraph = get_imm_context();
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    dsgraph.olr_r1_deferred_receivers.clear();
+    dsgraph.olr_r1_receiver_bounds_valid = true;
     const bool compareScene = Device.dwFrame % 67 == 0 && g_pGameLevel->bReady && !Device.Paused() &&
         !Device.dwPrecacheFrame && AndroidSceneCompare::Enabled(Core.Params);
     CTimer compareTimer;
@@ -230,7 +249,10 @@ void CRender::Render()
         Target->phase_scene_begin();
         dsgraph.render_hud();
         dsgraph.render_graph(0);
-        dsgraph.render_lods(true, true);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (!olr_r1_scene_enabled())
+#endif
+            dsgraph.render_lods(true, true);
         if (Details)
             Details->Render(dsgraph.cmd_list);
         Target->phase_scene_end();
@@ -251,6 +273,11 @@ void CRender::Render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
 
+    // Native R1 needs the complete fallback receiver list, including the HUD
+    // and details in a split scene. Defer only its light selection until PART-1;
+    // keep the existing R2 overlap/scheduling unchanged.
+    const auto prepareLocalLights = [&]
+    {
     //******* Occlusion testing of volume-limited light-sources
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope visibilityScope(GLGpuProfiler::Stage::LightVisibility);
@@ -270,6 +297,40 @@ void CRender::Render()
         PIX_EVENT(DEFER_TEST_LIGHT_VIS);
         light_Package& LP = Lights.package;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        // Skip only lights whose finite range misses every actual G-buffer
+        // receiver. Preserve the original package for native POINT/SPOT.
+        const bool pruneR1Lights = olr_r1_scene_enabled() &&
+            dsgraph.olr_r1_receiver_bounds_valid && !ps_r2_ls_flags.test(R2FLAG_GI) &&
+            !(Details && Details->HasR1DeferredMaterials()) &&
+            !(g_pGameLevel->pHUD && g_pGameLevel->pHUD->RenderActiveItemUIQuery()) &&
+            !strstr(Core.Params, "-olr_r1_receiver_cull_off");
+        u32 skippedR2 = 0;
+        const auto neededByDeferred = [&](const light* entry)
+        {
+            if (!pruneR1Lights || entry->flags.bVolumetric) return true;
+            const auto* source = entry->shadow_parent ? entry->shadow_parent : entry;
+            if (source->flags.bVolumetric) return true;
+            for (const auto& receiver : dsgraph.olr_r1_deferred_receivers)
+            {
+                const float radius = source->range + receiver.R + EPS_L;
+                if (source->position.distance_to_sqr(receiver.P) <= radius*radius)
+                    return true;
+            }
+            ++skippedR2;
+            return false;
+        };
+#endif
+        const auto queueLight = [&](light* L, auto& normal, auto& pending)
+        {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if (!neededByDeferred(L)) return;
+#endif
+            L->vis_prepare(dsgraph.cmd_list);
+            if (L->vis.pending) pending.push_back(L);
+            else normal.push_back(L);
+        };
+
         // stats
         Stats.l_shadowed = LP.v_shadowed.size();
         Stats.l_unshadowed = LP.v_point.size() + LP.v_spot.size();
@@ -285,37 +346,45 @@ void CRender::Render()
             if (it < LP.v_point.size())
             {
                 light* L = LP.v_point[it];
-                L->vis_prepare(dsgraph.cmd_list);
-                if (L->vis.pending)
-                    LP_pending.v_point.push_back(L);
-                else
-                    LP_normal.v_point.push_back(L);
+                queueLight(L, LP_normal.v_point, LP_pending.v_point);
             }
             if (it < LP.v_spot.size())
             {
                 light* L = LP.v_spot[it];
-                L->vis_prepare(dsgraph.cmd_list);
-                if (L->vis.pending)
-                    LP_pending.v_spot.push_back(L);
-                else
-                    LP_normal.v_spot.push_back(L);
+                queueLight(L, LP_normal.v_spot, LP_pending.v_spot);
             }
             if (it < LP.v_shadowed.size())
             {
                 light* L = LP.v_shadowed[it];
-                L->vis_prepare(dsgraph.cmd_list);
-                if (L->vis.pending)
-                    LP_pending.v_shadowed.push_back(L);
-                else
-                    LP_normal.v_shadowed.push_back(L);
+                queueLight(L, LP_normal.v_shadowed, LP_pending.v_shadowed);
             }
         }
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (compareScene)
+            Msg("* [olr_r1_deferred_lights] frame=%u enabled=%u skipped=%u candidates=%u", Device.dwFrame,
+                unsigned(pruneR1Lights), skippedR2, Stats.l_total);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::RecordR1LightCull(unsigned(dsgraph.olr_r1_deferred_receivers.size()), skippedR2);
+#endif
+#endif
     }
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (compareScene)
+        Msg("* [olr_r1_deferred] frame=%u receivers=%zu bounds_valid=%u", Device.dwFrame,
+            dsgraph.olr_r1_deferred_receivers.size(), unsigned(dsgraph.olr_r1_receiver_bounds_valid));
+#endif
     LP_normal.sort();
     LP_pending.sort();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     visibilityScope.Stop();
 #endif
+    };
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    const bool deferredR1Selection = olr_r1_scene_enabled();
+#else
+    const bool deferredR1Selection = false;
+#endif
+    if (!deferredR1Selection) prepareLocalLights();
 
     //******* Main render :: PART-1 (second)
     if (split_the_scene_to_minimize_wait)
@@ -341,7 +410,10 @@ void CRender::Render()
         // level
         Target->phase_scene_begin();
         dsgraph.render_hud();
-        dsgraph.render_lods(true, true);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (!olr_r1_scene_enabled())
+#endif
+            dsgraph.render_lods(true, true);
         if (Details)
             Details->Render(dsgraph.cmd_list);
         Target->phase_scene_end();
@@ -350,6 +422,7 @@ void CRender::Render()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const u32 mainDraws = dsgraph.cmd_list.stat.render.calls - mainDrawStart;
 #endif
+    if (deferredR1Selection) prepareLocalLights();
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope wallmarksScope(GLGpuProfiler::Stage::Wallmarks);
 #endif
@@ -542,7 +615,12 @@ void CRender::render_forward()
     //.todo: should be done inside "combine" with estimation of of luminance, tone-mapping, etc.
     {
         //	Igor: we don't want to render old lods on next frame.
-        dsgraph.mapLOD.clear();
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (olr_r1_scene_enabled())
+            dsgraph.render_lods(true, false);
+        else
+#endif
+            dsgraph.mapLOD.clear();
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
         // On devices without HDR float blending, preserve existing R2 light
         // by blending baked diffuse over the finished LDR image.
@@ -556,6 +634,12 @@ void CRender::render_forward()
         }
 #endif
         dsgraph.render_graph(1); // normal level, secondary priority
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+        if (olr_r1_scene_enabled() && Details)
+            Details->RenderNativeR1(dsgraph.cmd_list);
+        if (olr_r1_scene_enabled())
+            dsgraph.render_lods(false, true);
+#endif
         dsgraph.PortalTraverser.fade_render(); // faded-portals
         dsgraph.render_sorted(); // strict-sorted geoms
         g_pGamePersistent->Environment().RenderLast(); // rain/thunder-bolts

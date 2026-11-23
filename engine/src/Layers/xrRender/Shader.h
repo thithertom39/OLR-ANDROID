@@ -139,8 +139,14 @@ struct ECORE_API Shader : public xr_resource_flagged
     // R2 - 0=deffer, 1=norm_lod1(normal), 2=psm, 3=ssm, 4=dsm
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     ref_selement olr_r1_lightmap;
+    ref_selement olr_r1_lightmap_lq;
+    ref_selement olr_r1_detail_wave, olr_r1_detail_still;
     // Optional additive POINT/SPOT pass for the experimental forward R1 path.
     ref_selement olr_r1_lightmap_dynamic;
+    ref_selement olr_r1_lightmap_spot;
+    ref_selement olr_r1_projector_surface;
+    bool olr_r1_model = false;
+    int olr_r1_alpha_ref = -1; // authored 0..255 threshold; -1 means no alpha test
 #endif
     Shader() = default;
     ~Shader();

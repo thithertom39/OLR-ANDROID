@@ -4,7 +4,8 @@ param(
     [string]$JavaHome = $env:JAVA_HOME,
     [string]$GradleCache = $env:GRADLE_USER_HOME,
     [string]$HostCompilerBin = 'C:\MinGW\bin',
-    [switch]$Offline
+    [switch]$Offline,
+    [switch]$GpuProfile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +32,7 @@ if (!(Test-Path -LiteralPath $key)) {
 $arguments = @('assembleRelease', "-POXRAY_KEYSTORE=$key", '-POXR_GITHUB_TOKEN=',
     '--console=plain', '--max-workers=10', '--init-script', '../HANDOFF/vendor.init.gradle')
 if ($Offline) { $arguments += '--offline' }
+if ($GpuProfile) { $arguments += '-POXRAY_GPU_PROFILE=true' }
 $log = Join-Path $logs "$BuildName.build.log"
 
 Push-Location -LiteralPath $androidProject

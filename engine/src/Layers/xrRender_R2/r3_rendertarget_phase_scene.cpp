@@ -1,10 +1,16 @@
 #include "stdafx.h"
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+#include "Layers/xrRenderGL/olrR1Pipeline.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
 // startup
 void CRenderTarget::phase_scene_prepare()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_scene_prepare");
+#endif
     PIX_EVENT(phase_scene_prepare);
     // Clear depth & stencil
     // u_setrt	( Device.dwWidth,Device.dwHeight, get_base_rt(), nullptr, nullptr, get_base_zb() );
@@ -53,6 +59,9 @@ void CRenderTarget::phase_scene_prepare()
 // begin
 void CRenderTarget::phase_scene_begin()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_scene_begin");
+#endif
     // Targets, use accumulator for temporary storage
     if (!RImplementation.o.gbuffer_opt)
     {
@@ -92,6 +101,9 @@ void CRenderTarget::disable_aniso()
 // end
 void CRenderTarget::phase_scene_end()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    OlrR1Pipeline::EnterDeferredStage("phase_scene_end");
+#endif
     disable_aniso();
 
     if (!RImplementation.o.albedo_wo)
