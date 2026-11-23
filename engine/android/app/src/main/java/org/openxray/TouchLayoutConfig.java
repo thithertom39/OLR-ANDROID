@@ -97,6 +97,8 @@ public class TouchLayoutConfig {
         ld.buttons.put("wpn_4", new ButtonPos("wpn_4", 0.52f, 0.92f, smallRadius * 0.92f));
         ld.buttons.put("wpn_5", new ButtonPos("wpn_5", 0.60f, 0.92f, smallRadius * 0.92f));
         ld.buttons.put("wpn_6", new ButtonPos("wpn_6", 0.68f, 0.92f, smallRadius * 0.92f));
+        // Dedicated hold-and-drag radial selector; original 1–6 keys are unchanged.
+        ld.buttons.put("wheel", new ButtonPos("wheel", 0.57f, 0.78f, smallRadius * 1.05f));
 
         // 7. Top Bar System / UI Buttons
         float topY = smallRadius * 1.6f;
