@@ -75,7 +75,9 @@ try {
         Start-Sleep -Milliseconds 700
         $ui = Read-UI
         $entered = $ui.SelectSingleNode("//node[@resource-id='$($Package):id/edit_custom_args']")
-        if (!$entered -or $entered.text -ne $ArgumentsText) { throw 'Launcher argument edit did not match requested value.' }
+        # Android accessibility exposes an empty EditText's hint as its text.
+        $emptyHint = $entered -and !$ArgumentsText -and $entered.hint -and $entered.text -eq $entered.hint
+        if (!$entered -or ($entered.text -ne $ArgumentsText -and !$emptyHint)) { throw 'Launcher argument edit did not match requested value.' }
     }
     $back = $ui.SelectSingleNode("//node[@resource-id='$($Package):id/btn_settings_back']")
     if ($back) { Tap-Node $back; $ui = Read-UI }
