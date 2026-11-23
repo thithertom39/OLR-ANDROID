@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "olrR1Models.h"
+#include "olrR1Shadows.h"
 
 #if defined(XR_PLATFORM_ANDROID)
 #include "xrEngine/IGame_Persistent.h"
@@ -107,6 +108,7 @@ void Capture()
 
 void BeginCollect()
 {
+    OlrR1Shadows::BeginCollect();
     projector.receivers.clear();
     std::lock_guard<std::mutex> lock(projector.spatialMutex);
     projector.spatialOwners.clear();
@@ -401,9 +403,11 @@ void PrepareLocalLights(R_dsgraph_structure& graph)
     // Explicit component fixture, never a game light or an automatic visual
     // correction. It uses the same real traversal, model programs and original
     // DDS attenuation, but its input colors/positions are synthetic test data.
-    if (Core.Params && strstr(Core.Params,"-olr_r1_model_light_probe") &&
+    static bool fixturePrepared=false;
+    if (!fixturePrepared && Core.Params && strstr(Core.Params,"-olr_r1_model_light_probe") &&
         strstr(Core.Params,"-olr_r1_projector_capture") && !worldModels.empty())
     {
+        fixturePrepared=true;
         const ModelDraw* nearest=nullptr;
         float best=flt_max;
         Fvector target{};
@@ -442,8 +446,10 @@ void RenderLocalLights(CBackend& commands, bool hud)
 {
     const auto& models=hud ? hudModels : worldModels;
     unsigned pointDraws=0,spotDraws=0;
-    const bool capture=Core.Params && strstr(Core.Params,"-olr_r1_model_light_probe") &&
+    static bool captured=false;
+    const bool capture=!captured && Core.Params && strstr(Core.Params,"-olr_r1_model_light_probe") &&
         strstr(Core.Params,"-olr_r1_projector_capture");
+    if (capture) captured=true;
     xr_vector<u8> beforePixels,afterPixels;
     if (capture)
     {
@@ -524,6 +530,7 @@ void Bind(CBackend& commands, IRenderable* object, dxRender_Visual* visual)
 
 void Destroy()
 {
+    OlrR1Shadows::Destroy();
     worldModels.clear(); hudModels.clear(); modelLights.clear();
     if (projector.registered) Device.seqAppActivate.Remove(&projector);
     projector.registered = false;
@@ -608,8 +615,10 @@ void Compile(CBlender_Compile& compiler, bool blend, unsigned alphaRef)
     case SE_R1_NORMAL_LQ: stem = "olr_r1_model_lq"; break;
     case SE_R1_LPOINT: stem = "olr_r1_model_point"; break;
     case SE_R1_LSPOT: stem = "olr_r1_model_spot"; break;
-    // The original projected shadow caster is added with LightShadows. Do
-    // not substitute a R2 shadow-map shader for SE_R1_LMODELS in this mode.
+    case SE_R1_LMODELS:
+        compiler.r_Pass("olr_r1_model_shadow","olr_r1_model_shadow",FALSE,FALSE,FALSE,TRUE,D3DBLEND_ZERO,D3DBLEND_SRCCOLOR);
+        compiler.r_End();
+        return;
     default: return;
     }
     string128 program;

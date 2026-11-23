@@ -11,6 +11,7 @@
 #include "Layers/xrRender/olr_r1_mode.h"
 #include "Layers/xrRenderGL/glBackendStateCache.h"
 #include "olrR1Models.h"
+#include "olrR1Shadows.h"
 #endif
 
 namespace xray::render::RENDER_NAMESPACE::OlrR1Pipeline
@@ -272,6 +273,7 @@ void CRender::render_olr_r1()
     }
     if (m_bFirstFrameAfterReset) { m_bFirstFrameAfterReset = false; return; }
     r_main.sync(); // shared visibility/sector/portal preparation, not R2 lighting
+    OlrR1Shadows::Calculate();
     OlrR1Models::CalculateProjector();
     OlrR1Models::PrepareLocalLights(graph);
     const unsigned unsupported = UnsupportedMaterials(graph);

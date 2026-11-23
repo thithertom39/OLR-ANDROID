@@ -195,6 +195,37 @@ def model_projector_checks(gl, report, shader_source):
         if "aref" not in family:
             gl.glActiveTexture(0x84C1);gl.texture((128,160,192,0))
             record(f"model_{family}_opaque_final_alpha_zero_discards",gl.pixel(),[0,0,0,0])
+    # Original LightShadows silhouette, including full SKIN_2 (unlike LQ),
+    # and four-tap avg4. No diffuse alpha test or R2 texture is allowed here.
+    caster_programs={}
+    for skin in ("NONE","0","1","2","3","4"):
+        vertex=shader_source("olr_r1_model_shadow.vs",0,True).replace(
+            "#define OLR_R1_NATIVE","#define OLR_R1_NATIVE\n#define SKIN_"+skin)
+        program,result=gl.program(vertex,shader_source("olr_r1_model_shadow.ps",0,True))
+        report["compile_results"].append(dict(variant="olr_r1_model_shadow",skin=skin,**result))
+        if not all(result[key] for key in ("vertex_compile","fragment_compile","link")):
+            raise RuntimeError(f"R1 shadow caster SKIN_{skin}: {result}")
+        caster_programs[skin]=program
+    blur,result=gl.program(shader_source("olr_r1_shadow_blur.vs",0,True),shader_source("olr_r1_shadow_blur.ps",0,True))
+    report["compile_results"].append(dict(variant="olr_r1_shadow_blur",**result))
+    if not all(result[key] for key in ("vertex_compile","fragment_compile","link")):
+        raise RuntimeError(f"R1 shadow blur: {result}")
+    gl.draw_setup()
+    gl.use(caster_programs["NONE"],{})
+    if gl.glGetUniformLocation(caster_programs["NONE"],b"s_base")!=-1:
+        raise RuntimeError("Original shadow silhouette must not alpha-test diffuse texture")
+    gl.glClearColor(.8,.6,.4,1);gl.glClear(0x4000)
+    gl.glEnable(0x0BE2);gl.glBlendFunc(0,0x0300) # ZERO, SRC_COLOR
+    record("shadow_silhouette_zero_source_color_multiply",gl.pixel(clear=False),[0,0,0,0])
+    gl.glDisable(0x0BE2)
+    gl.use(blur,{"s_base":(64,128,192,255)})
+    gl.glVertexAttrib4f(8,.5,.5,0,1)
+    record("shadow_avg4_preserves_constant",gl.pixel(),[64/255,128/255,192/255,1])
+    texels=bytearray([255])*(512*512*4)
+    texels[(256*512+256)*4:(256*512+256)*4+4]=bytes(4)
+    gl.glActiveTexture(0x84C0);gl.texture(texels,512,512)
+    gl.glVertexAttrib4f(8,256.5/512,256.5/512,0,1)
+    record("shadow_avg4_original_075_texel_kernel",gl.pixel(),[.9375]*4)
     gl.draw_setup()
 
 

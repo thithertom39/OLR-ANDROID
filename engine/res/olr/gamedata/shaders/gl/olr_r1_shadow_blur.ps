@@ -1,0 +1,13 @@
+#include "common.h"
+layout(location = TEXCOORD0) in float2 shadow_uv;
+layout(location = 0) out float4 out_color;
+void main()
+{
+    // Original ApplyBlur4(...,512,512,0.75) and r1/avg4.ps. GL pixel
+    // centers supply the half-texel implicit in the D3D quad's p0/p1 UVs.
+    float2 k=float2(.75/512.0);
+    float4 a=tex2D(s_base,shadow_uv-k), b=tex2D(s_base,shadow_uv+k);
+    float4 c=tex2D(s_base,shadow_uv+float2(k.x,-k.y));
+    float4 d=tex2D(s_base,shadow_uv+float2(-k.x,k.y));
+    out_color=((a+b)*.5+(c+d)*.5)*.5;
+}

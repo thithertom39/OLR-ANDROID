@@ -12,6 +12,8 @@ target_sources(xrRender_GL PRIVATE
     ../xrRenderGL/olrR1ObjectLighting.cpp
     ../xrRenderGL/olrR1Models.cpp
     ../xrRenderGL/olrR1Models.h
+    ../xrRenderGL/olrR1Shadows.cpp
+    ../xrRenderGL/olrR1Shadows.h
     gl_rendertarget_accum_direct.cpp
     gl_rendertarget_build_textures.cpp
     gl_rendertarget.h

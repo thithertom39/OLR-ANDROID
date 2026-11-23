@@ -2,6 +2,7 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "LocalShadowStaticCache.h"
 #include "Layers/xrRenderGL/olrR1Models.h"
+#include "Layers/xrRenderGL/olrR1Shadows.h"
 #include "Layers/xrRenderGL/olrR1Pipeline.h"
 #endif
 
@@ -109,6 +110,10 @@ void R_dsgraph_structure::insert_dynamic(IRenderable* root, dxRender_Visual* pVi
     }
 
 // Shadows registering
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (OlrR1Pipeline::Independent() && o.is_main_pass && o.phase == CRender::PHASE_NORMAL)
+        OlrR1Shadows::Collect(root,pVisual,xform);
+#endif
 #if RENDER == R_R1
     RI.L_Shadows->add_element(_MatrixItem{ SSA, root, pVisual, xform });
 #endif

@@ -42,7 +42,7 @@ v_model vertex_model()
 #elif defined(SKIN_2)
     v_model_skinned_2 v;
     v.P=vertex_position; v.N=vertex_normal; v.T=vertex_tangent.xyz; v.B=vertex_binormal.xyz; v.tc=vertex_uv;
-#if !defined(OLR_R1_MODEL_HQ) && !defined(OLR_R1_LOCAL)
+#if !defined(OLR_R1_MODEL_HQ) && !defined(OLR_R1_LOCAL) && !defined(OLR_R1_SHADOW_CASTER)
     // OLR model_def_lq uses skinning_2lq: the first bone only. Keep the
     // GLES loader's converted positions/UVs and D3DCOLOR swizzle.
     int bone = int(v.tc.z);
@@ -74,6 +74,14 @@ v_model vertex_model()
 void main()
 {
     v_model vertex = vertex_model();
+#ifdef OLR_R1_SHADOW_CASTER
+    // Original model_def_shadow uses the fully skinned silhouette, no alpha
+    // cutout. Its own atlas uses D3D row order and clip-depth convention.
+    gl_Position = mul(m_WVP,vertex.P);
+    gl_Position.y = -gl_Position.y;
+    gl_Position.z = 2.0*gl_Position.z-gl_Position.w;
+    return;
+#endif
     float3 position = mul(m_W,vertex.P);
     float3 normal = normalize(mul(m_W,vertex.N));
     base_uv = vertex.tc;
