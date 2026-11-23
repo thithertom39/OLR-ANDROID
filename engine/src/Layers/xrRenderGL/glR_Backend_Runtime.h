@@ -2,6 +2,7 @@
 
 #include "glStateUtils.h"
 #include "glBackendStateCache.h"
+#include "glVertexBinding.h"
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "glGpuProfiler.h"
 #endif
@@ -297,7 +298,11 @@ ICF void CBackend::bindVertexBase(u32 baseV)
     if (!gles_state_rebind_enabled() && hardware.vertex_valid && hardware.vertex_buffer == vb &&
         hardware.vertex_stride == stride && hardware.vertex_offset == byteOffset)
         return;
-    if (GLAD_GL_ARB_vertex_attrib_binding)
+    const bool separated = UseSeparatedVertexBinding();
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::RecordVertexBinding(!separated);
+#endif
+    if (separated)
     {
         CHK_GL(glBindVertexBuffer(0, vb, byteOffset, stride));
     }

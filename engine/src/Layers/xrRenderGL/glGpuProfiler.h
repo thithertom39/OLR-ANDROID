@@ -20,6 +20,7 @@ void BeginFrame();
 void EndGpuFrame();
 void FinishFrame();
 void RecordDraw();
+void RecordVertexBinding(bool legacy);
 bool SamplingShadowAtlas();
 void RecordDetails(unsigned instances);
 
@@ -34,6 +35,8 @@ struct LocalDetailCullStats
     unsigned instanceCandidates = 0;
     unsigned instancesSkipped = 0;
     unsigned instancesSubmitted = 0;
+    unsigned cellReferenceTests = 0;
+    unsigned cellReferenceMismatches = 0;
 };
 LocalDetailCullStats* SampleLocalDetailCull();
 

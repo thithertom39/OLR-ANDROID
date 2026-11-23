@@ -71,6 +71,8 @@ struct State
     std::uint64_t lastFlush = 0;
     double intervalMs = -1;
     unsigned draws = 0;
+    unsigned vertexBindings = 0;
+    unsigned legacyVertexBindings = 0;
     unsigned detailInstances = 0;
     unsigned shadowDetailInstances = 0;
     LocalDetailCullStats localDetails;
@@ -339,6 +341,7 @@ void BeginFrame()
     state.start = start;
     state.threadStart = ThreadNow();
     state.draws = state.detailInstances = state.shadowDetailInstances = 0;
+    state.vertexBindings = state.legacyVertexBindings = 0;
     state.localDetails = {};
     state.wallNs = {};
     state.threadNs = {};
@@ -412,11 +415,12 @@ void FinishFrame()
         state.threadNs[unsigned(Stage::RenderTotal)] = cpu - state.threadStart;
     char row[8192];
     int used = std::snprintf(row, sizeof(row),
-        "{\"record\":\"cpu\",\"frame\":%llu,\"device_frame\":%u,\"width\":%u,\"height\":%u,\"camera\":[%.6f,%.6f,%.6f,%.6f,%.6f,%.6f],\"interval_ms\":%.6f,\"render_wall_ms\":%.6f,\"render_thread_cpu_ms\":%.6f,\"draw_calls\":%u,\"detail_instances_submitted\":%u,\"sun_detail_instances_submitted\":%u,\"inclusive_wall_ms\":[",
+        "{\"record\":\"cpu\",\"frame\":%llu,\"device_frame\":%u,\"width\":%u,\"height\":%u,\"camera\":[%.6f,%.6f,%.6f,%.6f,%.6f,%.6f],\"interval_ms\":%.6f,\"render_wall_ms\":%.6f,\"render_thread_cpu_ms\":%.6f,\"draw_calls\":%u,\"detail_instances_submitted\":%u,\"sun_detail_instances_submitted\":%u,\"vertex_binding_updates\":%u,\"legacy_vertex_pointer_batches\":%u,\"inclusive_wall_ms\":[",
         static_cast<unsigned long long>(state.frame), state.deviceFrame, Device.dwWidth, Device.dwHeight,
         double(Device.vCameraPosition.x), double(Device.vCameraPosition.y), double(Device.vCameraPosition.z),
         double(Device.vCameraDirection.x), double(Device.vCameraDirection.y), double(Device.vCameraDirection.z),
-        state.intervalMs, wallMs, cpuMs, state.draws, state.detailInstances, state.shadowDetailInstances);
+        state.intervalMs, wallMs, cpuMs, state.draws, state.detailInstances, state.shadowDetailInstances,
+        state.vertexBindings, state.legacyVertexBindings);
     for (unsigned i = 0; i < StageCount; ++i)
         used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%.6f", i ? "," : "", double(state.wallNs[i]) * 1e-6);
     used += std::snprintf(row + used, sizeof(row) - size_t(used), "],\"inclusive_thread_cpu_ms\":[");
@@ -431,10 +435,12 @@ void FinishFrame()
         "],\"local_detail_cull\":{\"model_tests\":%u,\"models_rejected\":%u,"
         "\"model_bounds_built\":%u,\"cell_bounds_built\":%u,\"cells_tested\":%u,\"cells_rejected\":%u,"
         "\"instance_candidates\":%u,\"instances_skipped_by_cells\":%u,"
-        "\"instance_tests\":%u,\"local_instances_submitted\":%u}}\n",
+        "\"instance_tests\":%u,\"local_instances_submitted\":%u,"
+        "\"cell_reference_tests\":%u,\"cell_reference_mismatches\":%u}}\n",
         details.modelTests, details.modelsRejected, details.modelBoundsBuilt, details.cellBoundsBuilt,
         details.cellsTested, details.cellsRejected, details.instanceCandidates, details.instancesSkipped,
-        details.instanceCandidates - details.instancesSkipped, details.instancesSubmitted);
+        details.instanceCandidates - details.instancesSkipped, details.instancesSubmitted,
+        details.cellReferenceTests, details.cellReferenceMismatches);
     Write(row);
     if (end - state.lastFlush >= 5000000000ULL)
     {
@@ -450,6 +456,14 @@ void RecordDraw()
 {
     if (state.inFrame)
         ++state.draws;
+}
+
+void RecordVertexBinding(bool legacy)
+{
+    if (!state.inFrame)
+        return;
+    ++state.vertexBindings;
+    state.legacyVertexBindings += legacy;
 }
 
 bool SamplingShadowAtlas()

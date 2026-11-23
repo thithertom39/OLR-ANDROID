@@ -2,6 +2,7 @@
 #include "Layers/xrRender/BufferUtils.h"
 #include "glBackendStateCache.h"
 #include "glStreamSync.h"
+#include "glVertexBinding.h"
 
 #include <FlexibleVertexFormat.h>
 
@@ -175,7 +176,7 @@ void ConvertVertexDeclaration(const VertexElement* dxdecl, SDeclaration* decl)
     [](GLuint location, GLint size, GLenum type, GLboolean normalized, GLuint offset, GLuint stream)
     {
         CHK_GL(glEnableVertexAttribArray(location));
-        if (GLAD_GL_ARB_vertex_attrib_binding)
+        if (UseSeparatedVertexBinding())
         {
             CHK_GL(glVertexAttribFormat(location, size, type, normalized, offset));
             CHK_GL(glVertexAttribBinding(location, stream));

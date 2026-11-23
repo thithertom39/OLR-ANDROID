@@ -6,6 +6,7 @@
 
 #include "glHW.h"
 #include "glTextureBindings.h"
+#include "glVertexBinding.h"
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "glGpuProfiler.h"
 #endif
@@ -585,6 +586,7 @@ void CHW::CreateDevice(SDL_Window* hWnd)
         strstr(Core.Params, "-gles_highp_position") ? "highp (diagnostic)" : "default precision");
     Msg("* [GLES] State rebind diagnostic: %s", CBackend::gles_state_rebind_enabled() ? "on" : "off");
     Msg("* [GLES] Shared physical state cache: on");
+    Msg("* [GLES] Vertex binding: %s", UseSeparatedVertexBinding() ? "separated (ES 3.1 core)" : "legacy pointers");
     if (AngleAuditEnabled())
     {
         Msg("* [gles_angle_audit] caps OES_texture_float_linear=%u EXT_color_buffer_float=%u "
