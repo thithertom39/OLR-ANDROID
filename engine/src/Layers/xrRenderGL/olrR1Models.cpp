@@ -4,6 +4,7 @@
 #if defined(XR_PLATFORM_ANDROID)
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/IRenderable.h"
+#include "xrEngine/CustomHUD.h"
 #include "Layers/xrRender/FBasicVisual.h"
 #include "Layers/xrRender/LightTrack.h"
 #include "Layers/xrRender/Blender_Recorder.h"
@@ -58,7 +59,7 @@ struct ModelDraw
 };
 struct ModelLight
 {
-    const light* source;
+    bool spot;
     Fvector4 position, color;
     Fmatrix texture;
     xr_vector<unsigned> worldDraws, hudDraws;
@@ -356,7 +357,7 @@ void PrepareLocalLights(R_dsgraph_structure& graph)
         }
         traversal.PortalTraverser.traverse(traversal.Sectors[sector],frustum,origin,combined,0);
         ModelLight selected;
-        selected.source=source;
+        selected.spot=spot;
         selected.position.set(source->position.x,source->position.y,source->position.z,(spot ? 1.f : .5f)/source->range);
         selected.color.set(source->color.r*scale,source->color.g*scale,source->color.b*scale,1.f);
         const Fmatrix adjustment={
@@ -397,6 +398,39 @@ void PrepareLocalLights(R_dsgraph_structure& graph)
     for (const auto* source : RImplementation.Lights.package.v_point) prepare(source);
     for (const auto* source : RImplementation.Lights.package.v_shadowed)
         if (source && (source->shadow_parent ? source->shadow_parent : source)->flags.type == IRender_Light::POINT) prepare(source);
+    // Explicit component fixture, never a game light or an automatic visual
+    // correction. It uses the same real traversal, model programs and original
+    // DDS attenuation, but its input colors/positions are synthetic test data.
+    if (Core.Params && strstr(Core.Params,"-olr_r1_model_light_probe") &&
+        strstr(Core.Params,"-olr_r1_projector_capture") && !worldModels.empty())
+    {
+        const ModelDraw* nearest=nullptr;
+        float best=flt_max;
+        Fvector target{};
+        for (const auto& draw : worldModels)
+        {
+            Fvector center; draw.world.transform_tiny(center,draw.visual->vis.sphere.P);
+            const float distance=center.distance_to_sqr(Device.vCameraPosition);
+            if (distance < best) { best=distance; nearest=&draw; target=center; }
+        }
+        light fixture;
+        fixture.position=Device.vCameraPosition;
+        fixture.position.y+=.25f;
+        fixture.direction.sub(target,fixture.position).normalize_safe();
+        fixture.range=_max(8.f,_sqrt(best)+nearest->visual->vis.sphere.R*2.f);
+        fixture.cone=deg2rad(100.f);
+        fixture.spatial.sphere.set(fixture.position,fixture.range);
+        fixture.spatial.sector_id=traversal.detect_sector(fixture.position);
+        fixture.flags.bActive=true;
+        // Draw fixture SPOT before fixture POINT as for the regular lights.
+        fixture.flags.type=IRender_Light::SPOT; fixture.color.set(.05f,.15f,.35f,1.f);
+        visited.erase(&fixture); prepare(&fixture);
+        fixture.flags.type=IRender_Light::POINT; fixture.color.set(.35f,.15f,.05f,1.f);
+        visited.erase(&fixture); prepare(&fixture);
+        fixture.flags.bActive=false; // never registered in game SpatialSpace
+        Msg("* [olr_r1_ppa_fixture] synthetic=1 camera_light_range=%f target=%f,%f,%f sector=%u; not original level lights",
+            fixture.range,target.x,target.y,target.z,unsigned(fixture.spatial.sector_id));
+    }
     RImplementation.release_context(contextId);
     static unsigned reports=0;
     if (reports++ < 8)
@@ -408,9 +442,18 @@ void RenderLocalLights(CBackend& commands, bool hud)
 {
     const auto& models=hud ? hudModels : worldModels;
     unsigned pointDraws=0,spotDraws=0;
+    const bool capture=Core.Params && strstr(Core.Params,"-olr_r1_model_light_probe") &&
+        strstr(Core.Params,"-olr_r1_projector_capture");
+    xr_vector<u8> beforePixels,afterPixels;
+    if (capture)
+    {
+        beforePixels.resize(Device.dwWidth*Device.dwHeight*4);
+        afterPixels.resize(beforePixels.size());
+        glReadPixels(0,0,Device.dwWidth,Device.dwHeight,GL_RGBA,GL_UNSIGNED_BYTE,beforePixels.data());
+    }
     for (const auto& selected : modelLights)
     {
-        const bool spot=selected.source->flags.type == IRender_Light::SPOT;
+        const bool spot=selected.spot;
         for (const auto index : (hud ? selected.hudDraws : selected.worldDraws))
         {
             const auto& draw=models[index];
@@ -418,6 +461,11 @@ void RenderLocalLights(CBackend& commands, bool hud)
             if (!element || element->passes.empty())
                 FATAL("R1 LightPPA: selected model lacks original local shader element");
             commands.set_Element(element._get());
+            if (hud && psHUD_Flags.test(HUD_LEFT_HANDED))
+            {
+                const auto cull=commands.get_CullMode();
+                if (cull != CULL_NONE) commands.set_CullMode(cull == CULL_CW ? CULL_CCW : CULL_CW);
+            }
             commands.set_xform_world(draw.world);
             // The skin renderer supplies its own bone palette on this actual
             // visual submission, exactly as in the matching base pass.
@@ -428,6 +476,23 @@ void RenderLocalLights(CBackend& commands, bool hud)
             const unsigned before=commands.stat.render.calls;
             draw.visual->Render(commands,draw.lod,false);
             (spot ? spotDraws : pointDraws)+=commands.stat.render.calls-before;
+        }
+        if (capture)
+        {
+            CHK_GL(glReadPixels(0,0,Device.dwWidth,Device.dwHeight,GL_RGBA,GL_UNSIGNED_BYTE,afterPixels.data()));
+            unsigned changed=0,negative=0;
+            for (size_t pixel=0;pixel<afterPixels.size();pixel+=4)
+            {
+                bool brighter=false,darker=false;
+                for (unsigned c=0;c<3;++c)
+                {
+                    brighter|=afterPixels[pixel+c]>beforePixels[pixel+c];
+                    darker|=afterPixels[pixel+c]<beforePixels[pixel+c];
+                }
+                changed+=brighter; negative+=darker;
+            }
+            Msg("* [olr_r1_ppa_pixels] type=%s rgb_brighter=%u rgb_darker=%u",spot ? "SPOT" : "POINT",changed,negative);
+            beforePixels.swap(afterPixels);
         }
     }
     commands.set_xform_world(Fidentity);
