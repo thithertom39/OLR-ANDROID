@@ -8,6 +8,7 @@ namespace OlrR1Shadows
 void BeginCollect();
 void Collect(IRenderable* object, dxRender_Visual* visual, const Fmatrix& world);
 void Calculate();
+void Render();
 void Destroy();
 }
 }

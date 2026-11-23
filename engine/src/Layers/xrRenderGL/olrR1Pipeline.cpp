@@ -304,6 +304,7 @@ void CRender::render_olr_r1()
     graph.render_lods(true, false);
     g_pGamePersistent->Environment().RenderSky();
     g_pGamePersistent->Environment().RenderClouds();
+    OlrR1Shadows::Render();
     graph.render_lods(false, true);
     graph.render_graph(1);
     graph.PortalTraverser.fade_render();

@@ -226,6 +226,19 @@ def model_projector_checks(gl, report, shader_source):
     gl.glActiveTexture(0x84C0);gl.texture(texels,512,512)
     gl.glVertexAttrib4f(8,256.5/512,256.5/512,0,1)
     record("shadow_avg4_original_075_texel_kernel",gl.pixel(),[.9375]*4)
+    world,result=gl.program(shader_source("olr_r1_shadow_world.vs",0,True),shader_source("olr_r1_shadow_world.ps",0,True))
+    report["compile_results"].append(dict(variant="olr_r1_shadow_world",**result))
+    if not all(result[key] for key in ("vertex_compile","fragment_compile","link")):
+        raise RuntimeError(f"R1 projected shadow: {result}")
+    gl.draw_setup()
+    gl.glVertexAttrib4f(0,.2,.2,.2,.2);gl.glVertexAttrib4f(8,.5,.5,0,1)
+    for texel in ((64,128,192,255),(0,0,0,0),(255,255,255,255)):
+        gl.use(world,{"s_base":texel})
+        gl.glClearColor(.8,.6,.4,1);gl.glClear(0x4000)
+        gl.glEnable(0x0BE2);gl.glBlendFunc(0x0306,0) # original DEST_COLOR,ZERO
+        expected=[(.8,.6,.4,1)[i]*min(1,texel[i]/255+.2) for i in range(4)]
+        record(f"shadow_world_fixed_function_ADD_multiply_{texel[0]}",gl.pixel(clear=False),expected)
+        gl.glDisable(0x0BE2)
     gl.draw_setup()
 
 
