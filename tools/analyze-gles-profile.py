@@ -39,6 +39,10 @@ def summarize(path,tail):
                   render_thread_cpu_ms=distribution([cpu[f].get('render_thread_cpu_ms') for f in frames]),
                   draw_calls=distribution([cpu[f].get('draw_calls') for f in frames]),
                   matched_gpu_samples=sum(f in gpu for f in frames),stages={})
+        item['vertex_binding_updates']=distribution([cpu[f].get('vertex_binding_updates') for f in frames])
+        item['legacy_vertex_pointer_batches']=distribution([cpu[f].get('legacy_vertex_pointer_batches') for f in frames])
+        item['local_detail_cull']={key:distribution([cpu[f].get('local_detail_cull',{}).get(key) for f in frames])
+            for key in sorted({k for f in frames for k in cpu[f].get('local_detail_cull',{})})}
         if intervals:
             item['fps_from_mean_interval']=1000/statistics.mean(intervals)
             item['sampled_1percent_low_fps']=1000/statistics.mean(intervals[-max(1,math.ceil(len(intervals)*.01)):])

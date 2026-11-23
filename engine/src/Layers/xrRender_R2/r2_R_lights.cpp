@@ -216,7 +216,7 @@ void CRender::render_lights(light_Package& LP)
 #endif
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
     GLDetailShadowCull::BoundsBatch detailBoundsBatch(
-        Details, GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_cells"));
+        Details, GLDetailShadowCull::CellCacheEnabled(Core.Params));
 #endif
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const bool useStaticCache = !hwOcclusion &&

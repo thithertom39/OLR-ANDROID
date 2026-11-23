@@ -38,6 +38,13 @@ inline bool EagerSetupRequested(const char* args)
     return HasOption(args, "-gles_detail_eager_setup");
 }
 
+inline bool CellCacheEnabled(const char* args)
+{
+    // Exact negative flag allows same-binary A/B. The old positive flag remains
+    // compatible. Bounds live only for one immutable light-package traversal.
+    return !HasOption(args, "-gles_no_detail_cells");
+}
+
 // No allocation, no cached pointers: same immutable visible list as the draw.
 // An invalid bound makes the original predicate retain the instance.
 template<class Groups, class Predicate>

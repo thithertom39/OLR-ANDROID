@@ -309,6 +309,23 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                         rejectCell = detailLocalShadowPlanes->Outside(*cellBounds++);
                     }
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    // Optional sampled validation against the original instance
+                    // predicate. Absent from regular builds and disabled by default.
+                    if (rejectCell && detailCullStats &&
+                        GLDetailShadowCull::HasOption(Core.Params, "-gles_verify_detail_cells"))
+                    {
+                        for (const auto* instance : *items)
+                        {
+                            ++detailCullStats->cellReferenceTests;
+                            const auto bounds = GLDetailShadowCull::Build(Object.bv_bb, instance->mRotY,
+                                instance->scale_calculated, wind, wave, var_id != 0);
+                            if (!detailLocalShadowPlanes->Outside(bounds))
+                            {
+                                ++detailCullStats->cellReferenceMismatches;
+                                rejectCell = false;
+                            }
+                        }
+                    }
                     if (detailCullStats && cullThisPass)
                     {
                         detailCullStats->instanceCandidates += unsigned(items->size());
