@@ -331,7 +331,10 @@ ICF void CBackend::set_Vertices(GLuint _vb, u32 _vb_stride)
         vb = _vb;
         vb_stride = _vb_stride;
 
-        bindVertexBase(0);
+        // Both indexed and array draws bind their actual base immediately before
+        // drawing. Binding zero here can submit an unnecessary intermediate base.
+        if (VertexBindingState().eager)
+            bindVertexBase(0);
     }
 }
 

@@ -527,6 +527,7 @@ void CHW::CreateDevice(SDL_Window* hWnd)
 #endif
     }
 
+    InitializeVertexBinding();
     if (ThisInstanceIsGlobal())
     {
         UpdateVSync();
@@ -587,6 +588,7 @@ void CHW::CreateDevice(SDL_Window* hWnd)
     Msg("* [GLES] State rebind diagnostic: %s", CBackend::gles_state_rebind_enabled() ? "on" : "off");
     Msg("* [GLES] Shared physical state cache: on");
     Msg("* [GLES] Vertex binding: %s", UseSeparatedVertexBinding() ? "separated (ES 3.1 core)" : "legacy pointers");
+    Msg("* [GLES] Vertex binding at draw: %s", VertexBindingState().eager ? "eager control" : "deferred");
     if (AngleAuditEnabled())
     {
         Msg("* [gles_angle_audit] caps OES_texture_float_linear=%u EXT_color_buffer_float=%u "

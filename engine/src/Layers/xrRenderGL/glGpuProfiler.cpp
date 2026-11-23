@@ -73,6 +73,7 @@ struct State
     unsigned draws = 0;
     unsigned vertexBindings = 0;
     unsigned legacyVertexBindings = 0;
+    std::array<unsigned, 32> mainVisuals{}, shadowVisuals{};
     unsigned detailInstances = 0;
     unsigned shadowDetailInstances = 0;
     LocalDetailCullStats localDetails;
@@ -342,6 +343,8 @@ void BeginFrame()
     state.threadStart = ThreadNow();
     state.draws = state.detailInstances = state.shadowDetailInstances = 0;
     state.vertexBindings = state.legacyVertexBindings = 0;
+    state.mainVisuals = {};
+    state.shadowVisuals = {};
     state.localDetails = {};
     state.wallNs = {};
     state.threadNs = {};
@@ -430,6 +433,12 @@ void FinishFrame()
     used += std::snprintf(row + used, sizeof(row) - size_t(used), "],\"logical_stage_invocations\":[");
     for (unsigned i = 0; i < StageCount; ++i)
         used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%u", i ? "," : "", state.invocations[i]);
+    used += std::snprintf(row + used, sizeof(row) - size_t(used), "],\"main_visual_submissions\":[");
+    for (unsigned i = 0; i < state.mainVisuals.size(); ++i)
+        used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%u", i ? "," : "", state.mainVisuals[i]);
+    used += std::snprintf(row + used, sizeof(row) - size_t(used), "],\"shadow_visual_submissions\":[");
+    for (unsigned i = 0; i < state.shadowVisuals.size(); ++i)
+        used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%u", i ? "," : "", state.shadowVisuals[i]);
     const auto& details = state.localDetails;
     std::snprintf(row + used, sizeof(row) - size_t(used),
         "],\"local_detail_cull\":{\"model_tests\":%u,\"models_rejected\":%u,"
@@ -464,6 +473,16 @@ void RecordVertexBinding(bool legacy)
         return;
     ++state.vertexBindings;
     state.legacyVertexBindings += legacy;
+}
+
+void RecordVisual(unsigned type)
+{
+    if (!state.inFrame || type >= state.mainVisuals.size())
+        return;
+    if (state.depth[unsigned(Stage::MainGeometry)])
+        ++state.mainVisuals[type];
+    if (state.depth[unsigned(Stage::LocalShadowGeometry)])
+        ++state.shadowVisuals[type];
 }
 
 bool SamplingShadowAtlas()

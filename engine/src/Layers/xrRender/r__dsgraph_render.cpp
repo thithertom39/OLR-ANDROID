@@ -7,6 +7,9 @@
 #include "FBasicVisual.h"
 #include "SkeletonCustom.h"
 #include "FLOD.h"
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#endif
 
 extern ENGINE_API float psHUD_FOV;
 
@@ -90,6 +93,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                     // --#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
                     // RCache.hemi.c_update(item.pVisual);
 
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    GLGpuProfiler::RecordVisual(item.pVisual->Type);
+#endif
                     item.pVisual->Render(cmd_list, LOD, o.phase == CRender::PHASE_SMAP);
                 }
                 items.clear();
@@ -135,6 +141,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                     // --#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
                     // RCache.hemi.c_update(item.pVisual);
 
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    GLGpuProfiler::RecordVisual(item.pVisual->Type);
+#endif
                     item.pVisual->Render(cmd_list, LOD, o.phase == CRender::PHASE_SMAP);
                 }
                 items.clear();

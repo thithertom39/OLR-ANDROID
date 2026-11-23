@@ -21,6 +21,7 @@ void EndGpuFrame();
 void FinishFrame();
 void RecordDraw();
 void RecordVertexBinding(bool legacy);
+void RecordVisual(unsigned type);
 bool SamplingShadowAtlas();
 void RecordDetails(unsigned instances);
 
