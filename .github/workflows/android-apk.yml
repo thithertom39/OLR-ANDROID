@@ -15,6 +15,7 @@ on:
     paths:
       - '.github/workflows/android-apk.yml'
       - 'docs/ANDROID_CLOUD_BUILD.md'
+      - 'engine/src/xrGame/Level_start.cpp'
 
 # This workflow only needs to read the repository.
 permissions:
