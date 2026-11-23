@@ -4,6 +4,7 @@ param(
     [string]$Package = 'org.openxray.olr',
     [string]$Tag = 'r1-smoke',
     [string]$ArgumentsText,
+    [string]$ResolutionName,
     [switch]$Interact,
     [switch]$DirectionSweep,
     [ValidateSet(-200,200)][int]$SweepStep = 200,
@@ -49,6 +50,17 @@ try {
     # Dismiss its local report dialog; never submit reports automatically.
     $skip = $ui.SelectSingleNode("//node[@resource-id='android:id/button2' and @text='SKIP']")
     if ($skip) { Tap-Node $skip; $ui = Read-UI }
+    if ($PSBoundParameters.ContainsKey('ResolutionName')) {
+        $open = $ui.SelectSingleNode("//node[@resource-id='$($Package):id/btn_open_settings']")
+        if ($open) { Tap-Node $open; $ui = Read-UI }
+        Tap-Node $ui.SelectSingleNode("//node[@resource-id='$($Package):id/spinner_resolution']")
+        $ui = Read-UI
+        Tap-Node $ui.SelectSingleNode("//node[@text='$ResolutionName']")
+        $ui = Read-UI
+        if (!$ui.SelectSingleNode("//node[@resource-id='$($Package):id/spinner_resolution']//node[@text='$ResolutionName']")) {
+            throw 'Resolution selection did not match requested preset.'
+        }
+    }
     if ($PSBoundParameters.ContainsKey('ArgumentsText')) {
         if ($ArgumentsText.Contains("'") -or $ArgumentsText.Contains('"')) { throw 'Use simple unquoted smoke-test arguments.' }
         $open = $ui.SelectSingleNode("//node[@resource-id='$($Package):id/btn_open_settings']")

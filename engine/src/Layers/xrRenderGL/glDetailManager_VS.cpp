@@ -194,6 +194,8 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     auto* detailCullStats = detailLocalShadowPlanes ? GLGpuProfiler::SampleLocalDetailCull() : nullptr;
+    const bool verifyCells = detailCullStats &&
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_verify_detail_cells");
 #endif
 
     // Iterate
@@ -311,8 +313,7 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                     // Optional sampled validation against the original instance
                     // predicate. Absent from regular builds and disabled by default.
-                    if (rejectCell && detailCullStats &&
-                        GLDetailShadowCull::HasOption(Core.Params, "-gles_verify_detail_cells"))
+                    if (rejectCell && verifyCells)
                     {
                         for (const auto* instance : *items)
                         {
