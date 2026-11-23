@@ -9,6 +9,7 @@ void BeginCollect();
 void Collect(IRenderable* object, dxRender_Visual* visual, const Fmatrix& world);
 void Calculate();
 void Render();
+unsigned Parts();
 void Destroy();
 }
 }

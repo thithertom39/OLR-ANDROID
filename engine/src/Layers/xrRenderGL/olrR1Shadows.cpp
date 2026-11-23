@@ -222,6 +222,13 @@ void Collect(IRenderable* object, dxRender_Visual* visual, const Fmatrix& world)
     casters.push_back({object,center,{{visual,world}}});
 }
 
+unsigned Parts()
+{
+    unsigned count=0;
+    for (const auto& caster : casters) count+=unsigned(caster.nodes.size());
+    return count;
+}
+
 void Calculate()
 {
     if (casters.empty()) return;

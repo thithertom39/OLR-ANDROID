@@ -67,6 +67,18 @@ void R_dsgraph_structure::insert_dynamic(IRenderable* root, dxRender_Visual* pVi
     if (SSA <= r_ssaDISCARD)
         return;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (olr_r1_shadow_only)
+    {
+        // Render_First uses the original game HUD eligibility/root rules.
+        // Unlike an R2 PHASE_SMAP traversal, this only registers original
+        // projected casters. Return before ANY color/distortion/HUD queue,
+        // irrespective of the shared GLES renderer's generation identifier.
+        OlrR1Shadows::Collect(root,pVisual,xform);
+        return;
+    }
+#endif
+
     // Distortive geometry should be marked and R2 special-cases it
     // a) Allow to optimize RT order
     // b) Should be rendered to special distort buffer in another pass
@@ -1017,6 +1029,10 @@ void R_dsgraph_structure::build_subspace([[maybe_unused]] LocalShadowStaticCache
                 IGameObject* O = g_pGameLevel->CurrentViewEntity();
                 if (O)
                 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                    if (OlrR1Pipeline::Independent())
+                        OlrR1Models::Observe(O,O);
+#endif
                     CROS_impl* R = (CROS_impl*)O->ROS();
                     if (R)
                         R->update(O);
@@ -1161,7 +1177,24 @@ void R_dsgraph_structure::build_subspace([[maybe_unused]] LocalShadowStaticCache
 #endif
 
             if (o.is_main_pass)
+            {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+                if (OlrR1Pipeline::Independent())
+                {
+                    // Independent R1 has no R2 shadow phase. Preserve the
+                    // game-side Render_First checks (HUD view, holder, root),
+                    // but route its body parts solely to LightShadows.
+                    const unsigned before=OlrR1Shadows::Parts();
+                    olr_r1_shadow_only=true;
+                    g_pGameLevel->pHUD->Render_First(context_id);
+                    olr_r1_shadow_only=false;
+                    static unsigned reports=0;
+                    if (reports++ < 8)
+                        Msg("* [olr_r1_actor_shadow] added_parts=%u color_submission=0 R2_shadow_phase=0",OlrR1Shadows::Parts()-before);
+                }
+#endif
                 g_pGameLevel->pHUD->Render_Last(context_id);
+            }
         }
     }
 
