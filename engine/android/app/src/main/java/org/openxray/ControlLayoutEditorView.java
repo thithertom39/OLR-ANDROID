@@ -70,7 +70,7 @@ public class ControlLayoutEditorView extends View {
         mButtonStrokePaint.setStrokeWidth(3);
 
         mHighlightStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mHighlightStrokePaint.setColor(Color.argb(255, 255, 185, 20)); // Vivid Gold/Amber
+        mHighlightStrokePaint.setColor(Color.argb(205, 143, 135, 102)); // Vivid Gold/Amber
         mHighlightStrokePaint.setStyle(Paint.Style.STROKE);
         mHighlightStrokePaint.setStrokeWidth(6);
 
@@ -80,11 +80,11 @@ public class ControlLayoutEditorView extends View {
         mTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
 
         mInfoBadgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mInfoBadgePaint.setColor(Color.argb(220, 20, 20, 22));
+        mInfoBadgePaint.setColor(Color.argb(190, 19, 23, 20));
         mInfoBadgePaint.setStyle(Paint.Style.FILL);
 
         mInfoTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mInfoTextPaint.setColor(Color.argb(255, 255, 185, 20));
+        mInfoTextPaint.setColor(Color.argb(205, 143, 135, 102));
         mInfoTextPaint.setTextAlign(Paint.Align.CENTER);
         mInfoTextPaint.setTextSize(26);
         mInfoTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
@@ -228,6 +228,7 @@ public class ControlLayoutEditorView extends View {
         if ("wpn_4".equals(id)) return "Slot 4 (Grenade)";
         if ("wpn_5".equals(id)) return "Slot 5 (Binoc)";
         if ("wpn_6".equals(id)) return "Slot 6 (Bolt)";
+        if ("wheel".equals(id)) return "Weapon / Item Wheel";
         if ("esc".equals(id)) return "ESC";
         if ("inv".equals(id)) return "INV";
         if ("pda".equals(id)) return "PDA";
@@ -259,6 +260,7 @@ public class ControlLayoutEditorView extends View {
         if ("wpn_4".equals(id)) return "4";
         if ("wpn_5".equals(id)) return "5";
         if ("wpn_6".equals(id)) return "6";
+        if ("wheel".equals(id)) return "WHEEL";
         if ("esc".equals(id)) return "ESC";
         if ("inv".equals(id)) return "INV";
         if ("pda".equals(id)) return "PDA";
@@ -306,33 +308,12 @@ public class ControlLayoutEditorView extends View {
             boolean isSelected = id.equals(mDraggedId);
             float cornerRadius = br * 0.56f;
 
-            // Set specific colors for button categories
-            if ("lmb_main".equals(id) || "lmb_left".equals(id)) {
-                mButtonPaint.setColor(Color.argb(180, 65, 38, 12));
-                mButtonStrokePaint.setColor(Color.argb(240, 255, 160, 20));
-            } else if ("rmb_main".equals(id)) {
-                mButtonPaint.setColor(Color.argb(180, 12, 45, 65));
-                mButtonStrokePaint.setColor(Color.argb(240, 0, 195, 225));
-            } else if ("medkit".equals(id)) {
-                mButtonPaint.setColor(Color.argb(190, 75, 15, 15));
-                mButtonStrokePaint.setColor(Color.argb(240, 255, 65, 65));
-            } else if ("bandage".equals(id)) {
-                mButtonPaint.setColor(Color.argb(190, 15, 60, 55));
-                mButtonStrokePaint.setColor(Color.argb(240, 45, 215, 180));
-            } else if ("q".equals(id) || "e".equals(id)) {
-                mButtonPaint.setColor(Color.argb(190, 48, 25, 65));
-                mButtonStrokePaint.setColor(Color.argb(240, 180, 105, 245));
-            } else if (id.startsWith("wpn_") || "ammo".equals(id) || "gl".equals(id)) {
-                mButtonPaint.setColor(Color.argb(190, 24, 24, 28));
-                mButtonStrokePaint.setColor(Color.argb(220, 240, 170, 40));
-            } else if ("detector".equals(id)) {
-                mButtonPaint.setColor(Color.argb(190, 30, 55, 20));
-                mButtonStrokePaint.setColor(Color.argb(240, 150, 230, 60));
-            } else {
-                mButtonPaint.setColor(Color.argb(170, 30, 30, 30));
-                mButtonStrokePaint.setColor(Color.argb(200, 200, 200, 200));
+            // Preview matches the subdued in-game palette; selected handle stays legible.
+            mButtonPaint.setColor(Color.argb(120, 23, 28, 25));
+            mButtonStrokePaint.setColor(Color.argb(165, 133, 139, 124));
+            if (id.startsWith("wpn_") || "wheel".equals(id) || "ammo".equals(id) || "gl".equals(id)) {
+                mButtonStrokePaint.setColor(Color.argb(165, 145, 138, 115));
             }
-
             canvas.drawRoundRect(mTempRect, cornerRadius, cornerRadius, mButtonPaint);
             canvas.drawRoundRect(mTempRect, cornerRadius, cornerRadius, isSelected ? mHighlightStrokePaint : mButtonStrokePaint);
 
