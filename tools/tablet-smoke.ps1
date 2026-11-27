@@ -10,6 +10,7 @@ param(
     [switch]$DirectionSweep,
     [switch]$HeavyView,
     [switch]$CaptureMemory,
+    [ValidateRange(0,100)][int]$MinBatteryPercent = 0,
     [ValidateSet(-200,200)][int]$SweepStep = 200,
     [switch]$ConfigureOnly,
     [ValidateRange(20,180)][int]$Seconds = 80,
@@ -20,15 +21,19 @@ New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 $measurements = @()
 function Read-Thermals {
     $battery = & $Adb shell dumpsys battery
+    $levelLine = $battery | Select-String '^  level:\s*(\d+)' | Select-Object -First 1
     $tempLine = $battery | Select-String '^  temperature:' | Select-Object -First 1
     $thermalLine = & $Adb shell dumpsys thermalservice | Select-String '^Thermal Status:' | Select-Object -First 1
     if (!$tempLine -or !$thermalLine) { throw 'Thermal readings unavailable; test not started/continued.' }
+    if (!$levelLine) { throw 'Battery level unavailable; test not started/continued.' }
+    $level = [int]$levelLine.Matches[0].Groups[1].Value
     $temp = [int]([regex]::Match($tempLine.ToString(), '\d+').Value)
     $status = [int]([regex]::Match($thermalLine.ToString(), '\d+').Value)
     if ($temp -ge 400 -or $status -ge 3) { throw "Thermal stop: battery=$($temp/10.0) C, Android status=$status" }
+    if ($level -lt $MinBatteryPercent) { throw "Battery stop: charge=$level%, minimum=$MinBatteryPercent%" }
     $gpu = & $Adb shell 'cat /sys/class/kgsl/kgsl-3d0/gpubusy /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq 2>/dev/null'
     # Read-only driver snapshots, not cumulative per-frame GPU execution time.
-    return @{time=(Get-Date).ToString('o'); battery_celsius=$temp/10.0; thermal_status=$status; kgsl_snapshot=($gpu -join '; ')}
+    return @{time=(Get-Date).ToString('o'); battery_percent=$level; battery_celsius=$temp/10.0; thermal_status=$status; kgsl_snapshot=($gpu -join '; ')}
 }
 function Read-UI {
     & $Adb shell uiautomator dump /sdcard/olr-r1-smoke-ui.xml | Out-Null
@@ -99,7 +104,7 @@ try {
         $measurements += Read-Thermals
         $currentPid = (& $Adb shell pidof $Package) -join ' '
         if ($currentPid.Trim() -ne $runPid) { throw 'Game process exited or restarted; ending capture immediately.' }
-        Write-Output "elapsed=$elapsed battery=$($measurements[-1].battery_celsius) C thermal=$($measurements[-1].thermal_status)"
+        Write-Output "elapsed=$elapsed battery=$($measurements[-1].battery_percent)% temp=$($measurements[-1].battery_celsius) C thermal=$($measurements[-1].thermal_status)"
         if ($HeavyView -and $elapsed -eq 60) {
             for ($turn=0; $turn -lt 4; $turn++) {
                 & $Adb shell input swipe 2100 800 (2100+$SweepStep) 800 400
