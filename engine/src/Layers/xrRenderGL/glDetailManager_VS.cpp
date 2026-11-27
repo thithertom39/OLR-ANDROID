@@ -192,6 +192,12 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
     c_ambient.set(desc.ambient.x, desc.ambient.y, desc.ambient.z);
     c_hemi.set(desc.hemi_color.x, desc.hemi_color.y, desc.hemi_color.z);
 
+#if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
+    const bool localShadow = detailLocalShadowPlanes && detailLocalShadowBackend == &cmd_list;
+    const bool eagerSetup = localShadow && GLDetailShadowCull::EagerSetupRequested(Core.Params);
+    const bool coherentCells = localShadow &&
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_cell_coherence");
+#endif
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     auto* detailCullStats = detailLocalShadowPlanes ? GLGpuProfiler::SampleLocalDetailCull() : nullptr;
     const bool verifyCells = detailCullStats &&
@@ -207,15 +213,16 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
         {
             for (u32 iPass = 0; iPass < Object.shader->E[lod_id]->passes.size(); ++iPass)
             {
+                auto firstCell = vis.begin();
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
                 const auto& detailPass = Object.shader->E[lod_id]->passes[iPass];
-                const bool cullThisPass = detailLocalShadowPlanes && detailLocalShadowBackend == &cmd_list &&
+                const bool cullThisPass = localShadow &&
                     detailPass->pp && GLDetailShadowCull::KnownProgram(detailPass->pp->cName.c_str(), var_id != 0);
                 const GLDetailShadowCull::Bounds* cellBounds = nullptr;
                 // No shader/material/uniform work if this local shadow pass
                 // has no surviving detail instances. Retain the original draw
                 // and per-instance cull unchanged whenever any can survive.
-                if (cullThisPass && !GLDetailShadowCull::EagerSetupRequested(Core.Params))
+                if (cullThisPass && !eagerSetup)
                 {
                     // m_visibles/matrices/scales stay immutable after Render's
                     // task wait throughout this package. Bound every possible
@@ -246,7 +253,9 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                     if (detailCullStats)
                         ++detailCullStats->modelTests;
 #endif
-                    if (detailLocalShadowPlanes->Outside(aggregate.envelope))
+                    const bool windCovered = var_id == 0 ||
+                        GLDetailShadowCull::WindWithinEnvelope(windLimit, wind, wave);
+                    if (windCovered && detailLocalShadowPlanes->Outside(aggregate.envelope))
                     {
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                         if (detailCullStats)
@@ -254,9 +263,60 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 #endif
                         continue;
                     }
-                    if (aggregate.cells &&
-                        (var_id == 0 || GLDetailShadowCull::WindWithinEnvelope(windLimit, wind, wave)))
+                    if (windCovered)
                         cellBounds = aggregate.cells;
+                }
+                std::size_t lastRejectingPlane = 0;
+                const auto rejectCell = [&](const SlotItemVec* items)
+                {
+                    bool rejected = false;
+                    if (cellBounds)
+                    {
+                        const auto& bounds = *cellBounds++;
+                        rejected = coherentCells
+                            ? detailLocalShadowPlanes->OutsideCoherent(bounds, lastRejectingPlane)
+                            : detailLocalShadowPlanes->Outside(bounds);
+                    }
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    if (rejected && verifyCells)
+                    {
+                        for (const auto* instance : *items)
+                        {
+                            ++detailCullStats->cellReferenceTests;
+                            const auto bounds = GLDetailShadowCull::Build(Object.bv_bb, instance->mRotY,
+                                instance->scale_calculated, wind, wave, var_id != 0);
+                            if (!detailLocalShadowPlanes->Outside(bounds))
+                            {
+                                ++detailCullStats->cellReferenceMismatches;
+                                rejected = false;
+                            }
+                        }
+                    }
+                    if (detailCullStats && cullThisPass)
+                    {
+                        detailCullStats->instanceCandidates += unsigned(items->size());
+                        detailCullStats->cellsTested += cellBounds != nullptr;
+                        if (rejected)
+                        {
+                            ++detailCullStats->cellsRejected;
+                            detailCullStats->instancesSkipped += unsigned(items->size());
+                        }
+                    }
+#else
+                    (void)items;
+#endif
+                    return rejected;
+                };
+
+                // A rejected prefix needs no shader or uniform setup. The
+                // first surviving cell has already been tested by this loop.
+                const bool pretestCells = coherentCells && cellBounds;
+                if (pretestCells)
+                {
+                    while (firstCell != vis.end() && rejectCell(*firstCell))
+                        ++firstCell;
+                    if (firstCell == vis.end())
+                        continue;
                 }
 #endif
                 // Setup matrices + colors (and flush it as necessary)
@@ -302,43 +362,11 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 
                 u32 dwBatch = 0;
 
-                for (auto items : vis)
+                for (auto cell = firstCell; cell != vis.end(); ++cell)
                 {
+                    auto* items = *cell;
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
-                    bool rejectCell = false;
-                    if (cellBounds)
-                    {
-                        rejectCell = detailLocalShadowPlanes->Outside(*cellBounds++);
-                    }
-#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
-                    // Optional sampled validation against the original instance
-                    // predicate. Absent from regular builds and disabled by default.
-                    if (rejectCell && verifyCells)
-                    {
-                        for (const auto* instance : *items)
-                        {
-                            ++detailCullStats->cellReferenceTests;
-                            const auto bounds = GLDetailShadowCull::Build(Object.bv_bb, instance->mRotY,
-                                instance->scale_calculated, wind, wave, var_id != 0);
-                            if (!detailLocalShadowPlanes->Outside(bounds))
-                            {
-                                ++detailCullStats->cellReferenceMismatches;
-                                rejectCell = false;
-                            }
-                        }
-                    }
-                    if (detailCullStats && cullThisPass)
-                    {
-                        detailCullStats->instanceCandidates += unsigned(items->size());
-                        detailCullStats->cellsTested += cellBounds != nullptr;
-                        if (rejectCell)
-                        {
-                            ++detailCullStats->cellsRejected;
-                            detailCullStats->instancesSkipped += unsigned(items->size());
-                        }
-                    }
-#endif
-                    if (rejectCell)
+                    if ((!pretestCells || cell != firstCell) && rejectCell(items))
                         continue;
 #endif
                     for (auto& instance : *items)

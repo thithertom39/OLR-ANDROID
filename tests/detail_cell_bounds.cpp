@@ -40,6 +40,19 @@ int main()
             cell=cell.valid?D::UnionBounds(cell,bound):bound;
         }
         cell=D::UnionBounds(cell,cell);
+        Plane planes[6];
+        std::size_t lastRejectingPlane = 0;
+        for (auto& plane : planes)
+            plane = {{unit(rng), unit(rng), unit(rng), 0}, unit(rng) * 7};
+        const D::PlaneSet coherentFrustum(planes, std::size(planes));
+        for (unsigned i=0;i<32;++i)
+        {
+            auto translated = cell;
+            for (auto& coord : translated.center)
+                coord += unit(rng) * 20;
+            assert(coherentFrustum.OutsideCoherent(translated, lastRejectingPlane) ==
+                coherentFrustum.Outside(translated));
+        }
         for (unsigned p=0;p<50;++p)
         {
             Plane plane{{unit(rng),unit(rng),unit(rng),0},unit(rng)*15};

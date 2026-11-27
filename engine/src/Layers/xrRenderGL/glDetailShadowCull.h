@@ -272,6 +272,17 @@ class PlaneSet
     std::array<Equation, 12> equations;
     std::size_t size = 0;
 
+    static bool OutsidePlane(const Bounds& bounds, const Equation& plane)
+    {
+        double distance = plane.distance, radius = 0;
+        for (unsigned axis = 0; axis != 3; ++axis)
+        {
+            distance += plane.normal[axis] * bounds.center[axis];
+            radius += plane.absNormal[axis] * bounds.extent[axis];
+        }
+        return distance > radius;
+    }
+
 public:
     template <class Plane>
     PlaneSet(const Plane* planes, std::size_t count)
@@ -294,16 +305,23 @@ public:
         if (!bounds.valid)
             return false;
         for (std::size_t i = 0; i != size; ++i)
-        {
-            const auto& p = equations[i];
-            double distance = p.distance, radius = 0;
-            for (unsigned j = 0; j != 3; ++j)
-            {
-                distance += p.normal[j] * bounds.center[j];
-                radius += p.absNormal[j] * bounds.extent[j];
-            }
-            if (distance > radius)
+            if (OutsidePlane(bounds, equations[i]))
                 return true;
+        return false;
+    }
+
+    bool OutsideCoherent(const Bounds& bounds, std::size_t& lastRejectingPlane) const
+    {
+        if (!bounds.valid || !size)
+            return false;
+        if (lastRejectingPlane < size && OutsidePlane(bounds, equations[lastRejectingPlane]))
+            return true;
+        for (std::size_t i = 0; i != size; ++i)
+        {
+            if (i == lastRejectingPlane || !OutsidePlane(bounds, equations[i]))
+                continue;
+            lastRejectingPlane = i;
+            return true;
         }
         return false;
     }
