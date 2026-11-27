@@ -240,6 +240,19 @@ void CALLBACK OnAngleAuditDebugCallback(GLenum source, GLenum type, GLuint id, G
     if (type != GL_DEBUG_TYPE_ERROR && type != GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR &&
         severity != GL_DEBUG_SEVERITY_HIGH && severity != GL_DEBUG_SEVERITY_MEDIUM)
         return;
+    // Adreno labels some repeated performance notices high severity.
+    // Keep their budget independent from errors of any severity.
+    if (type == GL_DEBUG_TYPE_PERFORMANCE)
+    {
+        static std::atomic<u32> notices{0};
+        const auto n = notices.fetch_add(1, std::memory_order_relaxed);
+        if (n < 4)
+            Msg("! [gles_angle_audit] performance id=%u severity=0x%x message=%.*s",
+                id, severity, length, message);
+        else if (n == 4)
+            Msg("! [gles_angle_audit] performance notice limit reached (4)");
+        return;
+    }
     const bool critical = type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR ||
         severity == GL_DEBUG_SEVERITY_HIGH;
     static std::atomic<u32> errors{0}, warnings{0};
