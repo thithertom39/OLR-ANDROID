@@ -7,6 +7,9 @@
 #include "glHW.h"
 #include "glTextureBindings.h"
 #include "glVertexBinding.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "glStaticIndexBatch.h"
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "glGpuProfiler.h"
 #endif
@@ -602,6 +605,8 @@ void CHW::CreateDevice(SDL_Window* hWnd)
     Msg("* [GLES] Shared physical state cache: on");
     Msg("* [GLES] Vertex binding: %s", UseSeparatedVertexBinding() ? "separated (ES 3.1 core)" : "legacy pointers");
     Msg("* [GLES] Vertex binding at draw: %s", VertexBindingState().eager ? "eager control" : "deferred");
+    Msg("* [GLES] Static index batching: main=%s local_shadows=%s",
+        GLStaticIndexBatch::MainEnabled() ? "on" : "off", GLStaticIndexBatch::ShadowEnabled() ? "on" : "off");
     if (AngleAuditEnabled())
     {
         Msg("* [gles_angle_audit] caps OES_texture_float_linear=%u EXT_color_buffer_float=%u "
@@ -651,6 +656,8 @@ void CHW::CreateDevice(SDL_Window* hWnd)
 void CHW::DestroyDevice()
 {
 #ifdef XR_PLATFORM_ANDROID
+    if (ThisInstanceIsGlobal())
+        GLStaticIndexBatch::Shutdown();
     if (ThisInstanceIsGlobal())
         presentGamma.Release(m_context && SDL_GL_GetCurrentContext() == m_context);
 #endif

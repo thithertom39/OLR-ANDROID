@@ -8,6 +8,7 @@
 #include "xrCore/stream_reader.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "Layers/xrRender/LocalShadowStaticCache.h"
+#include "Layers/xrRenderGL/glStaticIndexBatch.h"
 #endif
 
 #if defined(USE_DX11)
@@ -116,6 +117,10 @@ void CRender::level_Load(IReader* fs)
 
 void CRender::level_Unload()
 {
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    // Keys reference immutable level meshes; discard them before those meshes.
+    GLStaticIndexBatch::Shutdown();
+#endif
     ZoneScoped;
 
     if (!g_pGameLevel)
@@ -275,7 +280,17 @@ void CRender::LoadBuffers(CStreamReader* base_fs, bool alternative)
             // Create and fill
             //  TODO: DX11: Check fragmentation.
             //  Check if buffer is less then 2048 kb
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+            // Retain a bounded CPU copy of the immutable level indices only
+            // when static batching is requested.
+            const bool retain = (GLStaticIndexBatch::MainEnabled() || GLStaticIndexBatch::ShadowEnabled()) &&
+                GLStaticIndexBatch::RetainSource(size_t(iCount) * sizeof(u16));
+            ibuffers[i].Create(iCount * 2, retain);
+            if (retain)
+                ibuffers[i].MarkStaticBatchSource();
+#else
             ibuffers[i].Create(iCount * 2);
+#endif
             u8* pData = static_cast<u8*>(ibuffers[i].Map());
             fs->r(pData, iCount * 2);
             ibuffers[i].Unmap(true); // upload index data

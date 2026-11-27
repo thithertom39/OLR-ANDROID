@@ -344,6 +344,9 @@ IndexBufferHandle IndexStagingBuffer::GetBufferHandle() const
 
 void IndexStagingBuffer::Destroy()
 {
+#if defined(XR_PLATFORM_ANDROID)
+    m_StaticBatchSource = false;
+#endif
     DiscardHostBuffer();
     m_Size = 0;
 

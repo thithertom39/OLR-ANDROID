@@ -458,7 +458,11 @@ void CRender::render_lights(light_Package& LP)
 #if defined(XR_PLATFORM_ANDROID) && !defined(_EDITOR)
     AndroidCpuProfile::Scope submitProbe(AndroidCpuProfile::Phase::LocalSubmit);
 #endif
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    dsgraph.render_graph(0, true);
+#else
     dsgraph.render_graph(0);
+#endif
 }
                 }
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))

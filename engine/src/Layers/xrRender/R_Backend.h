@@ -370,6 +370,12 @@ public:
     ICF void set_Format(SDeclaration* _decl);
 
 private:
+#if defined(USE_OGL)
+    ICF void resetGeometryBindings();
+    ICF void bindVertexBaseForCurrentFormat(u32 baseV);
+    ICF void bindIndicesForCurrentFormat(GLuint indices);
+    ICF void prepareIndexedGeometry(GLuint indices, u32 baseV);
+#endif
 #if defined(USE_DX11)
     ICF void set_PS(ID3DPixelShader* _ps, LPCSTR _n = nullptr);
 #elif defined(USE_OGL)
@@ -547,6 +553,9 @@ public:
     // Rendering
     ICF void Render(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV, u32 startI, u32 PC);
     ICF void Render(D3DPRIMITIVETYPE T, u32 startV, u32 PC);
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    ICF void RenderStaticIndices(GLuint indexBuffer, u32 indices, u32 vertices, u32 logicalDraws);
+#endif
 
     ICF void submit()
     {

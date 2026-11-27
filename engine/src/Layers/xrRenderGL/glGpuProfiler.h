@@ -17,12 +17,16 @@ enum class Stage : unsigned
 void Initialize();
 void Shutdown(bool contextCurrent);
 void BeginFrame();
+void BeginLocalLightsElapsed();
+void EndLocalLightsElapsed();
 void EndGpuFrame();
 void FinishFrame();
 void RecordDraw();
 void RecordVertexBinding(bool legacy);
 void RecordVisual(unsigned type);
+void RecordStaticBatch(unsigned draws, unsigned bytes);
 bool SamplingShadowAtlas();
+bool Capturing();
 void RecordDetails(unsigned instances);
 
 struct LocalDetailCullStats

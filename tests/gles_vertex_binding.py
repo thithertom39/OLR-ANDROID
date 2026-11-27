@@ -97,6 +97,44 @@ for number,(size,typ,norm,attribute) in enumerate(formats):
             if separated:assert pixels[step]==bytes(rgba),(number,step,'pixel mismatch')
             else:pixels[step]=bytes(rgba)
     results.append(dict(encoding=number,comparisons=5,equal=True))
-report=dict(renderer=fn(gl,'glGetString',C.c_char_p,U)(0x1f01).decode(),version=fn(gl,'glGetString',C.c_char_p,U)(0x1f02).decode(),comparisons=85,passed=True,formats=results)
+# Static batching: compare separate uint16 draws using distinct vertex bases
+# with a concatenated, rebased uint32 stream at base zero. No ID builtins.
+vao=U();gen_vao(1,C.byref(vao));bind_vao(vao)
+vertex=U();gen_buffer(1,C.byref(vertex));index=U();gen_buffer(1,C.byref(index))
+for location,size,offset in [(3,3,0),(0,4,12)]:
+    enable(location);format_attr(location,size,0x1406,False,offset);binding(location,0)
+vertices=bytearray(40*28)
+bases=(7,17,28)
+points=[(-1,-1),(3,-1),(-1,3),(-1,-1),(0,1),(-1,1),(0,-1),(1,1),(0,1)]
+for part,base in enumerate(bases):
+    color=[(.25,.5,.75,1),(.75,.25,.5,1),(.5,.75,.25,1)][part]
+    for i in range(3):
+        x,y=points[part*3+i];vertices[(base+i)*28:(base+i+1)*28]=struct.pack('<7f',x,y,0,*color)
+bind_buffer(0x8892,vertex);raw=C.create_string_buffer(bytes(vertices));buffer_data(0x8892,len(vertices),raw,0x88e4)
+enable_cap=fn(gl,'glEnable',None,U);disable_cap=fn(gl,'glDisable',None,U)
+fn(gl,'glBlendFunc',None,U,U)(1,1)
+batch_comparisons=0
+for restart in (False,True):
+    (enable_cap if restart else disable_cap)(0x8d69)
+    source=[0,1,2,65535,65535,65535,0,1,2] if restart else [0,1,2]
+    for blend in (False,True):
+        (enable_cap if blend else disable_cap)(0x0be2)
+        captures=[]
+        for batch in (False,True):
+            clear_color(0,0,0,0);clear(0x4000);bind_buffer(0x8893,index)
+            if batch:
+                merged=[0xffffffff if restart and i==65535 else base+i for base in bases for i in source]
+                raw=C.create_string_buffer(struct.pack('<'+'I'*len(merged),*merged));buffer_data(0x8893,len(merged)*4,raw,0x88e4)
+                bind_vertex(0,vertex,0,28);draw(4,len(merged),0x1405,None)
+            else:
+                raw=C.create_string_buffer(struct.pack('<'+'H'*len(source),*source));buffer_data(0x8893,len(source)*2,raw,0x88e4)
+                for base in bases:bind_vertex(0,vertex,base*28,28);draw(4,len(source),0x1403,None)
+            rgba=(B*(16*16*4))();read(0,0,16,16,0x1908,0x1401,rgba)
+            assert get_error()==0,'rebased index GL error'
+            assert rgba[3]==255 and any(rgba[:3]),'empty batched draw'
+            captures.append(bytes(rgba))
+        assert captures[0]==captures[1],('rebased index pixel mismatch',restart,blend)
+        batch_comparisons+=1
+report=dict(renderer=fn(gl,'glGetString',C.c_char_p,U)(0x1f01).decode(),version=fn(gl,'glGetString',C.c_char_p,U)(0x1f02).decode(),comparisons=85,static_batch_pixel_comparisons=batch_comparisons,passed=True,formats=results)
 if len(sys.argv)>1:Path(sys.argv[1]).write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report))
