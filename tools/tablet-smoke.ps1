@@ -5,8 +5,11 @@ param(
     [string]$Tag = 'r1-smoke',
     [string]$ArgumentsText,
     [string]$ResolutionName,
+    [ValidateSet('Normal (play)','Diagnostic (logs)')][string]$LaunchProfile = 'Normal (play)',
     [switch]$Interact,
     [switch]$DirectionSweep,
+    [switch]$HeavyView,
+    [switch]$CaptureMemory,
     [ValidateSet(-200,200)][int]$SweepStep = 200,
     [switch]$ConfigureOnly,
     [ValidateRange(20,180)][int]$Seconds = 80,
@@ -50,6 +53,12 @@ try {
     # Dismiss its local report dialog; never submit reports automatically.
     $skip = $ui.SelectSingleNode("//node[@resource-id='android:id/button2' and @text='SKIP']")
     if ($skip) { Tap-Node $skip; $ui = Read-UI }
+    $open = $ui.SelectSingleNode("//node[@resource-id='$($Package):id/btn_open_settings']")
+    if ($open) { Tap-Node $open; $ui = Read-UI }
+    Tap-Node $ui.SelectSingleNode("//node[@resource-id='$($Package):id/spinner_launch_profile']")
+    $ui = Read-UI
+    Tap-Node $ui.SelectSingleNode("//node[@text='$LaunchProfile']")
+    $ui = Read-UI
     if ($PSBoundParameters.ContainsKey('ResolutionName')) {
         $open = $ui.SelectSingleNode("//node[@resource-id='$($Package):id/btn_open_settings']")
         if ($open) { Tap-Node $open; $ui = Read-UI }
@@ -91,6 +100,12 @@ try {
         $currentPid = (& $Adb shell pidof $Package) -join ' '
         if ($currentPid.Trim() -ne $runPid) { throw 'Game process exited or restarted; ending capture immediately.' }
         Write-Output "elapsed=$elapsed battery=$($measurements[-1].battery_celsius) C thermal=$($measurements[-1].thermal_status)"
+        if ($HeavyView -and $elapsed -eq 60) {
+            for ($turn=0; $turn -lt 4; $turn++) {
+                & $Adb shell input swipe 2100 800 (2100+$SweepStep) 800 400
+                Start-Sleep -Milliseconds 300
+            }
+        }
         if ($DirectionSweep -and $elapsed -in @(80,100,120,140,160)) {
             & $Adb shell screencap -p /sdcard/olr-r1-smoke.png
             & $Adb pull /sdcard/olr-r1-smoke.png (Join-Path $LogDirectory "$Tag-direction-$elapsed.png")
@@ -112,6 +127,9 @@ try {
             & $Adb shell screencap -p /sdcard/olr-r1-smoke.png
             & $Adb pull /sdcard/olr-r1-smoke.png (Join-Path $LogDirectory "$Tag-$($elapsed)s.png")
         }
+    }
+    if ($CaptureMemory) {
+        & $Adb shell dumpsys meminfo $runPid > (Join-Path $LogDirectory "$Tag-meminfo.txt")
     }
     $engineFiles = & $Adb shell "find '$GameRoot' -maxdepth 1 -name 'openxray_u*.log'"
     foreach ($file in $engineFiles) {
