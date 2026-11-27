@@ -349,6 +349,16 @@ void CRender::Render()
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const u32 mainDraws = dsgraph.cmd_list.stat.render.calls - mainDrawStart;
+    if (HWOCC.is_light_enabled() && !o.msaa && !LP_normal.v_shadowed.empty())
+    {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope visibilityProbe(GLGpuProfiler::Stage::LightVisibility);
+#endif
+        // On split scenes complete HUD/LOD/details before sampling this depth.
+        if (split_the_scene_to_minimize_wait)
+            Target->phase_occq();
+        HWOCC.occq_light_issue(dsgraph.cmd_list, LP_normal.v_shadowed);
+    }
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope wallmarksScope(GLGpuProfiler::Stage::Wallmarks);
@@ -462,6 +472,8 @@ void CRender::Render()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     if (compareScene)
         compareTimer.Start();
+    if (HWOCC.is_light_enabled())
+        HWOCC.occq_light_collect(LP_normal.v_shadowed, compareScene);
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::BeginLocalLightsElapsed();

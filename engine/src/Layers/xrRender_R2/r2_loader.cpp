@@ -144,6 +144,7 @@ void CRender::level_Unload()
     cleanup_contexts();
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     LocalShadowStaticCache::Clear();
+    HWOCC.occq_light_clear();
 #endif
 
     //*** Lights
