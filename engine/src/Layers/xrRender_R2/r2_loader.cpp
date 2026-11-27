@@ -8,6 +8,7 @@
 #include "xrCore/stream_reader.h"
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "Layers/xrRender/LocalShadowStaticCache.h"
+#include "Layers/xrRenderGL/glLodStream.h"
 #include "Layers/xrRenderGL/glStaticIndexBatch.h"
 #endif
 
@@ -120,6 +121,7 @@ void CRender::level_Unload()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     // Keys reference immutable level meshes; discard them before those meshes.
     GLStaticIndexBatch::Shutdown();
+    GLLodStream::Shutdown();
 #endif
     ZoneScoped;
 

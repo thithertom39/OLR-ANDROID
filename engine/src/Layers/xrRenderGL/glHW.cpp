@@ -8,6 +8,7 @@
 #include "glTextureBindings.h"
 #include "glVertexBinding.h"
 #if defined(XR_PLATFORM_ANDROID)
+#include "glLodStream.h"
 #include "glStaticIndexBatch.h"
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
@@ -657,7 +658,10 @@ void CHW::DestroyDevice()
 {
 #ifdef XR_PLATFORM_ANDROID
     if (ThisInstanceIsGlobal())
+    {
+        GLLodStream::Shutdown();
         GLStaticIndexBatch::Shutdown();
+    }
     if (ThisInstanceIsGlobal())
         presentGamma.Release(m_context && SDL_GL_GetCurrentContext() == m_context);
 #endif
@@ -689,6 +693,10 @@ void CHW::DestroyDevice()
 void CHW::Reset()
 {
     ZoneScoped;
+#ifdef XR_PLATFORM_ANDROID
+    if (ThisInstanceIsGlobal())
+        GLLodStream::Shutdown();
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Shutdown(SDL_GL_GetCurrentContext() == m_context && m_context != nullptr);
 #endif
