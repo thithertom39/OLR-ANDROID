@@ -13,6 +13,7 @@ on:
         default: false
   pull_request:
     paths:
+      - 'engine/android/app/src/main/java/org/openxray/**'
       - '.github/workflows/android-apk.yml'
       - 'docs/ANDROID_CLOUD_BUILD.md'
       - 'engine/src/xrGame/Level_start.cpp'
