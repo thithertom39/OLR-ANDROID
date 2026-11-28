@@ -130,7 +130,14 @@ private:
         }
 
         if (nodes)
+        {
+            // The non-POD nodes were copied, so release their old owned
+            // values after the child links have been relocated.
+            if constexpr (!std::is_pod<T>::value)
+                for (auto* cur = nodes; cur != nodes + limit; ++cur)
+                    cur->~value_type();
             allocator::deallocate(nodes, limit);
+        }
 
         nodes = newNodes;
         limit = newLimit;
