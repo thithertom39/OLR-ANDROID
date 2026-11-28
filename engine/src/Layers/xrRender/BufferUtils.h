@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRenderGL/glFencedVertexStream.h"
+#endif
+
 namespace xray::render::RENDER_NAMESPACE
 {
 u32 GetFVFVertexSize(u32 FVF);
@@ -216,6 +220,9 @@ private:
 
     VertexBufferHandle m_DeviceBuffer{};
     u32 m_RefCounter{};
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    GLFencedVertexStream::Arena m_FencedVertexStream;
+#endif
 #ifdef USE_OGL
     HostBufferHandle m_UploadBuffer{};
     size_t m_UploadCapacity{};

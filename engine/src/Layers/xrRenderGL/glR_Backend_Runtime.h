@@ -11,6 +11,7 @@
 #include "glSpotWriterAudit.h"
 #endif
 #if defined(XR_PLATFORM_ANDROID)
+#include "glFencedVertexStream.h"
 #include "xrEngine/AndroidSceneCompare.h"
 #endif
 
@@ -300,7 +301,10 @@ ICF void CBackend::bindVertexBaseForCurrentFormat(u32 baseV)
     u32 stride = vb_stride;
     if (!stride && decl)
         stride = GetDeclVertexSize(decl->dcl_code.data(), 0);
-    const size_t byteOffset = size_t(baseV) * size_t(stride);
+    size_t byteOffset = size_t(baseV) * size_t(stride);
+#if defined(XR_PLATFORM_ANDROID)
+    byteOffset += GLFencedVertexStream::Base(vb);
+#endif
     if (!gles_state_rebind_enabled() && hardware.vertex_valid && hardware.vertex_buffer == vb &&
         hardware.vertex_stride == stride && hardware.vertex_offset == byteOffset)
         return;

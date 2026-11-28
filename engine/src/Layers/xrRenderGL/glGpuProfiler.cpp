@@ -44,7 +44,8 @@ constexpr const char* Names[StageCount] = {
     "local_normal", "local_pending", "local_visibility_cpu", "local_pack_cpu", "local_task_wait_cpu", "local_shadow_setup", "local_shadow_geometry", "local_shadow_details", "local_shadow_special", "local_smapvis_end", "local_point_accum", "local_spot_accum", "local_indirect", "local_volumetric", "sun_shadow_geometry", "sun_details", "sun_special", "sun_accum", "local_shadow_atlas",
     "main_static_graph", "main_dynamic_graph", "main_hud", "main_lods", "main_details",
     "main_index_setup_sample", "main_index_draw_sample", "shadow_index_setup_sample", "shadow_index_draw_sample",
-    "main_lod_build", "main_lod_upload", "main_lod_submit", "main_visibility_wait", "shared_stream_upload"
+    "main_lod_build", "main_lod_upload", "main_lod_submit", "main_visibility_wait", "shared_stream_upload",
+    "shared_index_upload", "vertex_ring_discard"
 };
 
 struct Event

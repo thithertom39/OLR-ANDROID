@@ -14,7 +14,8 @@ enum class Stage : unsigned
     Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas,
     MainStatic, MainDynamic, MainHud, MainLods, MainDetails,
     MainIndexSetup, MainIndexDraw, ShadowIndexSetup, ShadowIndexDraw,
-    MainLodBuild, MainLodUpload, MainLodSubmit, MainVisibilityWait, SharedStreamUpload, Count
+    MainLodBuild, MainLodUpload, MainLodSubmit, MainVisibilityWait, SharedStreamUpload,
+    SharedIndexUpload, VertexRingDiscard, Count
 };
 
 void Initialize();
