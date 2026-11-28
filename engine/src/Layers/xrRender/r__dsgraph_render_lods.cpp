@@ -1,6 +1,14 @@
 #include "stdafx.h"
 #include "FLOD.h"
 #include "xrCommon/xr_array.h"
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRenderGL/glLodStream.h"
+#include "xrEngine/AndroidSceneCompare.h"
+#include <cstring>
+#endif
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#endif
 
 #ifdef _EDITOR
 #include "IGame_Persistent.h"
@@ -22,6 +30,10 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
 {
     ZoneScoped;
     PIX_EVENT_CTX(cmd_list, dsgraph_render_lods);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    const bool sampleMain = GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry);
+    GLGpuProfiler::Scope mainLods(GLGpuProfiler::Stage::MainLods, false, sampleMain);
+#endif
 
     if (mapLOD.empty())
         return;
@@ -44,6 +56,10 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
 
     const u32 uiVertexPerImposter = 4;
     const u32 uiImpostersFit = RImplementation.Vertex.GetSize() / (firstV->geom->vb_stride * uiVertexPerImposter);
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    const bool dedicatedStream = firstV->geom->vb_stride == sizeof(FLOD::_hw) &&
+        AndroidSceneCompare::HasOption(Core.Params, "-gles_lod_dedicated_stream");
+#endif
 
     //Msg("dbg_lods: shid[%d],firstV[%X]",shid,u32((void*)firstV));
     //Msg("dbg_lods: shader[%X]",u32((void*)firstV->shader._get()));
@@ -52,10 +68,19 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
     for (u32 i = 0; i < lstLODs.size(); i++)
     {
         const u32 iBatchSize = std::min(lstLODs.size() - i, (size_t)uiImpostersFit);
+        const u32 vertexCount = iBatchSize * uiVertexPerImposter;
         int cur_count = 0;
-        u32 vOffset;
-        FLOD::_hw* V =
-            (FLOD::_hw*)RImplementation.Vertex.Lock(iBatchSize * uiVertexPerImposter, firstV->geom->vb_stride, vOffset);
+        u32 vOffset = 0;
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope build(GLGpuProfiler::Stage::MainLodBuild, false, sampleMain);
+#endif
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+        auto* staged = dedicatedStream ? GLLodStream::Reserve(vertexCount) : nullptr;
+        auto* V = staged ? staged :
+            static_cast<FLOD::_hw*>(RImplementation.Vertex.Lock(vertexCount, firstV->geom->vb_stride, vOffset));
+#else
+        auto* V = static_cast<FLOD::_hw*>(RImplementation.Vertex.Lock(vertexCount, firstV->geom->vb_stride, vOffset));
+#endif
 
         for (u32 j = 0; j < iBatchSize; ++j, ++i)
         {
@@ -123,7 +148,25 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
             }
         }
         lstLODgroups.push_back(cur_count);
-        RImplementation.Vertex.Unlock(iBatchSize * uiVertexPerImposter, firstV->geom->vb_stride);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        build.Stop();
+        GLGpuProfiler::Scope upload(GLGpuProfiler::Stage::MainLodUpload, false, sampleMain);
+#endif
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+        const GLuint lodBuffer = staged ? GLLodStream::Upload() : 0;
+        if (staged && !lodBuffer)
+        {
+            auto* fallback = RImplementation.Vertex.Lock(vertexCount, firstV->geom->vb_stride, vOffset);
+            std::memcpy(fallback, staged, size_t(vertexCount) * sizeof(FLOD::_hw));
+        }
+        if (!lodBuffer)
+#endif
+            RImplementation.Vertex.Unlock(vertexCount, firstV->geom->vb_stride);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        upload.Stop();
+        GLGpuProfiler::Scope submit(GLGpuProfiler::Stage::MainLodSubmit, false, sampleMain);
+        const u32 previousDraws = cmd_list.stat.render.calls;
+#endif
 
         // *** Render
         cmd_list.set_xform_world(Fidentity);
@@ -139,6 +182,10 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
                 {
                     cmd_list.set_Element(lstLODs[current].pVisual->shader->E[shid], uiPass);
                     cmd_list.set_Geometry(firstV->geom);
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+                    if (lodBuffer)
+                        cmd_list.set_Vertices(lodBuffer, firstV->geom->vb_stride);
+#endif
                     cmd_list.Render(D3DPT_TRIANGLELIST, vCurOffset, 0, 4 * p_count, 0, 2 * p_count);
                 }
                 cmd_list.stat.r.s_flora_lods.add(4 * p_count);
@@ -147,7 +194,14 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
             }
         }
 
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+        if (lodBuffer)
+            cmd_list.set_Vertices(firstV->geom->vb, firstV->geom->vb_stride);
+#endif
         lstLODgroups.clear();
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::RecordLods(iBatchSize, cmd_list.stat.render.calls - previousDraws);
+#endif
     }
 
     lstLODs.clear();

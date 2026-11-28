@@ -2,13 +2,16 @@
 
 #include "glStateUtils.h"
 #include "glBackendStateCache.h"
+#include "glVertexBinding.h"
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "glGpuProfiler.h"
+#include <optional>
 #endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
 #include "glSpotWriterAudit.h"
 #endif
 #if defined(XR_PLATFORM_ANDROID)
+#include "glFencedVertexStream.h"
 #include "xrEngine/AndroidSceneCompare.h"
 #endif
 
@@ -158,23 +161,29 @@ IC bool CBackend::ClearZBRect(GLuint zb, float depth, size_t numRects, const Ire
     return true;
 }
 
+ICF void CBackend::resetGeometryBindings()
+{
+    vb = 0;
+    vb_stride = 0;
+    ib = 0;
+    cached_baseV = 0;
+    cached_bind_vb = 0;
+    cached_bind_stride = 0;
+    cached_bind_offset = size_t(-1);
+}
+
 ICF void CBackend::set_Format(SDeclaration* _decl)
 {
     if (!_decl)
     {
         decl = nullptr;
-        vb = 0;
-        vb_stride = 0;
-        ib = 0;
-        cached_baseV = 0;
-        cached_bind_vb = 0;
-        cached_bind_stride = 0;
-        cached_bind_offset = size_t(-1);
+        resetGeometryBindings();
         return;
     }
 
     const bool declaration_changed = decl != _decl;
-    const bool hardware_changed = GLHardwareState::Get().vertex_array.update(_decl->dcl, gles_state_rebind_enabled());
+    auto& hardware = GLHardwareState::Get();
+    const bool hardware_changed = hardware.vertex_array.update(_decl->dcl, gles_state_rebind_enabled());
     if (hardware_changed || declaration_changed)
     {
         PGO(Msg("PGO:v_format:%x", _decl));
@@ -185,21 +194,15 @@ ICF void CBackend::set_Format(SDeclaration* _decl)
         if (hardware_changed)
         {
             CHK_GL(glBindVertexArray(_decl->dcl));
-            GLHardwareState::Get().vertex_valid = false;
-            GLHardwareState::Get().index_buffer.invalidate();
+            hardware.vertex_valid = false;
+            hardware.index_buffer.invalidate();
         }
 
         if (!declaration_changed)
             return; // Rebinding a VAO must preserve this command list's logical buffers.
 
         // Clear cached vertex and index buffers because buffer bindings are stored inside VAO!
-        vb = 0;
-        vb_stride = 0;
-        ib = 0;
-        cached_baseV = 0;
-        cached_bind_vb = 0;
-        cached_bind_stride = 0;
-        cached_bind_offset = size_t(-1);
+        resetGeometryBindings();
     }
 }
 
@@ -289,15 +292,27 @@ ICF void CBackend::bindVertexBase(u32 baseV)
     if (!decl)
         return;
     set_Format(decl);
+    bindVertexBaseForCurrentFormat(baseV);
+}
+
+ICF void CBackend::bindVertexBaseForCurrentFormat(u32 baseV)
+{
     auto& hardware = GLHardwareState::Get();
     u32 stride = vb_stride;
     if (!stride && decl)
         stride = GetDeclVertexSize(decl->dcl_code.data(), 0);
-    const size_t byteOffset = size_t(baseV) * size_t(stride);
+    size_t byteOffset = size_t(baseV) * size_t(stride);
+#if defined(XR_PLATFORM_ANDROID)
+    byteOffset += GLFencedVertexStream::Base(vb);
+#endif
     if (!gles_state_rebind_enabled() && hardware.vertex_valid && hardware.vertex_buffer == vb &&
         hardware.vertex_stride == stride && hardware.vertex_offset == byteOffset)
         return;
-    if (GLAD_GL_ARB_vertex_attrib_binding)
+    const bool separated = UseSeparatedVertexBinding();
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::RecordVertexBinding(!separated);
+#endif
+    if (separated)
     {
         CHK_GL(glBindVertexBuffer(0, vb, byteOffset, stride));
     }
@@ -326,7 +341,10 @@ ICF void CBackend::set_Vertices(GLuint _vb, u32 _vb_stride)
         vb = _vb;
         vb_stride = _vb_stride;
 
-        bindVertexBase(0);
+        // Both indexed and array draws bind their actual base immediately before
+        // drawing. Binding zero here can submit an unnecessary intermediate base.
+        if (VertexBindingState().eager)
+            bindVertexBase(0);
     }
 }
 
@@ -334,6 +352,11 @@ ICF void CBackend::set_Indices(GLuint _ib)
 {
     if (decl)
         set_Format(decl);
+    bindIndicesForCurrentFormat(_ib);
+}
+
+ICF void CBackend::bindIndicesForCurrentFormat(GLuint _ib)
+{
     ib = _ib;
     if (GLHardwareState::Get().index_buffer.update(_ib, gles_state_rebind_enabled()))
     {
@@ -389,6 +412,36 @@ IC u32 GetIndexCount(D3DPRIMITIVETYPE T, u32 iPrimitiveCount)
     }
 }
 
+#if defined(XR_PLATFORM_ANDROID)
+inline bool IndexedSetupOnceEnabled()
+{
+    static const bool enabled = AndroidSceneCompare::HasOption(Core.Params, "-olr") &&
+        AndroidSceneCompare::HasOption(Core.Params, "-gles_indexed_setup_once") &&
+        !AndroidSceneCompare::HasOption(Core.Params, "-gles_eager_vertex_base") &&
+        !AndroidSceneCompare::HasOption(Core.Params, "-gles_eager_vertex_binding") &&
+        !CBackend::gles_state_rebind_enabled() && !GLSpotWriterAudit::Enabled();
+    return enabled;
+}
+#endif
+
+ICF void CBackend::prepareIndexedGeometry(GLuint indices, u32 baseV)
+{
+    set_Format(decl);
+#if defined(XR_PLATFORM_ANDROID)
+    if (IndexedSetupOnceEnabled())
+    {
+        // The shared hardware cache has just validated the VAO.
+        bindIndicesForCurrentFormat(indices);
+        constants.flush();
+        bindVertexBaseForCurrentFormat(baseV);
+        return;
+    }
+#endif
+    set_Indices(indices);
+    constants.flush();
+    bindVertexBase(baseV);
+}
+
 ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV, u32 startI, u32 PC)
 {
     if (!decl || !vb || !ib || PC == 0)
@@ -400,22 +453,31 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV,
     stat.render.calls++;
     stat.render.verts += countV;
     stat.render.polys += PC;
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    using GLGpuProfiler::Stage;
+    const Stage submission = GLGpuProfiler::SampleIndexedSubmission();
+    std::optional<GLGpuProfiler::Scope> submitScope;
+    if (submission != Stage::Count)
+        submitScope.emplace(submission, false);
+#endif
     if (pp)
         set_PP(pp);
-    set_Format(decl);
-    set_Indices(ib);
-    constants.flush();
-
-    // Base vertex is applied as a vertex-buffer binding offset (see
-    // bindVertexBase), so plain glDrawElements is used on every path.
-    // glDrawElementsBaseVertex is deliberately avoided: it segfaults Adreno
-    // drivers on flora draws (shared VB, baseV != 0).
-    bindVertexBase(baseV);
+    prepareIndexedGeometry(ib, baseV);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    submitScope.reset();
+#endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
     const bool spot_writer_sampled = GLSpotWriterAudit::BeforeDraw(*this, pp, iIndexCount, baseV, startI);
 #endif
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    if (submission != Stage::Count)
+        submitScope.emplace(submission == Stage::MainIndexSetup ? Stage::MainIndexDraw : Stage::ShadowIndexDraw, false);
+#endif
+    // Base vertex is encoded in the vertex-buffer binding offset. Avoid
+    // glDrawElementsBaseVertex, which can crash on Adreno flora draws.
     CHK_GL(glDrawElements(Topology, iIndexCount, GL_UNSIGNED_SHORT, (void*)(startI * sizeof(GLushort))));
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    submitScope.reset();
     GLGpuProfiler::RecordDraw();
 #endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
@@ -423,6 +485,26 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV,
 #endif
     PGO(Msg("PGO:DIP:%dv/%df", countV, PC));
 }
+
+#if defined(XR_PLATFORM_ANDROID)
+ICF void CBackend::RenderStaticIndices(GLuint indexBuffer, u32 indices, u32 vertices, u32 logicalDraws)
+{
+    if (!decl || !vb || !indices)
+        return;
+    ++stat.render.calls;
+    stat.render.verts += vertices;
+    stat.render.polys += indices / 3;
+    if (pp)
+        set_PP(pp);
+    prepareIndexedGeometry(indexBuffer, 0);
+    CHK_GL(glDrawElements(GL_TRIANGLES, GLsizei(indices), GL_UNSIGNED_INT, nullptr));
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::RecordDraw();
+    GLGpuProfiler::RecordStaticBatch(logicalDraws, indices * sizeof(u32));
+#endif
+}
+
+#endif
 
 ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 startV, u32 PC)
 {
@@ -479,7 +561,19 @@ ICF void CBackend::set_GeometryForIndexedDraw(SGeometry* geometry)
 
     // Render() binds the real base vertex before drawing. Avoid first binding offset zero
     // on an indexed mesh, then immediately changing the same VAO to another offset.
-    set_Format(geometry->dcl._get());
+    auto* nextDecl = geometry->dcl._get();
+    if (IndexedSetupOnceEnabled() && nextDecl)
+    {
+        // Keep the command-list declaration logical until the indexed draw.
+        // Changes made by other lists still invalidate physical bindings.
+        if (decl != nextDecl)
+        {
+            decl = nextDecl;
+            resetGeometryBindings();
+        }
+    }
+    else
+        set_Format(nextDecl);
     vb = geometry->vb;
     vb_stride = geometry->vb_stride;
     ib = geometry->ib;

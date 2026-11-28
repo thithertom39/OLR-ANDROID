@@ -11,6 +11,7 @@ namespace xray::render::RENDER_NAMESPACE::GLTextureBindings
 namespace detail
 {
 constexpr u32 Capacity = CTexture::mtMaxCombinedShaderTextures;
+static_assert(Capacity <= 64);
 constexpr size_t TargetCount = 6;
 constexpr GLenum Targets[TargetCount] = {
     GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP,
@@ -29,7 +30,7 @@ struct Cache
     std::array<Binding, Capacity> samplers{};
     // Proof for the targets visited by ClearStage, not for untracked GL targets.
     // Unknown/reset state must first take the full baseline traversal.
-    std::array<bool, Capacity> allTargetsKnownClear{};
+    u64 stagesToClear = ~u64{0};
     // Unknown bindings must be visited after every physical-cache reset.
     // Once known, only the nonzero prefix can need clearing by another pass.
     u32 samplerExtent = Capacity;
@@ -109,6 +110,11 @@ inline void Invalidate()
     detail::State() = detail::Cache{};
 }
 
+inline u64 StagesToClear()
+{
+    return detail::State().stagesToClear;
+}
+
 inline void Activate(u32 unit, bool force = false)
 {
     auto& cache = detail::State();
@@ -136,7 +142,7 @@ inline void Bind(GLenum target, GLuint texture, bool force = false)
     if (index == detail::TargetCount || unit >= detail::Capacity)
     {
         if (unit < detail::Capacity)
-            cache.allTargetsKnownClear[unit] = false;
+            cache.stagesToClear |= u64{1} << unit;
         if (force)
             Activate(unit, true);
         CHK_GL(glBindTexture(target, texture));
@@ -150,7 +156,7 @@ inline void Bind(GLenum target, GLuint texture, bool force = false)
     auto& binding = cache.textures[unit][index];
     if (force || !binding.valid || binding.name != texture)
     {
-        cache.allTargetsKnownClear[unit] = false;
+        cache.stagesToClear |= u64{1} << unit;
         if (force)
             Activate(unit, true);
         CHK_GL(glBindTexture(target, texture));
@@ -181,9 +187,10 @@ inline void ClearStage(u32 unit, bool force = false)
     if (!detail::UnitSupported(unit))
         return;
     auto& cache = detail::State();
+    const u64 stageBit = unit < detail::Capacity ? u64{1} << unit : 0;
     // The original traversal would skip every supported target and leave the
     // active unit unchanged. Keep force and out-of-cache requests on that path.
-    if (!force && unit < detail::Capacity && cache.allTargetsKnownClear[unit])
+    if (!force && stageBit && !(cache.stagesToClear & stageBit))
         return;
     for (size_t index = 0; index < detail::TargetCount; ++index)
     {
@@ -198,8 +205,7 @@ inline void ClearStage(u32 unit, bool force = false)
         Activate(unit, force);
         Bind(detail::Targets[index], 0, force);
     }
-    if (unit < detail::Capacity)
-        cache.allTargetsKnownClear[unit] = true;
+    cache.stagesToClear &= ~stageBit;
 }
 
 // Include both the pass's used prefix and any unknown/nonzero hardware tail.

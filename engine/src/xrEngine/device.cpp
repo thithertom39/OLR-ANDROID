@@ -669,11 +669,17 @@ struct State
     float maxDirectionDeltaSq = 0;
 };
 static State state;
+static std::array<u32, 2048> intervalUs;
+
+bool capture_intervals()
+{
+    return AndroidSceneCompare::HasOption(Core.Params, "-gles_frame_intervals");
+}
 
 bool enabled()
 {
     return AndroidSceneCompare::HasOption(Core.Params, "-gles_perf") ||
-        AndroidSceneCompare::Enabled(Core.Params);
+        AndroidSceneCompare::Enabled(Core.Params) || capture_intervals();
 }
 
 u64 now(clockid_t clock)
@@ -739,8 +745,12 @@ void finish_frame(bool eligible, IGame_Level* level)
     const u64 end = now(CLOCK_MONOTONIC);
     if (end < state.previousEnd) { reset(); return; }
     constexpr u64 binNs = 1000000;
-    const auto bin = std::min<u64>((end - state.previousEnd) / binNs, std::size(state.intervalHistogram) - 1);
+    const u64 intervalNs = end - state.previousEnd;
+    const auto bin = std::min<u64>(intervalNs / binNs, std::size(state.intervalHistogram) - 1);
     ++state.intervalHistogram[bin];
+    const bool capture = capture_intervals();
+    if (capture && state.frames < intervalUs.size())
+        intervalUs[state.frames] = u32(std::min<u64>(intervalNs / 1000, u32(-1)));
     state.previousEnd = end;
     const auto& position = Device.vCameraPosition;
     const auto& direction = Device.vCameraDirection;
@@ -790,6 +800,18 @@ void finish_frame(bool eligible, IGame_Level* level)
         Device.dwWidth, Device.dwHeight, elapsed * 1000.0 / state.frames, p95Bin);
     Msg("%s", summary);
     ft::emit_to_file(summary, /*flush_now*/ true);
+    if (capture)
+    {
+        // Write one record per window so the capture does not require per-frame I/O.
+        // The end frame identifies the associated camera and resolution above.
+        char record[96 + intervalUs.size() * 12];
+        char* cursor = record + snprintf(record, sizeof(record),
+            "* [gles_frame_intervals] device_frame=%u frames=%u us=", Device.dwFrame, state.frames);
+        const auto count = std::min<size_t>(state.frames, intervalUs.size());
+        for (size_t i = 0; i < count; ++i)
+            cursor += snprintf(cursor, size_t(record + sizeof(record) - cursor), "%s%u", i ? "," : "", intervalUs[i]);
+        ft::emit_to_file(record, /*flush_now*/ true);
+    }
     state.windowStart = end;
     state.cpuStart = cpuEnd;
     state.frames = 0;

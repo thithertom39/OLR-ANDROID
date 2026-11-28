@@ -2,6 +2,10 @@
 #include "Layers/xrRender/BufferUtils.h"
 #include "glBackendStateCache.h"
 #include "glStreamSync.h"
+#include "glVertexBinding.h"
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "glGpuProfiler.h"
+#endif
 
 #include <FlexibleVertexFormat.h>
 
@@ -175,7 +179,7 @@ void ConvertVertexDeclaration(const VertexElement* dxdecl, SDeclaration* decl)
     [](GLuint location, GLint size, GLenum type, GLboolean normalized, GLuint offset, GLuint stream)
     {
         CHK_GL(glEnableVertexAttribArray(location));
-        if (GLAD_GL_ARB_vertex_attrib_binding)
+        if (UseSeparatedVertexBinding())
         {
             CHK_GL(glVertexAttribFormat(location, size, type, normalized, offset));
             CHK_GL(glVertexAttribBinding(location, stream));
@@ -343,6 +347,9 @@ IndexBufferHandle IndexStagingBuffer::GetBufferHandle() const
 
 void IndexStagingBuffer::Destroy()
 {
+#if defined(XR_PLATFORM_ANDROID)
+    m_StaticBatchSource = false;
+#endif
     DiscardHostBuffer();
     m_Size = 0;
 
@@ -392,7 +399,12 @@ void VertexStreamBuffer::Create(size_t size)
         m_UploadBuffer = xr_alloc<u8>(size);
         CHECK_OR_EXIT(m_UploadBuffer != nullptr, "Could not allocate vertex upload staging memory");
     }
-    CreateVertexBuffer(&m_DeviceBuffer, nullptr, size, true);
+#if defined(XR_PLATFORM_ANDROID)
+    if (!(GLStreamSync::UploadEnabled() && GLStreamSync::HasFlag("-olr") &&
+        GLStreamSync::HasFlag("-gles_fenced_vertex_stream") && !CBackend::gles_state_rebind_enabled() &&
+        m_FencedVertexStream.Create(m_DeviceBuffer, size)))
+#endif
+        CreateVertexBuffer(&m_DeviceBuffer, nullptr, size, true);
     if (GLStreamSync::UploadEnabled())
         GLStreamSync::CheckUploadCreation(m_DeviceBuffer, size);
     AddRef();
@@ -407,7 +419,10 @@ void VertexStreamBuffer::Destroy()
     if (m_DeviceBuffer == 0)
         return;
 
-    glDeleteBuffers(1, &m_DeviceBuffer);
+#if defined(XR_PLATFORM_ANDROID)
+    if (m_FencedVertexStream.Release(m_DeviceBuffer))
+#endif
+        glDeleteBuffers(1, &m_DeviceBuffer);
     GLHardwareState::InvalidateGeometry();
     m_DeviceBuffer = 0;
 }
@@ -419,12 +434,33 @@ void* VertexStreamBuffer::Map(size_t offset, size_t size, bool flush /*= false*/
         CHECK_OR_EXIT(m_DeviceBuffer && m_UploadBuffer && !m_UploadMapped && size > 0 &&
             offset <= m_UploadCapacity && size <= m_UploadCapacity - offset,
             "Invalid or nested vertex upload stream mapping");
-        glBindBuffer(GL_ARRAY_BUFFER, m_DeviceBuffer);
         if (flush)
-            GLStreamSync::ReplaceStorage(GL_ARRAY_BUFFER, m_UploadCapacity, offset, size);
+        {
+#if defined(XR_PLATFORM_ANDROID)
+            if (m_FencedVertexStream.Enabled())
+            {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                GLGpuProfiler::Scope discard(GLGpuProfiler::Stage::VertexRingDiscard, false);
+#endif
+                m_FencedVertexStream.Discard(m_DeviceBuffer);
+                if (Device.dwFrame % 67 == 0)
+                    Msg("* [gles_fenced_vertex_stream] frame=%u mapped_discards=%u fallback_discards=%u",
+                        Device.dwFrame, m_FencedVertexStream.mappedDiscards, m_FencedVertexStream.fallbackDiscards);
+            }
+            else
+#endif
+            {
+                glBindBuffer(GL_ARRAY_BUFFER, m_DeviceBuffer);
+                GLStreamSync::ReplaceStorage(GL_ARRAY_BUFFER, m_UploadCapacity, offset, size);
+            }
+        }
         m_UploadOffset = offset;
         m_UploadSize = size;
         m_UploadMapped = true;
+#if defined(XR_PLATFORM_ANDROID)
+        if (m_FencedVertexStream.MappedSlot())
+            return m_FencedVertexStream.Address(offset);
+#endif
         return static_cast<u8*>(m_UploadBuffer) + offset;
     }
     VERIFY(m_DeviceBuffer);
@@ -464,9 +500,16 @@ void VertexStreamBuffer::Unmap(size_t usedBytes)
                 static_cast<void*>(this), unsigned(m_DeviceBuffer), usedBytes, m_UploadSize,
                 m_UploadOffset, m_UploadCapacity, unsigned(m_UploadMapped));
         CHECK_OR_EXIT(usedBytes <= m_UploadSize, "Vertex upload exceeds mapped reservation");
-        if (usedBytes)
+        if (usedBytes
+#if defined(XR_PLATFORM_ANDROID)
+            && !m_FencedVertexStream.MappedSlot()
+#endif
+            )
         {
             glBindBuffer(GL_ARRAY_BUFFER, m_DeviceBuffer);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            GLGpuProfiler::Scope upload(GLGpuProfiler::Stage::SharedStreamUpload, false);
+#endif
             GLStreamSync::UploadRange(GL_ARRAY_BUFFER, m_DeviceBuffer, m_UploadOffset, usedBytes,
                 static_cast<u8*>(m_UploadBuffer) + m_UploadOffset);
         }
@@ -528,9 +571,11 @@ void* IndexStreamBuffer::Map(size_t offset, size_t size, bool flush /*= false*/)
         CHECK_OR_EXIT(m_DeviceBuffer && m_UploadBuffer && !m_UploadMapped && size > 0 &&
             offset <= m_UploadCapacity && size <= m_UploadCapacity - offset,
             "Invalid or nested index upload stream mapping");
-        glBindBuffer(GL_COPY_WRITE_BUFFER, m_DeviceBuffer);
         if (flush)
+        {
+            glBindBuffer(GL_COPY_WRITE_BUFFER, m_DeviceBuffer);
             GLStreamSync::ReplaceStorage(GL_COPY_WRITE_BUFFER, m_UploadCapacity, offset, size);
+        }
         m_UploadOffset = offset;
         m_UploadSize = size;
         m_UploadMapped = true;
@@ -570,6 +615,10 @@ void IndexStreamBuffer::Unmap(size_t usedBytes)
         if (usedBytes)
         {
             glBindBuffer(GL_COPY_WRITE_BUFFER, m_DeviceBuffer);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            GLGpuProfiler::Scope upload(GLGpuProfiler::Stage::SharedStreamUpload, false);
+            GLGpuProfiler::Scope indexUpload(GLGpuProfiler::Stage::SharedIndexUpload, false);
+#endif
             GLStreamSync::UploadRange(GL_COPY_WRITE_BUFFER, m_DeviceBuffer, m_UploadOffset, usedBytes,
                 static_cast<u8*>(m_UploadBuffer) + m_UploadOffset);
         }

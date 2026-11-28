@@ -8,6 +8,10 @@
 #include "Layers/xrRenderGL/glTextureBindings.h"
 #endif
 
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#include "xrEngine/AndroidSceneCompare.h"
+#endif
+
 #if defined(USE_DX11)
 #include <DirectXMath.h>
 #endif
@@ -246,6 +250,12 @@ void CBackend::set_Textures(STextureList* textures_list)
 
     // Sparse lists can leave holes below their highest occupied slot. Clear
     // those slots too, but only issue GL calls for nonzero/unknown bindings.
+#if defined(XR_PLATFORM_ANDROID)
+    static const bool prune_empty_stages =
+        AndroidSceneCompare::HasOption(Core.Params, "-gles_prune_empty_texture_stages");
+    const u64 stages_to_clear = prune_empty_stages && !force_rebind ?
+        GLTextureBindings::StagesToClear() : ~u64{0};
+#endif
     for (u32 stage = 0; stage < StageCount; ++stage)
     {
         if (used[stage])
@@ -254,6 +264,10 @@ void CBackend::set_Textures(STextureList* textures_list)
             textures_ps[stage] = nullptr;
         else
             textures_vs[stage - CTexture::rstVertex] = nullptr;
+#if defined(XR_PLATFORM_ANDROID)
+        if (!(stages_to_clear & (u64{1} << stage)))
+            continue;
+#endif
         GLTextureBindings::ClearStage(stage, force_rebind);
     }
 #else

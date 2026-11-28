@@ -12,6 +12,9 @@
 #include "UIGameCustom.h"
 #include "ui/UICDkey.h"
 #include "xrNetServer/NET_Messages.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "saved_game_wrapper.h"
+#endif
 
 int g_cl_save_demo = 0;
 
@@ -147,6 +150,21 @@ bool CLevel::net_start2()
     if (net_start_result_total && m_caServerOptions.size())
     {
         ZoneScoped;
+#if defined(XR_PLATFORM_ANDROID)
+        const auto& p = g_pGamePersistent->m_game_params;
+        // Console/autoload can bypass the menu's save validation. Reject bad
+        // headers before Server::Connect enters ALife's fatal load assertion;
+        // use the existing failed-start cleanup and return to the main menu.
+        // Never reinterpret an invalid load as a new game or modify the save.
+        if (!xr_strcmp(p.m_game_type, "single") && !xr_strcmp(p.m_alife, "alife") &&
+            !xr_strcmp(p.m_new_or_load, "load") &&
+            !CSavedGameWrapper::valid_saved_game(p.m_game_or_spawn))
+        {
+            Msg("! Refusing to load invalid or incompatible saved game '%s'; returning to main menu", p.m_game_or_spawn);
+            net_start_result_total = false;
+            return true;
+        }
+#endif
         GameDescriptionData game_descr;
         if ((m_connect_server_err = Server->Connect(m_caServerOptions, game_descr)) != xrServer::ErrNoError)
         {

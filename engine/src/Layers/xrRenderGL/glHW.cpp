@@ -6,6 +6,11 @@
 
 #include "glHW.h"
 #include "glTextureBindings.h"
+#include "glVertexBinding.h"
+#if defined(XR_PLATFORM_ANDROID)
+#include "glLodStream.h"
+#include "glStaticIndexBatch.h"
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "glGpuProfiler.h"
 #endif
@@ -239,6 +244,19 @@ void CALLBACK OnAngleAuditDebugCallback(GLenum source, GLenum type, GLuint id, G
     if (type != GL_DEBUG_TYPE_ERROR && type != GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR &&
         severity != GL_DEBUG_SEVERITY_HIGH && severity != GL_DEBUG_SEVERITY_MEDIUM)
         return;
+    // Adreno labels some repeated performance notices high severity.
+    // Keep their budget independent from errors of any severity.
+    if (type == GL_DEBUG_TYPE_PERFORMANCE)
+    {
+        static std::atomic<u32> notices{0};
+        const auto n = notices.fetch_add(1, std::memory_order_relaxed);
+        if (n < 4)
+            Msg("! [gles_angle_audit] performance id=%u severity=0x%x message=%.*s",
+                id, severity, length, message);
+        else if (n == 4)
+            Msg("! [gles_angle_audit] performance notice limit reached (4)");
+        return;
+    }
     const bool critical = type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR ||
         severity == GL_DEBUG_SEVERITY_HIGH;
     static std::atomic<u32> errors{0}, warnings{0};
@@ -526,6 +544,7 @@ void CHW::CreateDevice(SDL_Window* hWnd)
 #endif
     }
 
+    InitializeVertexBinding();
     if (ThisInstanceIsGlobal())
     {
         UpdateVSync();
@@ -585,6 +604,10 @@ void CHW::CreateDevice(SDL_Window* hWnd)
         strstr(Core.Params, "-gles_highp_position") ? "highp (diagnostic)" : "default precision");
     Msg("* [GLES] State rebind diagnostic: %s", CBackend::gles_state_rebind_enabled() ? "on" : "off");
     Msg("* [GLES] Shared physical state cache: on");
+    Msg("* [GLES] Vertex binding: %s", UseSeparatedVertexBinding() ? "separated (ES 3.1 core)" : "legacy pointers");
+    Msg("* [GLES] Vertex binding at draw: %s", VertexBindingState().eager ? "eager control" : "deferred");
+    Msg("* [GLES] Static index batching: main=%s local_shadows=%s",
+        GLStaticIndexBatch::MainEnabled() ? "on" : "off", GLStaticIndexBatch::ShadowEnabled() ? "on" : "off");
     if (AngleAuditEnabled())
     {
         Msg("* [gles_angle_audit] caps OES_texture_float_linear=%u EXT_color_buffer_float=%u "
@@ -635,6 +658,11 @@ void CHW::DestroyDevice()
 {
 #ifdef XR_PLATFORM_ANDROID
     if (ThisInstanceIsGlobal())
+    {
+        GLLodStream::Shutdown();
+        GLStaticIndexBatch::Shutdown();
+    }
+    if (ThisInstanceIsGlobal())
         presentGamma.Release(m_context && SDL_GL_GetCurrentContext() == m_context);
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
@@ -665,6 +693,10 @@ void CHW::DestroyDevice()
 void CHW::Reset()
 {
     ZoneScoped;
+#ifdef XR_PLATFORM_ANDROID
+    if (ThisInstanceIsGlobal())
+        GLLodStream::Shutdown();
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Shutdown(SDL_GL_GetCurrentContext() == m_context && m_context != nullptr);
 #endif

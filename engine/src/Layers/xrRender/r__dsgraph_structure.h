@@ -201,7 +201,11 @@ struct R_dsgraph_structure
     void insert_static(dxRender_Visual* pVisual);
 
     // render primitives
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    void render_graph(u32 _priority, bool localShadowBatch = false);
+#else
     void render_graph(u32 _priority);
+#endif
     void render_hud();
     void render_hud_ui();
     void render_lods(bool _setup_zb, bool _clear);

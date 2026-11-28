@@ -17,6 +17,9 @@
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
 #include "Layers/xrRender/FBasicVisual.h"
 #include "Layers/xrRender/LocalShadowStaticCache.h"
+#include "Layers/xrRender/du_cone.h"
+#include "Layers/xrRender/du_sphere_part.h"
+#include "Layers/xrRenderGL/glShadowVolumeClip.h"
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -35,6 +38,25 @@ struct ShadowCacheSlot
 };
 std::array<ShadowCacheSlot, 256> shadowCacheSlots;
 std::array<unsigned, 2> shadowAuditFrames{};
+
+bool ShadowVolumeOutside(light& tile)
+{
+    const light& source = tile.shadow_parent ? *tile.shadow_parent : tile;
+    if (source.flags.bHudMode || tile.flags.bVolumetric || tile.s_point || tile.s_spot ||
+        tile.s_volumetric || (tile.flags.type != IRender_Light::OMNIPART && tile.flags.type != IRender_Light::SPOT))
+        return false;
+
+    static const auto pointFaceBounds =
+        GLShadowVolumeClip::MeshBounds(du_sphere_part_vertices, DU_SPHERE_PART_NUMVERTEX);
+    static const auto spotBounds = GLShadowVolumeClip::MeshBounds(du_cone_vertices, DU_CONE_NUMVERTEX);
+    tile.xform_calc();
+    Fmatrix worldView, worldViewProjection;
+    // Same multiplication order as the built-in accumulation shader constants.
+    worldView.mul_43(Device.mView, tile.m_xform);
+    worldViewProjection.mul(Device.mProject, worldView);
+    return GLShadowVolumeClip::Outside(
+        tile.flags.type == IRender_Light::OMNIPART ? pointFaceBounds : spotBounds, worldViewProjection.m);
+}
 
 class ShadowSourcesAudit
 {
@@ -216,9 +238,17 @@ void CRender::render_lights(light_Package& LP)
 #endif
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
     GLDetailShadowCull::BoundsBatch detailBoundsBatch(
-        Details, GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_cells"));
+        Details, GLDetailShadowCull::CellCacheEnabled(Core.Params),
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_group_bounds"));
 #endif
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    const bool clipShadowVolumes = GLDetailShadowCull::HasOption(Core.Params, "-gles_shadow_volume_clip");
+    const bool probeShadowVolumes = GLDetailShadowCull::HasOption(Core.Params, "-gles_shadow_volume_clip_probe");
+    const bool checkClip = (clipShadowVolumes || probeShadowVolumes) && !hwOcclusion &&
+        !ps_r2_ls_flags.test(R2FLAG_GI) && !GLSpotWriterAudit::Enabled();
+    const bool sampleClip = checkClip && !LP.v_shadowed.empty() && Device.dwFrame % 67 == 0;
+    u32 clipOutside = 0, clipSubmitted = 0;
+    u64 clipStaticEntries = 0, clipDynamicEntries = 0;
     const bool useStaticCache = !hwOcclusion &&
         GLDetailShadowCull::HasOption(Core.Params, "-gles_shadow_static_cache");
     const bool sampleShadowCache = useStaticCache && !LP.v_shadowed.empty() && Device.dwFrame % 67 == 0;
@@ -346,11 +376,29 @@ void CRender::render_lights(light_Package& LP)
         u32 batch_id{};
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
         LocalShadowStaticCache* static_cache{};
+        bool clipOutside{};
 #endif
     };
     static xr_vector<task_data_t> lights_queue{};
     lights_queue.reserve(R__NUM_SUN_CASCADES);
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    const bool sampleLateQueries = &LP == &LP_normal && HWOCC.is_light_late_probe_enabled() &&
+        Device.dwFrame % 67 == 0 && !LP.v_shadowed.empty();
+    const auto halfShadowPasses = (LP.v_shadowed.size() + 1) / 2;
+    const bool sampleMidQueries = sampleLateQueries && LP.v_shadowed.size() > 1;
+    const bool cullLateQueries = &LP == &LP_normal && !LP.v_shadowed.empty() &&
+        HWOCC.occq_light_begin_late_cull();
+    const bool cullQueuedLights = cullLateQueries &&
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_light_occq_queued");
+    const bool sampleLateCull = cullLateQueries && Device.dwFrame % 67 == 0;
+    const auto lateCullCandidates = LP.v_shadowed.size();
+    size_t tilesAtLastLatePoll = 0;
+    u32 submittedShadowPasses = 0;
+    u32 lateCulled = 0;
+    u32 queuedCulled = 0;
+    u32 queuedPolls = 0;
+#endif
     const auto& flush_lights = [&]()
     {
         ZoneScopedN("flush lights");
@@ -399,16 +447,38 @@ void CRender::render_lights(light_Package& LP)
 
             auto& dsgraph = get_context(batch_id);
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if (sampleClip && entry.clipOutside)
+            {
+                u32 staticEntries, dynamicEntries;
+                dsgraph.get_Counters(staticEntries, dynamicEntries);
+                clipStaticEntries += staticEntries;
+                clipDynamicEntries += dynamicEntries;
+            }
+#endif
+
             const bool bNormal = !dsgraph.mapNormalPasses[0][0].empty() || !dsgraph.mapMatrixPasses[0][0].empty();
             const bool bSpecial = !dsgraph.mapNormalPasses[1][0].empty() || !dsgraph.mapMatrixPasses[1][0].empty() ||
                 !dsgraph.mapSorted.empty();
+            bool queuedOccluded = false;
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if (cullQueuedLights)
+            {
+                // Check availability once per queue after the first build has finished.
+                // The result can arrive after this light's build was scheduled.
+                if (&entry == &lights_queue.front() && HWOCC.occq_light_poll_late_cull())
+                    ++queuedPolls;
+                queuedOccluded = (bNormal || bSpecial) && HWOCC.occq_light_is_occluded(L);
+                queuedCulled += queuedOccluded;
+            }
             if (shadowAudit)
-                shadowAudit->Write(*L, dsgraph, bNormal || bSpecial);
+                shadowAudit->Write(*L, dsgraph, !queuedOccluded && (bNormal || bSpecial));
 #endif
+            const bool drawShadow = !queuedOccluded && (bNormal || bSpecial);
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
             static u32 spot_audit_geometry_logged = 0;
-            const u32 spot_audit_ticket = spot_audit_geometry_logged < 16 ? gles_spot_shadow_audit_ticket(*L) : 0;
+            const u32 spot_audit_ticket = !queuedOccluded && spot_audit_geometry_logged < 16 ?
+                gles_spot_shadow_audit_ticket(*L) : 0;
             const u32 spot_audit_calls_before = spot_audit_ticket ? dsgraph.cmd_list.stat.render.calls : 0;
             if (spot_audit_ticket)
             {
@@ -423,7 +493,7 @@ void CRender::render_lights(light_Package& LP)
                     dsgraph.o.view_pos.x, dsgraph.o.view_pos.y, dsgraph.o.view_pos.z, u32(_valid(L->X.S.combine)));
             }
 #endif
-            if (bNormal || bSpecial)
+            if (drawShadow)
             {
 #if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 const u32 callsBeforeDepth = sampleAtlas ? dsgraph.cmd_list.stat.render.calls : 0;
@@ -458,7 +528,11 @@ void CRender::render_lights(light_Package& LP)
 #if defined(XR_PLATFORM_ANDROID) && !defined(_EDITOR)
     AndroidCpuProfile::Scope submitProbe(AndroidCpuProfile::Phase::LocalSubmit);
 #endif
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    dsgraph.render_graph(0, true);
+#else
     dsgraph.render_graph(0);
+#endif
 }
                 }
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
@@ -525,7 +599,7 @@ void CRender::render_lights(light_Package& LP)
                     depthDraws += dsgraph.cmd_list.stat.render.calls - callsBeforeDepth;
 #endif
             }
-            else
+            else if (!queuedOccluded)
             {
                 Stats.s_finalclip++;
             }
@@ -537,6 +611,14 @@ void CRender::render_lights(light_Package& LP)
     L->svis[batch_id].end();
 } // NOTE(DX11): occqs are fetched here, this should be done on the imm context only
             RImplementation.release_context(batch_id);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if ((sampleLateQueries || sampleLateCull) && drawShadow)
+            {
+                ++submittedShadowPasses;
+                if (sampleMidQueries && submittedShadowPasses == halfShadowPasses)
+                    HWOCC.occq_light_probe_late(false, submittedShadowPasses);
+            }
+#endif
         }
 
         lights_queue.clear();
@@ -570,6 +652,36 @@ void CRender::render_lights(light_Package& LP)
             if (L->vis.smap_ID != sid)
                 break;
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            // Keep the original light order and atlas tiles. This only skips
+            // building and drawing the shadow of a fully clipped light volume.
+            const bool outside = checkClip && ShadowVolumeOutside(*L);
+            if (outside && clipShadowVolumes)
+            {
+                ++clipOutside;
+                source.pop_back();
+                continue;
+            }
+            if (cullLateQueries)
+            {
+                // Count consumed tiles so that a retry after a full context
+                // queue cannot cause another poll for the same tile.
+                constexpr size_t tilesBetweenPolls = 8;
+                const size_t visitedTiles = lateCullCandidates - source.size();
+                if (visitedTiles - tilesAtLastLatePoll >= tilesBetweenPolls)
+                {
+                    HWOCC.occq_light_poll_late_cull();
+                    tilesAtLastLatePoll = visitedTiles;
+                }
+                if (HWOCC.occq_light_is_occluded(L))
+                {
+                    ++lateCulled;
+                    source.pop_back();
+                    continue;
+                }
+            }
+#endif
+
             const auto batch_id = [&]() {
 #if defined(XR_PLATFORM_ANDROID) && !defined(_EDITOR)
                 AndroidCpuProfile::Scope allocProbe(AndroidCpuProfile::Phase::LocalContextAlloc);
@@ -591,6 +703,9 @@ void CRender::render_lights(light_Package& LP)
             data.batch_id = batch_id;
             data.L = L;
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            clipOutside += outside;
+            ++clipSubmitted;
+            data.clipOutside = outside;
             if (useStaticCache)
                 data.static_cache = LocalShadowStaticCache::Acquire(L, Device.dwFrame);
 #endif
@@ -768,7 +883,24 @@ void CRender::render_lights(light_Package& LP)
         }
     }
 
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (sampleLateQueries)
+        HWOCC.occq_light_probe_late(true, submittedShadowPasses);
+    if (sampleLateCull)
+    {
+        HWOCC.occq_light_poll_late_cull();
+        HWOCC.occq_light_log_late_cull(lateCullCandidates, submittedShadowPasses, lateCulled,
+            queuedCulled, queuedPolls);
+    }
+#endif
     PIX_EVENT(POINT_LIGHTS_ACCUM);
+#if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+    if (sampleClip)
+        Msg("* [gles_shadow_volume_clip] frame=%u suppress=%u outside=%u submitted=%u"
+            " probe_static_entries=%llu probe_dynamic_entries=%llu",
+            Device.dwFrame, u32(clipShadowVolumes), clipOutside, clipSubmitted,
+            static_cast<unsigned long long>(clipStaticEntries), static_cast<unsigned long long>(clipDynamicEntries));
+#endif
 #if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     if (sampleAtlas)
         Msg("* [gles_shadow_atlas] frame=%u clears=%u tiles=%u tile_pixels=%llu depth_draws=%u grass_draws=%u",

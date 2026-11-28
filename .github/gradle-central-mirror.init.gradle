@@ -1,0 +1,23 @@
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+// CI-only transport fallback for Maven Central HTTP 429 on shared runner IPs.
+// Same pinned dependencies; leave Google Android Maven and other repositories
+// unchanged. Google's documented Central mirror:
+// https://docs.cloud.google.com/docs/buildpacks/java#configure_maven
+def centralMirror = { repository ->
+    if (repository instanceof MavenArtifactRepository &&
+        repository.url.host in ['repo.maven.apache.org', 'repo1.maven.org'] &&
+        repository.url.path.startsWith('/maven2')) {
+        repository.setUrl('https://maven-central.storage-download.googleapis.com/maven2/')
+        println 'OLR CI: Maven Central downloads use the Google Cloud mirror.'
+    }
+}
+
+gradle.settingsEvaluated { settings ->
+    settings.pluginManagement.repositories.all(centralMirror)
+    settings.dependencyResolutionManagement.repositories.all(centralMirror)
+}
+gradle.beforeProject { project ->
+    project.buildscript.repositories.all(centralMirror)
+    project.repositories.all(centralMirror)
+}

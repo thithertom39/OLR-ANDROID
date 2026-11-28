@@ -9,6 +9,31 @@
 
 namespace xray::render::RENDER_NAMESPACE
 {
+#if defined(USE_OGL)
+namespace
+{
+void DeleteOwnedGLStage(GLuint handle, pcstr name)
+{
+#if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
+    if (Core.Params && strstr(Core.Params, "-gles_shader_delete_audit"))
+    {
+        static unsigned zeros = 0, invalid = 0;
+        if (!handle && zeros++ == 0)
+            Msg("* [gles_shader_delete] ignored empty stage '%s'", name);
+        if (handle && !GLAD_GL_ARB_separate_shader_objects && !glIsShader(handle) && invalid++ < 8)
+            Msg("! [gles_shader_delete] invalid stage='%s' handle=%u is_program=%u", name, handle, unsigned(glIsProgram(handle)));
+    }
+#endif
+    // Empty/null stages own no object. Avoid dispatching a deletion for them.
+    if (!handle)
+        return;
+    if (GLAD_GL_ARB_separate_shader_objects)
+        CHK_GL(glDeleteProgram(handle));
+    else
+        CHK_GL(glDeleteShader(handle));
+}
+}
+#endif
 // Atomic
 //SVS::~SVS()
 //{
@@ -52,10 +77,7 @@ SVS::~SVS()
 #if defined(USE_DX11)
     _RELEASE(sh);
 #elif defined(USE_OGL)
-    if (GLAD_GL_ARB_separate_shader_objects)
-        CHK_GL(glDeleteProgram(sh));
-    else
-        CHK_GL(glDeleteShader(sh));
+    DeleteOwnedGLStage(sh, cName.c_str());
 #else
 #   error No graphics API selected or enabled!
 #endif
@@ -68,10 +90,7 @@ SPS::~SPS()
 #if defined(USE_DX11)
     _RELEASE(sh);
 #elif defined(USE_OGL)
-    if (GLAD_GL_ARB_separate_shader_objects)
-        CHK_GL(glDeleteProgram(sh));
-    else
-        CHK_GL(glDeleteShader(sh));
+    DeleteOwnedGLStage(sh, cName.c_str());
 #else
 #   error No graphics API selected or enabled!
 #endif
@@ -86,10 +105,7 @@ SGS::~SGS()
 #   if defined(USE_DX11)
     _RELEASE(sh);
 #   elif defined(USE_OGL)
-    if (GLAD_GL_ARB_separate_shader_objects)
-        CHK_GL(glDeleteProgram(sh));
-    else
-        CHK_GL(glDeleteShader(sh));
+    DeleteOwnedGLStage(sh, cName.c_str());
 #   else
 #       error No graphics API selected or enabled!
 #   endif
@@ -102,10 +118,7 @@ SHS::~SHS()
 #   if defined(USE_DX11)
     _RELEASE(sh);
 #   elif defined(USE_OGL)
-    if (GLAD_GL_ARB_separate_shader_objects)
-        CHK_GL(glDeleteProgram(sh));
-    else
-        CHK_GL(glDeleteShader(sh));
+    DeleteOwnedGLStage(sh, cName.c_str());
 #   else
 #       error No graphics API selected or enabled!
 #   endif
@@ -118,10 +131,7 @@ SDS::~SDS()
 #   if defined(USE_DX11)
     _RELEASE(sh);
 #   elif defined(USE_OGL)
-    if (GLAD_GL_ARB_separate_shader_objects)
-        CHK_GL(glDeleteProgram(sh));
-    else
-        CHK_GL(glDeleteShader(sh));
+    DeleteOwnedGLStage(sh, cName.c_str());
 #   endif
 
     RImplementation.Resources->_DeleteDS(this);
@@ -132,10 +142,7 @@ SCS::~SCS()
 #    if defined(USE_DX11)
     _RELEASE(sh);
 #    elif defined(USE_OGL)
-    if (GLAD_GL_ARB_separate_shader_objects)
-        CHK_GL(glDeleteProgram(sh));
-    else
-        CHK_GL(glDeleteShader(sh));
+    DeleteOwnedGLStage(sh, cName.c_str());
 #   else
 #       error No graphics API selected or enabled!
 #   endif

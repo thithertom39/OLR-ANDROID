@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -36,6 +37,13 @@ bool HasOption(const char* args, const char (&flag)[N])
 inline bool EagerSetupRequested(const char* args)
 {
     return HasOption(args, "-gles_detail_eager_setup");
+}
+
+inline bool CellCacheEnabled(const char* args)
+{
+    // Exact negative flag allows same-binary A/B. The old positive flag remains
+    // compatible. Bounds live only for one immutable light-package traversal.
+    return !HasOption(args, "-gles_no_detail_cells");
 }
 
 // No allocation, no cached pointers: same immutable visible list as the draw.
@@ -133,12 +141,14 @@ inline thread_local BoundsBatch* activeBoundsBatch = nullptr;
 // Reuse the allocation between packages. Only the outer package owns it and
 // only entries written by that package are readable.
 inline constexpr std::size_t MaxCachedCells = 16384;
+inline constexpr std::size_t CellsPerGroup = 8;
 inline thread_local std::unique_ptr<Bounds[]> cellScratch;
 
 struct ModelBounds
 {
     Bounds envelope;
     const Bounds* cells = nullptr;
+    const Bounds* groups = nullptr;
 };
 
 struct BoundsBatch
@@ -146,11 +156,13 @@ struct BoundsBatch
     const void* owner;
     BoundsBatch* previous;
     const bool cacheCells;
+    const bool groupCells;
     std::size_t cellsUsed = 0;
     std::array<ModelBounds, 3 * 64> entries{};
     std::array<bool, 3 * 64> ready{};
-    explicit BoundsBatch(const void* value, bool useCells = false)
-        : owner(value), previous(activeBoundsBatch), cacheCells(useCells && !previous)
+    explicit BoundsBatch(const void* value, bool useCells = false, bool useGroups = false)
+        : owner(value), previous(activeBoundsBatch), cacheCells(useCells && !previous),
+          groupCells(cacheCells && useGroups)
     {
         activeBoundsBatch = this;
     }
@@ -158,6 +170,9 @@ struct BoundsBatch
     BoundsBatch(const BoundsBatch&)=delete;
     BoundsBatch& operator=(const BoundsBatch&)=delete;
 };
+
+void BuildCellGroups(const Bounds* cells, std::size_t count, Bounds* output);
+
 template<class Builder>
 ModelBounds BatchBounds(const void* owner, unsigned variant, unsigned model, std::size_t cellCount, Builder build)
 {
@@ -180,6 +195,14 @@ ModelBounds BatchBounds(const void* owner, unsigned variant, unsigned model, std
         {
             entry.cells = cells;
             batch->cellsUsed += cellCount;
+            const auto groupCount = (cellCount + CellsPerGroup - 1) / CellsPerGroup;
+            if (batch->groupCells && groupCount <= MaxCachedCells - batch->cellsUsed)
+            {
+                auto* groups = cellScratch.get() + batch->cellsUsed;
+                BuildCellGroups(cells, cellCount, groups);
+                entry.groups = groups;
+                batch->cellsUsed += groupCount;
+            }
         }
         batch->ready[index] = true;
     }
@@ -227,6 +250,84 @@ Bounds BuildModelBounds(const Groups& groups, Bounds* cells, BuildInstance build
     return model;
 }
 
+// Accumulate interval endpoints and pad once, rather than repeatedly
+// converting each growing union to center/extent and back.
+class BoundsExtrema
+{
+    static constexpr double Limit = std::numeric_limits<double>::infinity();
+    std::array<double, 3> lower{Limit, Limit, Limit};
+    std::array<double, 3> upper{-Limit, -Limit, -Limit};
+
+public:
+    void Add(const Bounds& bound)
+    {
+        for (unsigned axis = 0; axis != 3; ++axis)
+        {
+            lower[axis] = std::min(lower[axis], bound.center[axis] - bound.extent[axis]);
+            upper[axis] = std::max(upper[axis], bound.center[axis] + bound.extent[axis]);
+        }
+    }
+
+    Bounds Result() const
+    {
+        Bounds result;
+        if (lower[0] > upper[0])
+            return result;
+        for (unsigned axis = 0; axis != 3; ++axis)
+        {
+            const double lo = lower[axis], hi = upper[axis];
+            result.center[axis] = (lo + hi) * 0.5;
+            result.extent[axis] = (hi - lo) * 0.5 + 0.00001 * (1.0 + std::fabs(lo) + std::fabs(hi));
+            if (!std::isfinite(result.center[axis]) || !std::isfinite(result.extent[axis]))
+                return {};
+        }
+        result.valid = true;
+        return result;
+    }
+};
+
+inline void BuildCellGroups(const Bounds* cells, std::size_t count, Bounds* output)
+{
+    for (std::size_t index = 0; index < count; index += CellsPerGroup)
+    {
+        BoundsExtrema group;
+        const auto end = std::min(index + CellsPerGroup, count);
+        auto cell = index;
+        for (; cell < end && cells[cell].valid; ++cell)
+            group.Add(cells[cell]);
+        // Do not omit a cell whose bounds could not be established.
+        *output++ = cell == end ? group.Result() : Bounds{};
+    }
+}
+
+template<class Groups, class BuildInstance>
+Bounds BuildModelExtrema(const Groups& groups, Bounds* cells, BuildInstance build)
+{
+    BoundsExtrema model;
+    for (const auto* items : groups)
+    {
+        BoundsExtrema cell;
+        auto& accumulator = cells ? cell : model;
+        for (const auto* instance : *items)
+        {
+            const auto bound = build(*instance);
+            if (!bound.valid)
+                return {};
+            accumulator.Add(bound);
+        }
+        if (cells)
+        {
+            const auto bound = cell.Result();
+            *cells++ = bound;
+            if (bound.valid)
+                model.Add(bound);
+            else if (!items->empty())
+                return {};
+        }
+    }
+    return model.Result();
+}
+
 template<class Vector>
 bool WindWithinEnvelope(float limit, const Vector& wind, const Vector& wave)
 {
@@ -265,6 +366,17 @@ class PlaneSet
     std::array<Equation, 12> equations;
     std::size_t size = 0;
 
+    static bool OutsidePlane(const Bounds& bounds, const Equation& plane)
+    {
+        double distance = plane.distance, radius = 0;
+        for (unsigned axis = 0; axis != 3; ++axis)
+        {
+            distance += plane.normal[axis] * bounds.center[axis];
+            radius += plane.absNormal[axis] * bounds.extent[axis];
+        }
+        return distance > radius;
+    }
+
 public:
     template <class Plane>
     PlaneSet(const Plane* planes, std::size_t count)
@@ -287,16 +399,23 @@ public:
         if (!bounds.valid)
             return false;
         for (std::size_t i = 0; i != size; ++i)
-        {
-            const auto& p = equations[i];
-            double distance = p.distance, radius = 0;
-            for (unsigned j = 0; j != 3; ++j)
-            {
-                distance += p.normal[j] * bounds.center[j];
-                radius += p.absNormal[j] * bounds.extent[j];
-            }
-            if (distance > radius)
+            if (OutsidePlane(bounds, equations[i]))
                 return true;
+        return false;
+    }
+
+    bool OutsideCoherent(const Bounds& bounds, std::size_t& lastRejectingPlane) const
+    {
+        if (!bounds.valid || !size)
+            return false;
+        if (lastRejectingPlane < size && OutsidePlane(bounds, equations[lastRejectingPlane]))
+            return true;
+        for (std::size_t i = 0; i != size; ++i)
+        {
+            if (i == lastRejectingPlane || !OutsidePlane(bounds, equations[i]))
+                continue;
+            lastRejectingPlane = i;
+            return true;
         }
         return false;
     }

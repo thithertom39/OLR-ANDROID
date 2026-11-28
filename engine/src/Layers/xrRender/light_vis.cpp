@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "Layers/xrRender/light.h"
 #include "xrCDB/Intersect.hpp"
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#include "xrEngine/AndroidSceneCompare.h"
+#endif
 
 namespace xray::render::RENDER_NAMESPACE
 {
@@ -101,4 +104,70 @@ void light::vis_update()
         vis.frame2test = frame + 1;
     }
 }
+
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+void R_occlusion::occq_light_issue(CBackend& cmd_list, const xr_vector<light*>& candidates)
+{
+    // Indirect and volumetric lighting may contribute outside this volume.
+    // The non-MSAA deferred depth at this point is the accumulation depth.
+    if (candidates.empty() || ps_r2_ls_flags.test(R2FLAG_GI))
+        return;
+    const auto& project = Device.mProject;
+    if (project._34 != 1.f || project._44 != 0.f || project._33 <= 0.f)
+        return;
+    const float nearDepth = -project._43 / project._33;
+    if (!_valid(nearDepth) || nearDepth <= 0.f || !occq_light_begin_frame())
+        return;
+
+    for (u32 index = 0; index < candidates.size(); ++index)
+    {
+        auto* source = candidates[index];
+        const auto* owner = source->shadow_parent ? source->shadow_parent : source;
+        if (owner->flags.bHudMode || source->flags.bVolumetric ||
+            source->s_point || source->s_spot || source->s_volumetric ||
+            !_valid(source->range) || source->range <= 0.f)
+            continue;
+
+        // Full front and back volume faces make the query conservative for
+        // deferred lighting. If clipping could remove the front surface,
+        // the camera may be in/near the volume: keep the light.
+        float radius = source->range;
+        if (source->flags.type == IRender_Light::SPOT)
+            radius *= _sqrt(1.f + _sqr(tanf(source->cone * 0.5f)));
+        else if (source->flags.type != IRender_Light::OMNIPART)
+            continue;
+        Fvector viewPosition;
+        Device.mView.transform_tiny(viewPosition, source->position);
+        if (!_valid(viewPosition.z) || !_valid(radius) ||
+            viewPosition.z <= nearDepth + radius * 1.01f + EPS_L)
+            continue;
+
+        if (!occq_light_begin(index, source))
+            break; // Remaining lights stay visible if the ring is full.
+        if (!lightQueriesIssued)
+        {
+            RImplementation.rmNormal(cmd_list);
+            cmd_list.set_xform_view(Device.mView);
+            cmd_list.set_xform_project(project);
+            cmd_list.set_CullMode(CULL_NONE);
+            cmd_list.set_Scissor(nullptr);
+            cmd_list.set_Stencil(FALSE);
+            cmd_list.set_Z(true);
+            cmd_list.set_ZFunc(D3DCMP_LESSEQUAL);
+        }
+        source->xform_calc();
+        cmd_list.set_xform_world(source->m_xform);
+        RImplementation.Target->draw_volume(cmd_list, source);
+        occq_light_end();
+    }
+
+    if (lightQueriesIssued)
+    {
+        if (!lightQueryActive && AndroidSceneCompare::HasOption(Core.Params, "-gles_light_occq_flush"))
+            CHK_GL(glFlush());
+        cmd_list.set_CullMode(CULL_CCW);
+        cmd_list.set_Stencil(TRUE, D3DCMP_LESSEQUAL, 0x01, 0xff, 0x00);
+    }
+}
+#endif
 } // namespace xray::render::RENDER_NAMESPACE

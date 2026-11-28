@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#include "Layers/xrRenderGL/glFencedVertexStream.h"
+#endif
+
 namespace xray::render::RENDER_NAMESPACE
 {
 u32 GetFVFVertexSize(u32 FVF);
@@ -102,6 +106,17 @@ private:
 class IndexStagingBuffer
 {
 public:
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    void MarkStaticBatchSource() { m_StaticBatchSource = true; }
+
+    const u16* ReadOnlyIndices(size_t offset, size_t count) const
+    {
+        if (!m_StaticBatchSource || !m_HostBuffer || offset > m_Size / sizeof(u16) ||
+            count > m_Size / sizeof(u16) - offset)
+            return nullptr;
+        return static_cast<const u16*>(m_HostBuffer) + offset;
+    }
+#endif
     ~IndexStagingBuffer();
 
     void Create(size_t size, bool allowReadBack = false, bool managed = true);
@@ -150,6 +165,9 @@ private:
     size_t m_Size{};
     u32 m_RefCounter{};
     bool m_AllowReadBack{}; // specifies whether host will want to have the data back (e.g. skinning code)
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    bool m_StaticBatchSource{};
+#endif
 };
 
 /**
@@ -202,6 +220,9 @@ private:
 
     VertexBufferHandle m_DeviceBuffer{};
     u32 m_RefCounter{};
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    GLFencedVertexStream::Arena m_FencedVertexStream;
+#endif
 #ifdef USE_OGL
     HostBufferHandle m_UploadBuffer{};
     size_t m_UploadCapacity{};

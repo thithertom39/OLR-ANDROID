@@ -186,7 +186,14 @@ void CRender::Render()
     BasicStats.WaitS.End();
     q_sync_point.End();
 
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    {
+        GLGpuProfiler::Scope mainVisibility(GLGpuProfiler::Stage::MainVisibilityWait, false);
+        r_main.sync();
+    }
+#else
     r_main.sync();
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     syncScope.Stop();
     GLGpuProfiler::Scope prepareScope(GLGpuProfiler::Stage::ScenePrepare);
@@ -349,6 +356,16 @@ void CRender::Render()
 
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const u32 mainDraws = dsgraph.cmd_list.stat.render.calls - mainDrawStart;
+    if (HWOCC.is_light_enabled() && !o.msaa && !LP_normal.v_shadowed.empty())
+    {
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope visibilityProbe(GLGpuProfiler::Stage::LightVisibility);
+#endif
+        // On split scenes complete HUD/LOD/details before sampling this depth.
+        if (split_the_scene_to_minimize_wait)
+            Target->phase_occq();
+        HWOCC.occq_light_issue(dsgraph.cmd_list, LP_normal.v_shadowed);
+    }
 #endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     GLGpuProfiler::Scope wallmarksScope(GLGpuProfiler::Stage::Wallmarks);
@@ -434,7 +451,9 @@ void CRender::Render()
     {
         PIX_EVENT(DEFER_SELF_ILLUM);
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
-        GLGpuProfiler::Scope emissiveScope(GLGpuProfiler::Stage::Emissive);
+        // The accumulator state setup also runs in frames with no emissive draws.
+        const bool hasEmissiveDraws = !dsgraph.mapEmissive.empty() || !dsgraph.mapHUDEmissive.empty();
+        GLGpuProfiler::Scope emissiveScope(GLGpuProfiler::Stage::Emissive, hasEmissiveDraws);
 #endif
         Target->phase_accumulator(dsgraph.cmd_list);
         // Render emissive geometry, stencil - write 0x0 at pixel pos
@@ -460,6 +479,11 @@ void CRender::Render()
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     if (compareScene)
         compareTimer.Start();
+    if (HWOCC.is_light_enabled())
+        HWOCC.occq_light_collect(LP_normal.v_shadowed, compareScene);
+#endif
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::BeginLocalLightsElapsed();
 #endif
     {
         PIX_EVENT(DEFER_LIGHT_NO_OCCQ);
@@ -489,6 +513,9 @@ void CRender::Render()
     }
 
     // Postprocess
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::EndLocalLightsElapsed();
+#endif
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const float localMs = compareScene ? compareTimer.GetElapsed_sec() * 1000.f : 0.f;
 #endif

@@ -7,6 +7,15 @@
 #include "FBasicVisual.h"
 #include "SkeletonCustom.h"
 #include "FLOD.h"
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#include "FVisual.h"
+#include "Layers/xrRenderGL/glStaticIndexBatch.h"
+#include "Layers/xrRenderGL/glSpotWriterAudit.h"
+#endif
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "FTreeVisual.h"
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#endif
 
 extern ENGINE_API float psHUD_FOV;
 
@@ -37,12 +46,113 @@ bool cmp_pass(const T& left, const T& right)
     return left->second.ssa > right->second.ssa;
 }
 
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+static bool SameStripTreeMesh(const FTreeVisual_ST& first, const FTreeVisual_ST& next)
+{
+    return first.rm_geom == next.rm_geom && first.vBase == next.vBase && first.vCount == next.vCount &&
+        first.iBase == next.iBase && first.dwPrimitives == next.dwPrimitives;
+}
+#endif
+
+static bool BatchProgram(const SPass& pass, bool shadow)
+{
+    const char* program = pass.pp ? pass.pp->cName.c_str() : "";
+    const char* pixel = strchr(program, '|');
+    const char* geometry = strrchr(program, '|');
+    if (!pixel || pixel == geometry || (geometry[1] && strcmp(geometry + 1, "null") != 0))
+        return false;
+    // These built-in deferred/shadow programs do not use vertex or primitive IDs.
+    const char* prefix = shadow ? "shadow_" : "deffer_";
+    return strncmp(program, prefix, 7) == 0 &&
+        (strncmp(pixel + 1, prefix, 7) == 0 ||
+            (shadow && strncmp(pixel + 1, "dumb|", 5) == 0));
+}
+
+template <typename DrawItem>
+static void DrawStaticBatchPass(CBackend& backend, const mapNormalItems& items, bool shadow,
+    GLStaticIndexBatch::Counters* counters, const DrawItem& drawItem)
+{
+    std::array<const IRender_Mesh*, 128> meshes;
+    std::array<const _NormalItem*, 128> originalItems;
+    SGeometry* geometry = nullptr;
+    u32 count = 0, indices = 0, vertices = 0;
+    const auto flush = [&]
+    {
+        if (!count)
+            return;
+        const GLuint buffer = count > 1 ? GLStaticIndexBatch::Buffer(meshes.data(), count, indices, counters) : 0;
+        if (buffer)
+        {
+            backend.set_GeometryForIndexedDraw(geometry);
+            backend.RenderStaticIndices(buffer, indices, vertices, count);
+            backend.stat.r.s_static.add(vertices);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            for (u32 i = 0; i < count; ++i)
+                GLGpuProfiler::RecordVisual(MT_NORMAL);
+#endif
+        }
+        else
+            for (u32 i = 0; i < count; ++i)
+                drawItem(*originalItems[i]);
+        count = indices = vertices = 0;
+    };
+
+    for (const auto& item : items)
+    {
+        if (item.pVisual->Type == MT_NORMAL)
+        {
+            const auto& visual = *static_cast<const Fvisual*>(item.pVisual);
+            const IRender_Mesh& mesh = visual.m_fast &&
+                (ps_r1_force_geomx || (shadow && !backend.is_TessEnabled())) ?
+                static_cast<const IRender_Mesh&>(*visual.m_fast) : visual;
+            auto* next = mesh.rm_geom._get();
+            if (next && next->vb && next->dcl && mesh.p_rm_Indices && mesh.dwPrimitives &&
+                mesh.dwPrimitives <= GLStaticIndexBatch::MaxBatchIndices / 3 &&
+                mesh.p_rm_Indices->ReadOnlyIndices(mesh.iBase, mesh.dwPrimitives * 3))
+            {
+                const u32 meshIndices = mesh.dwPrimitives * 3;
+                if (count && (geometry->vb != next->vb || geometry->dcl != next->dcl ||
+                    geometry->vb_stride != next->vb_stride || count == meshes.size() ||
+                    meshIndices > GLStaticIndexBatch::MaxBatchIndices - indices || mesh.vCount > u32(-1) - vertices))
+                    flush();
+                geometry = next;
+                meshes[count] = &mesh;
+                originalItems[count++] = &item;
+                indices += meshIndices;
+                vertices += mesh.vCount;
+                continue;
+            }
+        }
+        flush();
+        drawItem(item);
+    }
+    flush();
+}
+
+void R_dsgraph_structure::render_graph(u32 _priority, bool localShadowBatch)
+#else
 void R_dsgraph_structure::render_graph(u32 _priority)
+#endif
 {
     PIX_EVENT_CTX(cmd_list, dsgraph_render_graph);
     RImplementation.BasicStats.Primitives.Begin(); // XXX: Refactor a bit later
 
     cmd_list.set_xform_world(Fidentity);
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+    const bool shadow = o.phase == CRender::PHASE_SMAP;
+    const bool staticStream = _priority == 0 &&
+        ((localShadowBatch && shadow && GLStaticIndexBatch::ShadowEnabled()) ||
+            (o.phase == CRender::PHASE_NORMAL && o.is_main_pass && GLStaticIndexBatch::MainEnabled())) &&
+        !GLSpotWriterAudit::Enabled() && GLStaticIndexBatch::Begin();
+    auto* const batchCounters = staticStream ? GLStaticIndexBatch::SampleCounters(shadow) : nullptr;
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    bool probeDepthPrefix = _priority == 0 && localShadowBatch && shadow &&
+        Device.dwFrame % 67 == 0 &&
+        AndroidSceneCompare::HasOption(Core.Params, "-gles_shadow_depth_prefix_probe");
+    u32 opaquePrefixDraws = 0;
+#endif
+#endif
 
 #if defined(XR_PLATFORM_ANDROID) && !defined(_EDITOR)
     auto* sortTiming = AndroidCpuProfile::SampleInside(AndroidCpuProfile::Phase::LocalSubmit,
@@ -65,6 +175,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
     {
         ZoneScopedN("dsgraph_render_static");
         PIX_EVENT_CTX(cmd_list, dsgraph_render_static);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope mainStatic(GLGpuProfiler::Stage::MainStatic, false,
+            GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
         for (u32 iPass = 0; iPass < SHADER_PASSES_MAX; ++iPass)
         {
@@ -81,17 +195,65 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 items.ssa = 0;
 
                 sortItems(items, cmp_ssa<_NormalItem>);
-                for (const auto& item : items)
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                if (!staticStream && GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainStatic))
                 {
+                    const FTreeVisual_ST* previous = nullptr;
+                    unsigned trees = 0, adjacentMatches = 0;
+                    for (const auto& item : items)
+                    {
+                        if (item.pVisual->Type != MT_TREE_ST)
+                        {
+                            previous = nullptr;
+                            continue;
+                        }
+                        const auto* tree = static_cast<const FTreeVisual_ST*>(item.pVisual);
+                        ++trees;
+                        adjacentMatches += previous && SameStripTreeMesh(*previous, *tree);
+                        previous = tree;
+                    }
+                    GLGpuProfiler::RecordStripTrees(trees, adjacentMatches);
+                }
+#endif
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                if (probeDepthPrefix)
+                {
+                    const char* program = it->first->pp ? it->first->pp->cName.c_str() : "";
+                    if (strcmp(program, "shadow_direct_base|dumb|null") == 0 ||
+                        strcmp(program, "shadow_direct_base_0|dumb|null") == 0)
+                    {
+                        for (const auto& item : items)
+                        {
+                            if (item.pVisual->Type != MT_NORMAL)
+                            {
+                                probeDepthPrefix = false;
+                                break;
+                            }
+                            ++opaquePrefixDraws;
+                        }
+                    }
+                    else
+                        probeDepthPrefix = false;
+                }
+#endif
+                const auto drawItem = [&](const _NormalItem& item)
+                {
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    GLGpuProfiler::RecordVisual(item.pVisual->Type);
+#endif
                     const float LOD = calcLOD(item.ssa, item.pVisual->vis.sphere.R);
 #ifdef USE_DX11
                     cmd_list.LOD.set_LOD(LOD);
 #endif
-                    // --#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
-                    // RCache.hemi.c_update(item.pVisual);
-
                     item.pVisual->Render(cmd_list, LOD, o.phase == CRender::PHASE_SMAP);
-                }
+                };
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+                if (staticStream && items.size() > 1 && BatchProgram(*it->first, shadow))
+                    DrawStaticBatchPass(cmd_list, items, shadow, batchCounters, drawItem);
+                else
+#endif
+                    for (const auto& item : items)
+                        drawItem(item);
                 items.clear();
 
             }
@@ -107,6 +269,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
     {
         ZoneScopedN("dsgraph_render_dynamic");
         PIX_EVENT_CTX(cmd_list, dsgraph_render_dynamic);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope mainDynamic(GLGpuProfiler::Stage::MainDynamic, false,
+            GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
         for (u32 iPass = 0; iPass < SHADER_PASSES_MAX; ++iPass)
         {
@@ -135,6 +301,9 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                     // --#SM+#-- Обновляем шейдерные данные модели [update shader values for this model]
                     // RCache.hemi.c_update(item.pVisual);
 
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                    GLGpuProfiler::RecordVisual(item.pVisual->Type);
+#endif
                     item.pVisual->Render(cmd_list, LOD, o.phase == CRender::PHASE_SMAP);
                 }
                 items.clear();
@@ -145,6 +314,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
     }
 
     RImplementation.BasicStats.Primitives.End(); // XXX: Refactor a bit later
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    if (opaquePrefixDraws)
+        Msg("* [gles_shadow_depth_prefix] frame=%u opaque_draws=%u", Device.dwFrame, opaquePrefixDraws);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -260,6 +433,10 @@ void R_dsgraph_structure::render_hud()
 {
     ZoneScoped;
     PIX_EVENT_CTX(cmd_list, dsgraph_render_hud);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope mainHud(GLGpuProfiler::Stage::MainHud, false,
+        GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
     if (!mapHUD.empty())
     {
