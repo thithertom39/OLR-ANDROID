@@ -90,13 +90,10 @@ public class TouchLayoutConfig {
         ld.buttons.put("medkit", new ButtonPos("medkit", 0.29f, 0.67f, smallRadius * 1.10f));
         ld.buttons.put("bandage", new ButtonPos("bandage", 0.37f, 0.67f, smallRadius * 1.10f));
 
-        // 6. Weapon Selection 1-6 (Bottom Center)
-        ld.buttons.put("wpn_1", new ButtonPos("wpn_1", 0.28f, 0.92f, smallRadius * 0.92f));
-        ld.buttons.put("wpn_2", new ButtonPos("wpn_2", 0.36f, 0.92f, smallRadius * 0.92f));
-        ld.buttons.put("wpn_3", new ButtonPos("wpn_3", 0.44f, 0.92f, smallRadius * 0.92f));
-        ld.buttons.put("wpn_4", new ButtonPos("wpn_4", 0.52f, 0.92f, smallRadius * 0.92f));
-        ld.buttons.put("wpn_5", new ButtonPos("wpn_5", 0.60f, 0.92f, smallRadius * 0.92f));
-        ld.buttons.put("wpn_6", new ButtonPos("wpn_6", 0.68f, 0.92f, smallRadius * 0.92f));
+        // 6. Radial selector replaces the separate number buttons. Old saved
+        // wpn_1–wpn_6 positions are ignored because loading iterates current defaults.
+        // The wheel still dispatches the original SDL slot keys.
+        ld.buttons.put("wheel", new ButtonPos("wheel", 0.57f, 0.78f, smallRadius * 1.05f));
 
         // 7. Top Bar System / UI Buttons
         float topY = smallRadius * 1.6f;

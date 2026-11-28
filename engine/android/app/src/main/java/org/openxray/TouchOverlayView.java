@@ -84,6 +84,7 @@ public class TouchOverlayView extends View {
         }
     }
 
+    private final XRayTouchSkin mSkin;
     private final Paint mBasePaint;
     private final Paint mThumbPaint;
     private final Paint mThumbDotPaint;
@@ -152,6 +153,10 @@ public class TouchOverlayView extends View {
     private float mButtonScale = 1.0f;
     private float mOverlayAlpha = 0.6f;
 
+    // Wheel uses its own pointer, so movement/look and ordinary buttons remain independent.
+    private int mWheelPointerId = -1;
+    private int mWheelSelection = -1;
+
     // Artifact detector button (CoP/Clear Sky only — SoC has no detector slot).
     private boolean mDetectorEnabled = false;
 
@@ -162,6 +167,7 @@ public class TouchOverlayView extends View {
 
     public TouchOverlayView(Context context) {
         super(context);
+        mSkin = new XRayTouchSkin(context);
 
         mBasePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mBasePaint.setStyle(Paint.Style.STROKE);
@@ -253,55 +259,47 @@ public class TouchOverlayView extends View {
     }
 
     private void updatePaints() {
-        int a = (int) (mOverlayAlpha * 255);
+        // Intentionally quiet X-Ray-style palette: charcoal and faded olive-grey,
+        // without the old neon-colored outlines; launcher opacity remains respected.
+        final int a = (int) (mOverlayAlpha * 255);
+        mBasePaint.setColor(Color.argb((int)(a * 0.48f), 134, 139, 130));
+        mThumbPaint.setColor(Color.argb((int)(a * 0.36f), 81, 87, 77));
+        mThumbDotPaint.setColor(Color.argb((int)(a * 0.55f), 170, 172, 158));
 
-        mBasePaint.setColor(Color.argb((int) (a * 0.45f), 255, 255, 255));
-        mThumbPaint.setColor(Color.argb((int) (a * 0.55f), 255, 255, 255));
-        mThumbDotPaint.setColor(Color.argb((int) (a * 0.90f), 255, 255, 255));
+        mButtonPaint.setColor(Color.argb((int)(a * 0.48f), 19, 24, 22));
+        mButtonStrokePaint.setColor(Color.argb((int)(a * 0.50f), 130, 134, 120));
+        mButtonPressedPaint.setColor(Color.argb((int)(a * 0.66f), 72, 70, 49));
 
-        // Default buttons
-        mButtonPaint.setColor(Color.argb((int) (a * 0.50f), 30, 30, 30));
-        mButtonStrokePaint.setColor(Color.argb((int) (a * 0.65f), 200, 200, 200));
-        mButtonPressedPaint.setColor(Color.argb((int) (a * 0.85f), 220, 130, 25));
+        mLkmPaint.setColor(Color.argb((int)(a * 0.49f), 25, 29, 26));
+        mLkmStrokePaint.setColor(Color.argb((int)(a * 0.56f), 133, 137, 116));
+        mLkmPressedPaint.setColor(Color.argb((int)(a * 0.72f), 89, 80, 52));
 
-        // LMB (Fire / Primary Action - Amber Orange)
-        mLkmPaint.setColor(Color.argb((int) (a * 0.60f), 65, 38, 12));
-        mLkmStrokePaint.setColor(Color.argb((int) (a * 0.95f), 255, 160, 20));
-        mLkmPressedPaint.setColor(Color.argb((int) (a * 0.95f), 255, 140, 0));
+        mPkmPaint.setColor(Color.argb((int)(a * 0.49f), 25, 29, 27));
+        mPkmStrokePaint.setColor(Color.argb((int)(a * 0.55f), 119, 135, 130));
+        mPkmPressedPaint.setColor(Color.argb((int)(a * 0.72f), 76, 83, 73));
 
-        // RMB (Aim / Secondary Action - Cyan Blue)
-        mPkmPaint.setColor(Color.argb((int) (a * 0.60f), 12, 45, 65));
-        mPkmStrokePaint.setColor(Color.argb((int) (a * 0.95f), 0, 195, 225));
-        mPkmPressedPaint.setColor(Color.argb((int) (a * 0.95f), 0, 180, 220));
+        mMedkitPaint.setColor(Color.argb((int)(a * 0.49f), 31, 28, 26));
+        mMedkitStrokePaint.setColor(Color.argb((int)(a * 0.58f), 139, 125, 114));
+        mMedkitPressedPaint.setColor(Color.argb((int)(a * 0.72f), 88, 69, 60));
 
-        // Medkit (Crimson Red / Salmon)
-        mMedkitPaint.setColor(Color.argb((int) (a * 0.65f), 75, 15, 15));
-        mMedkitStrokePaint.setColor(Color.argb((int) (a * 0.95f), 255, 65, 65));
-        mMedkitPressedPaint.setColor(Color.argb((int) (a * 0.95f), 230, 30, 30));
+        mBandagePaint.setColor(Color.argb((int)(a * 0.49f), 25, 31, 28));
+        mBandageStrokePaint.setColor(Color.argb((int)(a * 0.55f), 117, 135, 123));
+        mBandagePressedPaint.setColor(Color.argb((int)(a * 0.72f), 67, 82, 70));
 
-        // Bandage (Teal / Cyan)
-        mBandagePaint.setColor(Color.argb((int) (a * 0.65f), 15, 60, 55));
-        mBandageStrokePaint.setColor(Color.argb((int) (a * 0.95f), 45, 215, 180));
-        mBandagePressedPaint.setColor(Color.argb((int) (a * 0.95f), 20, 190, 155));
+        mQePaint.setColor(Color.argb((int)(a * 0.49f), 26, 28, 27));
+        mQeStrokePaint.setColor(Color.argb((int)(a * 0.51f), 131, 132, 126));
+        mQePressedPaint.setColor(Color.argb((int)(a * 0.70f), 73, 72, 65));
 
-        // Q/E (Purple / Indigo)
-        mQePaint.setColor(Color.argb((int) (a * 0.60f), 48, 25, 65));
-        mQeStrokePaint.setColor(Color.argb((int) (a * 0.95f), 180, 105, 245));
-        mQePressedPaint.setColor(Color.argb((int) (a * 0.95f), 160, 80, 230));
+        mWeaponPaint.setColor(Color.argb((int)(a * 0.49f), 27, 29, 27));
+        mWeaponStrokePaint.setColor(Color.argb((int)(a * 0.56f), 140, 132, 108));
+        mWeaponPressedPaint.setColor(Color.argb((int)(a * 0.71f), 96, 83, 52));
 
-        // Weapons (Deep Charcoal / Amber Border)
-        mWeaponPaint.setColor(Color.argb((int) (a * 0.55f), 24, 24, 28));
-        mWeaponStrokePaint.setColor(Color.argb((int) (a * 0.85f), 240, 170, 40));
-        mWeaponPressedPaint.setColor(Color.argb((int) (a * 0.90f), 220, 140, 20));
+        mDetectorPaint.setColor(Color.argb((int)(a * 0.49f), 25, 31, 26));
+        mDetectorStrokePaint.setColor(Color.argb((int)(a * 0.55f), 117, 133, 108));
+        mDetectorPressedPaint.setColor(Color.argb((int)(a * 0.72f), 74, 86, 63));
 
-        // Detector (Dark Olive / Lime Border)
-        mDetectorPaint.setColor(Color.argb((int) (a * 0.55f), 30, 55, 20));
-        mDetectorStrokePaint.setColor(Color.argb((int) (a * 0.90f), 150, 230, 60));
-        mDetectorPressedPaint.setColor(Color.argb((int) (a * 0.90f), 120, 200, 40));
-
-        mTextPaint.setColor(Color.argb((int) (a * 0.95f), 255, 255, 255));
+        mTextPaint.setColor(Color.argb((int)(a * 0.81f), 191, 194, 181));
     }
-
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -372,13 +370,9 @@ public class TouchOverlayView extends View {
         addButtonFromConfig(layout, "medkit", "AID KIT", KeyEvent.KEYCODE_LEFT_BRACKET, TYPE_MEDKIT);
         addButtonFromConfig(layout, "bandage", "BAND", KeyEvent.KEYCODE_RIGHT_BRACKET, TYPE_BANDAGE);
 
-        // 6. Weapon Selection 1-6 (Bottom Center)
-        addButtonFromConfig(layout, "wpn_1", "1", KeyEvent.KEYCODE_1, TYPE_WEAPON);
-        addButtonFromConfig(layout, "wpn_2", "2", KeyEvent.KEYCODE_2, TYPE_WEAPON);
-        addButtonFromConfig(layout, "wpn_3", "3", KeyEvent.KEYCODE_3, TYPE_WEAPON);
-        addButtonFromConfig(layout, "wpn_4", "4", KeyEvent.KEYCODE_4, TYPE_WEAPON);
-        addButtonFromConfig(layout, "wpn_5", "5", KeyEvent.KEYCODE_5, TYPE_WEAPON);
-        addButtonFromConfig(layout, "wpn_6", "6", KeyEvent.KEYCODE_6, TYPE_WEAPON);
+        // 6. Weapon and item selection is handled by the radial wheel.
+        // Optional wheel; retained 1–6 buttons remain usable and editable.
+        addButtonFromConfig(layout, "wheel", "WHEEL", KeyEvent.KEYCODE_UNKNOWN, TYPE_WEAPON);
 
         // 7. Top Bar System / UI Buttons
         addButtonFromConfig(layout, "esc", "ESC", KeyEvent.KEYCODE_ESCAPE, TYPE_DEFAULT);
@@ -429,6 +423,17 @@ public class TouchOverlayView extends View {
                 boolean hitButton = false;
                 for (TouchButton btn : mButtons) {
                     if (btn.contains(x, y) && btn.pointerId == -1) {
+                        if ("wheel".equals(btn.id)) {
+                            if (mWheelPointerId == -1) {
+                                mWheelPointerId = pointerId;
+                                mWheelSelection = -1;
+                                try {
+                                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                                } catch (Exception ignored) {}
+                            }
+                            hitButton = true;
+                            break;
+                        }
                         btn.isPressed = true;
                         btn.pointerId = pointerId;
                         try {
@@ -470,6 +475,22 @@ public class TouchOverlayView extends View {
                     int pId = event.getPointerId(i);
                     float x = event.getX(i);
                     float y = event.getY(i);
+
+                    if (pId == mWheelPointerId) {
+                        int next = RadialWeaponWheel.selection(
+                                x, y, getWidth() * 0.54f, getHeight() * 0.48f,
+                                RadialWeaponWheel.radius(getWidth(), getHeight()));
+                        if (next != mWheelSelection) {
+                            mWheelSelection = next;
+                            redraw = true;
+                            if (next >= 0) {
+                                try {
+                                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                        continue;
+                    }
 
                     // Update joystick
                     if (pId == mJoyPointerId) {
@@ -514,6 +535,18 @@ public class TouchOverlayView extends View {
             case MotionEvent.ACTION_POINTER_UP: {
                 int pointerId = event.getPointerId(actionIndex);
 
+                if (pointerId == mWheelPointerId) {
+                    final int key = RadialWeaponWheel.keyFor(mWheelSelection);
+                    mWheelPointerId = -1;
+                    mWheelSelection = -1;
+                    invalidate();
+                    if (key != KeyEvent.KEYCODE_UNKNOWN) {
+                        SDLActivity.onNativeKeyDown(key);
+                        postDelayed(() -> SDLActivity.onNativeKeyUp(key), 64L);
+                    }
+                    break;
+                }
+
                 // Release Joystick
                 if (pointerId == mJoyPointerId) {
                     mJoyPointerId = -1;
@@ -542,6 +575,8 @@ public class TouchOverlayView extends View {
             }
 
             case MotionEvent.ACTION_CANCEL: {
+                mWheelPointerId = -1;
+                mWheelSelection = -1;
                 if (mJoyPointerId != -1) {
                     mJoyPointerId = -1;
                     mJoyActive = false;
@@ -654,63 +689,18 @@ public class TouchOverlayView extends View {
         if (!mInitialized) return;
 
         // 1. Draw Movement Joystick
-        canvas.drawCircle(mJoyBaseX, mJoyBaseY, mJoyRadius, mBasePaint);
-        canvas.drawCircle(mJoyThumbX, mJoyThumbY, mJoyRadius * 0.45f, mThumbPaint);
-        canvas.drawCircle(mJoyThumbX, mJoyThumbY, mJoyRadius * 0.15f, mThumbDotPaint);
+        mSkin.drawJoystick(canvas, mJoyBaseX, mJoyBaseY, mJoyThumbX, mJoyThumbY,
+                mJoyRadius, mOverlayAlpha, mJoyActive);
 
         // 2. Draw Touch Buttons
         for (TouchButton btn : mButtons) {
-            float cornerRadius = btn.bounds.width() * 0.28f;
-
-            Paint fillPaint;
-            Paint strokePaint;
-
-            switch (btn.buttonType) {
-                case TYPE_LMB:
-                    fillPaint = btn.isPressed ? mLkmPressedPaint : mLkmPaint;
-                    strokePaint = mLkmStrokePaint;
-                    break;
-                case TYPE_RMB:
-                    fillPaint = btn.isPressed ? mPkmPressedPaint : mPkmPaint;
-                    strokePaint = mPkmStrokePaint;
-                    break;
-                case TYPE_MEDKIT:
-                    fillPaint = btn.isPressed ? mMedkitPressedPaint : mMedkitPaint;
-                    strokePaint = mMedkitStrokePaint;
-                    break;
-                case TYPE_BANDAGE:
-                    fillPaint = btn.isPressed ? mBandagePressedPaint : mBandagePaint;
-                    strokePaint = mBandageStrokePaint;
-                    break;
-                case TYPE_QE:
-                    fillPaint = btn.isPressed ? mQePressedPaint : mQePaint;
-                    strokePaint = mQeStrokePaint;
-                    break;
-                case TYPE_WEAPON:
-                    fillPaint = btn.isPressed ? mWeaponPressedPaint : mWeaponPaint;
-                    strokePaint = mWeaponStrokePaint;
-                    break;
-                case TYPE_DETECTOR:
-                    fillPaint = btn.isPressed ? mDetectorPressedPaint : mDetectorPaint;
-                    strokePaint = mDetectorStrokePaint;
-                    break;
-                default:
-                    fillPaint = btn.isPressed ? mButtonPressedPaint : mButtonPaint;
-                    strokePaint = mButtonStrokePaint;
-                    break;
-            }
-
-            // Fill
-            canvas.drawRoundRect(btn.bounds, cornerRadius, cornerRadius, fillPaint);
-            // Stroke
-            canvas.drawRoundRect(btn.bounds, cornerRadius, cornerRadius, strokePaint);
-
-            // Text Label
-            float fontSize = btn.bounds.height() * (btn.label.length() > 6 ? 0.22f : (btn.label.length() > 4 ? 0.26f : (btn.label.length() > 2 ? 0.32f : 0.40f)));
-            mTextPaint.setTextSize(fontSize);
-
-            float textY = btn.bounds.centerY() - ((mTextPaint.descent() + mTextPaint.ascent()) / 2);
-            canvas.drawText(btn.label, btn.bounds.centerX(), textY, mTextPaint);
+            mSkin.drawButton(canvas, btn.bounds, btn.label, mOverlayAlpha,
+                    btn.isPressed || ("wheel".equals(btn.id) && mWheelPointerId != -1));
+        }
+        if (mWheelPointerId != -1) {
+            RadialWeaponWheel.draw(canvas, getWidth(), getHeight(),
+                    getWidth() * 0.54f, getHeight() * 0.48f,
+                    mWheelSelection, mOverlayAlpha, mSkin);
         }
     }
 }
