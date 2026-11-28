@@ -108,9 +108,10 @@ public:
     void occq_light_collect(const xr_vector<light*>& candidates, bool logStats);
     void occq_light_probe_late(bool end, u32 shadowPasses);
     bool occq_light_begin_late_cull();
-    void occq_light_poll_late_cull();
+    bool occq_light_poll_late_cull();
     bool occq_light_is_occluded(const light* source) const;
-    void occq_light_log_late_cull(size_t candidates, u32 shadowPasses, u32 culled);
+    void occq_light_log_late_cull(size_t candidates, u32 shadowPasses, u32 earlyCulled,
+        u32 queuedCulled, u32 queuedPolls);
     void occq_light_clear();
 #endif
 };

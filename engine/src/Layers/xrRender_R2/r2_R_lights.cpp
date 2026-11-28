@@ -389,11 +389,15 @@ void CRender::render_lights(light_Package& LP)
     const bool sampleMidQueries = sampleLateQueries && LP.v_shadowed.size() > 1;
     const bool cullLateQueries = &LP == &LP_normal && !LP.v_shadowed.empty() &&
         HWOCC.occq_light_begin_late_cull();
+    const bool cullQueuedLights = cullLateQueries &&
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_light_occq_queued");
     const bool sampleLateCull = cullLateQueries && Device.dwFrame % 67 == 0;
     const auto lateCullCandidates = LP.v_shadowed.size();
     size_t tilesAtLastLatePoll = 0;
     u32 submittedShadowPasses = 0;
     u32 lateCulled = 0;
+    u32 queuedCulled = 0;
+    u32 queuedPolls = 0;
 #endif
     const auto& flush_lights = [&]()
     {
@@ -456,13 +460,25 @@ void CRender::render_lights(light_Package& LP)
             const bool bNormal = !dsgraph.mapNormalPasses[0][0].empty() || !dsgraph.mapMatrixPasses[0][0].empty();
             const bool bSpecial = !dsgraph.mapNormalPasses[1][0].empty() || !dsgraph.mapMatrixPasses[1][0].empty() ||
                 !dsgraph.mapSorted.empty();
+            bool queuedOccluded = false;
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
+            if (cullQueuedLights)
+            {
+                // Check availability once per queue after the first build has finished.
+                // The result can arrive after this light's build was scheduled.
+                if (&entry == &lights_queue.front() && HWOCC.occq_light_poll_late_cull())
+                    ++queuedPolls;
+                queuedOccluded = (bNormal || bSpecial) && HWOCC.occq_light_is_occluded(L);
+                queuedCulled += queuedOccluded;
+            }
             if (shadowAudit)
-                shadowAudit->Write(*L, dsgraph, bNormal || bSpecial);
+                shadowAudit->Write(*L, dsgraph, !queuedOccluded && (bNormal || bSpecial));
 #endif
+            const bool drawShadow = !queuedOccluded && (bNormal || bSpecial);
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
             static u32 spot_audit_geometry_logged = 0;
-            const u32 spot_audit_ticket = spot_audit_geometry_logged < 16 ? gles_spot_shadow_audit_ticket(*L) : 0;
+            const u32 spot_audit_ticket = !queuedOccluded && spot_audit_geometry_logged < 16 ?
+                gles_spot_shadow_audit_ticket(*L) : 0;
             const u32 spot_audit_calls_before = spot_audit_ticket ? dsgraph.cmd_list.stat.render.calls : 0;
             if (spot_audit_ticket)
             {
@@ -477,7 +493,7 @@ void CRender::render_lights(light_Package& LP)
                     dsgraph.o.view_pos.x, dsgraph.o.view_pos.y, dsgraph.o.view_pos.z, u32(_valid(L->X.S.combine)));
             }
 #endif
-            if (bNormal || bSpecial)
+            if (drawShadow)
             {
 #if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 const u32 callsBeforeDepth = sampleAtlas ? dsgraph.cmd_list.stat.render.calls : 0;
@@ -583,7 +599,7 @@ void CRender::render_lights(light_Package& LP)
                     depthDraws += dsgraph.cmd_list.stat.render.calls - callsBeforeDepth;
 #endif
             }
-            else
+            else if (!queuedOccluded)
             {
                 Stats.s_finalclip++;
             }
@@ -596,7 +612,7 @@ void CRender::render_lights(light_Package& LP)
 } // NOTE(DX11): occqs are fetched here, this should be done on the imm context only
             RImplementation.release_context(batch_id);
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
-            if ((sampleLateQueries || sampleLateCull) && (bNormal || bSpecial))
+            if ((sampleLateQueries || sampleLateCull) && drawShadow)
             {
                 ++submittedShadowPasses;
                 if (sampleMidQueries && submittedShadowPasses == halfShadowPasses)
@@ -873,7 +889,8 @@ void CRender::render_lights(light_Package& LP)
     if (sampleLateCull)
     {
         HWOCC.occq_light_poll_late_cull();
-        HWOCC.occq_light_log_late_cull(lateCullCandidates, submittedShadowPasses, lateCulled);
+        HWOCC.occq_light_log_late_cull(lateCullCandidates, submittedShadowPasses, lateCulled,
+            queuedCulled, queuedPolls);
     }
 #endif
     PIX_EVENT(POINT_LIGHTS_ACCUM);

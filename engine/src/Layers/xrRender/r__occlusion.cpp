@@ -344,12 +344,13 @@ bool R_occlusion::occq_light_begin_late_cull()
     return true;
 }
 
-void R_occlusion::occq_light_poll_late_cull()
+bool R_occlusion::occq_light_poll_late_cull()
 {
     if (!lightLateCullStarted || lightQueriesReady == lightQueriesIssued || !occq_light_current())
-        return;
+        return false;
     ++lightLatePolls;
     occq_light_read_ready(nullptr);
+    return true;
 }
 
 bool R_occlusion::occq_light_is_occluded(const light* source) const
@@ -362,14 +363,16 @@ bool R_occlusion::occq_light_is_occluded(const light* source) const
         reinterpret_cast<std::uintptr_t>(source));
 }
 
-void R_occlusion::occq_light_log_late_cull(size_t candidates, u32 shadowPasses, u32 culled)
+void R_occlusion::occq_light_log_late_cull(size_t candidates, u32 shadowPasses, u32 earlyCulled,
+    u32 queuedCulled, u32 queuedPolls)
 {
     if (!lightLateCullStarted || !occq_light_current())
         return;
     Msg("* [gles_light_occq_late_cull] frame=%u candidates=%zu shadow_passes=%u issued=%u ready=%u "
-        "pending=%u occluded=%u culled=%u polls=%u", Device.dwFrame, candidates, shadowPasses,
+        "pending=%u occluded=%u culled=%u polls=%u early_culled=%u queued_culled=%u queued_polls=%u",
+        Device.dwFrame, candidates, shadowPasses,
         lightQueriesIssued, lightQueriesReady, lightQueriesIssued - lightQueriesReady, lightQueriesOccluded,
-        culled, lightLatePolls);
+        earlyCulled + queuedCulled, lightLatePolls, earlyCulled, queuedCulled, queuedPolls);
 }
 #endif
 } // namespace xray::render::RENDER_NAMESPACE
