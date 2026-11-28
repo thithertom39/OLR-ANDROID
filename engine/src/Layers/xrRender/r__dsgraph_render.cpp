@@ -13,6 +13,7 @@
 #include "Layers/xrRenderGL/glSpotWriterAudit.h"
 #endif
 #if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "FTreeVisual.h"
 #include "Layers/xrRenderGL/glGpuProfiler.h"
 #endif
 
@@ -46,6 +47,14 @@ bool cmp_pass(const T& left, const T& right)
 }
 
 #if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+static bool SameStripTreeMesh(const FTreeVisual_ST& first, const FTreeVisual_ST& next)
+{
+    return first.rm_geom == next.rm_geom && first.vBase == next.vBase && first.vCount == next.vCount &&
+        first.iBase == next.iBase && first.dwPrimitives == next.dwPrimitives;
+}
+#endif
+
 static bool BatchProgram(const SPass& pass, bool shadow)
 {
     const char* program = pass.pp ? pass.pp->cName.c_str() : "";
@@ -166,6 +175,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
     {
         ZoneScopedN("dsgraph_render_static");
         PIX_EVENT_CTX(cmd_list, dsgraph_render_static);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope mainStatic(GLGpuProfiler::Stage::MainStatic, false,
+            GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
         for (u32 iPass = 0; iPass < SHADER_PASSES_MAX; ++iPass)
         {
@@ -182,6 +195,26 @@ void R_dsgraph_structure::render_graph(u32 _priority)
                 items.ssa = 0;
 
                 sortItems(items, cmp_ssa<_NormalItem>);
+#if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+                if (!staticStream && GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainStatic))
+                {
+                    const FTreeVisual_ST* previous = nullptr;
+                    unsigned trees = 0, adjacentMatches = 0;
+                    for (const auto& item : items)
+                    {
+                        if (item.pVisual->Type != MT_TREE_ST)
+                        {
+                            previous = nullptr;
+                            continue;
+                        }
+                        const auto* tree = static_cast<const FTreeVisual_ST*>(item.pVisual);
+                        ++trees;
+                        adjacentMatches += previous && SameStripTreeMesh(*previous, *tree);
+                        previous = tree;
+                    }
+                    GLGpuProfiler::RecordStripTrees(trees, adjacentMatches);
+                }
+#endif
 #if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                 if (probeDepthPrefix)
                 {
@@ -236,6 +269,10 @@ void R_dsgraph_structure::render_graph(u32 _priority)
     {
         ZoneScopedN("dsgraph_render_dynamic");
         PIX_EVENT_CTX(cmd_list, dsgraph_render_dynamic);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope mainDynamic(GLGpuProfiler::Stage::MainDynamic, false,
+            GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
         for (u32 iPass = 0; iPass < SHADER_PASSES_MAX; ++iPass)
         {
@@ -396,6 +433,10 @@ void R_dsgraph_structure::render_hud()
 {
     ZoneScoped;
     PIX_EVENT_CTX(cmd_list, dsgraph_render_hud);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope mainHud(GLGpuProfiler::Stage::MainHud, false,
+        GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
     if (!mapHUD.empty())
     {

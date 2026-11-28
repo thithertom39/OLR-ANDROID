@@ -3,6 +3,9 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#endif
 #pragma hdrstop
 
 #include "DetailManager.h"
@@ -406,6 +409,10 @@ void CDetailManager::Render(CBackend& cmd_list)
 #endif
 
     ZoneScoped;
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    GLGpuProfiler::Scope mainDetails(GLGpuProfiler::Stage::MainDetails, false,
+        GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry));
+#endif
 
     TaskScheduler->Wait(*m_calc_task);
 

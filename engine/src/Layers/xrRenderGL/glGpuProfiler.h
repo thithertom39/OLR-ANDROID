@@ -11,7 +11,10 @@ enum class Stage : unsigned
     RenderTotal, World, MainGeometry, Details, SunShadowAndDirect, LocalLights,
     Combine, Forward, BloomLuminance, Luminance, FinalCombineAA, ExtraPP, PresentBlit,
     ZPrefill, SyncWait, ScenePrepare, LightVisibility, Wallmarks, Rain, Emissive, LightFlush,
-    Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas, Count
+    Calculate, HOMWait, LocalNormal, LocalPending, LocalVisibility, LocalPack, LocalTaskWait, LocalShadowSetup, LocalShadowGeometry, LocalShadowDetails, LocalShadowSpecial, LocalSmapvisEnd, LocalPointAccum, LocalSpotAccum, LocalIndirect, LocalVolumetric, SunShadowGeometry, SunDetails, SunSpecial, SunAccum, LocalShadowAtlas,
+    MainStatic, MainDynamic, MainHud, MainLods, MainDetails,
+    MainIndexSetup, MainIndexDraw, ShadowIndexSetup, ShadowIndexDraw,
+    MainLodBuild, MainLodUpload, MainLodSubmit, MainVisibilityWait, SharedStreamUpload, Count
 };
 
 void Initialize();
@@ -27,7 +30,11 @@ void RecordVisual(unsigned type);
 void RecordStaticBatch(unsigned draws, unsigned bytes);
 bool SamplingShadowAtlas();
 bool Capturing();
+bool InStage(Stage stage);
+Stage SampleIndexedSubmission();
 void RecordDetails(unsigned instances);
+void RecordLods(unsigned impostors, unsigned draws);
+void RecordStripTrees(unsigned trees, unsigned adjacentMatches);
 
 struct LocalDetailCullStats
 {
@@ -53,7 +60,7 @@ class Scope
     std::uint64_t threadStart;
     bool active;
 public:
-    explicit Scope(Stage stage, bool gpuTimer = true);
+    explicit Scope(Stage stage, bool gpuTimer = true, bool enabled = true);
     Scope(const Scope&) = delete;
     Scope& operator=(const Scope&) = delete;
     ~Scope();

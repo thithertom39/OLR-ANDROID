@@ -6,6 +6,9 @@
 #include "xrEngine/AndroidSceneCompare.h"
 #include <cstring>
 #endif
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "Layers/xrRenderGL/glGpuProfiler.h"
+#endif
 
 #ifdef _EDITOR
 #include "IGame_Persistent.h"
@@ -27,6 +30,10 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
 {
     ZoneScoped;
     PIX_EVENT_CTX(cmd_list, dsgraph_render_lods);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    const bool sampleMain = GLGpuProfiler::InStage(GLGpuProfiler::Stage::MainGeometry);
+    GLGpuProfiler::Scope mainLods(GLGpuProfiler::Stage::MainLods, false, sampleMain);
+#endif
 
     if (mapLOD.empty())
         return;
@@ -64,6 +71,9 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
         const u32 vertexCount = iBatchSize * uiVertexPerImposter;
         int cur_count = 0;
         u32 vOffset = 0;
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::Scope build(GLGpuProfiler::Stage::MainLodBuild, false, sampleMain);
+#endif
 #if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
         auto* staged = dedicatedStream ? GLLodStream::Reserve(vertexCount) : nullptr;
         auto* V = staged ? staged :
@@ -138,6 +148,10 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
             }
         }
         lstLODgroups.push_back(cur_count);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        build.Stop();
+        GLGpuProfiler::Scope upload(GLGpuProfiler::Stage::MainLodUpload, false, sampleMain);
+#endif
 #if defined(USE_OGL) && defined(XR_PLATFORM_ANDROID)
         const GLuint lodBuffer = staged ? GLLodStream::Upload() : 0;
         if (staged && !lodBuffer)
@@ -148,6 +162,11 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
         if (!lodBuffer)
 #endif
             RImplementation.Vertex.Unlock(vertexCount, firstV->geom->vb_stride);
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        upload.Stop();
+        GLGpuProfiler::Scope submit(GLGpuProfiler::Stage::MainLodSubmit, false, sampleMain);
+        const u32 previousDraws = cmd_list.stat.render.calls;
+#endif
 
         // *** Render
         cmd_list.set_xform_world(Fidentity);
@@ -180,6 +199,9 @@ void R_dsgraph_structure::render_lods(bool _setup_zb, bool _clear)
             cmd_list.set_Vertices(firstV->geom->vb, firstV->geom->vb_stride);
 #endif
         lstLODgroups.clear();
+#if defined(USE_OGL) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+        GLGpuProfiler::RecordLods(iBatchSize, cmd_list.stat.render.calls - previousDraws);
+#endif
     }
 
     lstLODs.clear();

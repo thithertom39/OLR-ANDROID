@@ -5,6 +5,7 @@
 #include "glVertexBinding.h"
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
 #include "glGpuProfiler.h"
+#include <optional>
 #endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
 #include "glSpotWriterAudit.h"
@@ -448,16 +449,31 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV,
     stat.render.calls++;
     stat.render.verts += countV;
     stat.render.polys += PC;
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    using GLGpuProfiler::Stage;
+    const Stage submission = GLGpuProfiler::SampleIndexedSubmission();
+    std::optional<GLGpuProfiler::Scope> submitScope;
+    if (submission != Stage::Count)
+        submitScope.emplace(submission, false);
+#endif
     if (pp)
         set_PP(pp);
     prepareIndexedGeometry(ib, baseV);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    submitScope.reset();
+#endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
     const bool spot_writer_sampled = GLSpotWriterAudit::BeforeDraw(*this, pp, iIndexCount, baseV, startI);
+#endif
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    if (submission != Stage::Count)
+        submitScope.emplace(submission == Stage::MainIndexSetup ? Stage::MainIndexDraw : Stage::ShadowIndexDraw, false);
 #endif
     // Base vertex is encoded in the vertex-buffer binding offset. Avoid
     // glDrawElementsBaseVertex, which can crash on Adreno flora draws.
     CHK_GL(glDrawElements(Topology, iIndexCount, GL_UNSIGNED_SHORT, (void*)(startI * sizeof(GLushort))));
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    submitScope.reset();
     GLGpuProfiler::RecordDraw();
 #endif
 #if defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)
@@ -483,6 +499,7 @@ ICF void CBackend::RenderStaticIndices(GLuint indexBuffer, u32 indices, u32 vert
     GLGpuProfiler::RecordStaticBatch(logicalDraws, indices * sizeof(u32));
 #endif
 }
+
 #endif
 
 ICF void CBackend::Render(D3DPRIMITIVETYPE T, u32 startV, u32 PC)

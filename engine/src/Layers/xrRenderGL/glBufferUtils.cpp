@@ -3,6 +3,9 @@
 #include "glBackendStateCache.h"
 #include "glStreamSync.h"
 #include "glVertexBinding.h"
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+#include "glGpuProfiler.h"
+#endif
 
 #include <FlexibleVertexFormat.h>
 
@@ -471,6 +474,9 @@ void VertexStreamBuffer::Unmap(size_t usedBytes)
         if (usedBytes)
         {
             glBindBuffer(GL_ARRAY_BUFFER, m_DeviceBuffer);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            GLGpuProfiler::Scope upload(GLGpuProfiler::Stage::SharedStreamUpload, false);
+#endif
             GLStreamSync::UploadRange(GL_ARRAY_BUFFER, m_DeviceBuffer, m_UploadOffset, usedBytes,
                 static_cast<u8*>(m_UploadBuffer) + m_UploadOffset);
         }
@@ -574,6 +580,9 @@ void IndexStreamBuffer::Unmap(size_t usedBytes)
         if (usedBytes)
         {
             glBindBuffer(GL_COPY_WRITE_BUFFER, m_DeviceBuffer);
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+            GLGpuProfiler::Scope upload(GLGpuProfiler::Stage::SharedStreamUpload, false);
+#endif
             GLStreamSync::UploadRange(GL_COPY_WRITE_BUFFER, m_DeviceBuffer, m_UploadOffset, usedBytes,
                 static_cast<u8*>(m_UploadBuffer) + m_UploadOffset);
         }

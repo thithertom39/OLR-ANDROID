@@ -41,7 +41,10 @@ constexpr const char* Names[StageCount] = {
     "bloom_luminance_inclusive", "luminance", "final_combine_aa", "extra_pp", "present_blit",
     "z_prefill", "sync_wait", "scene_prepare", "light_visibility", "wallmarks_hud_ui",
     "rain", "emissive", "light_flush", "calculate", "hom_wait",
-    "local_normal", "local_pending", "local_visibility_cpu", "local_pack_cpu", "local_task_wait_cpu", "local_shadow_setup", "local_shadow_geometry", "local_shadow_details", "local_shadow_special", "local_smapvis_end", "local_point_accum", "local_spot_accum", "local_indirect", "local_volumetric", "sun_shadow_geometry", "sun_details", "sun_special", "sun_accum", "local_shadow_atlas"
+    "local_normal", "local_pending", "local_visibility_cpu", "local_pack_cpu", "local_task_wait_cpu", "local_shadow_setup", "local_shadow_geometry", "local_shadow_details", "local_shadow_special", "local_smapvis_end", "local_point_accum", "local_spot_accum", "local_indirect", "local_volumetric", "sun_shadow_geometry", "sun_details", "sun_special", "sun_accum", "local_shadow_atlas",
+    "main_static_graph", "main_dynamic_graph", "main_hud", "main_lods", "main_details",
+    "main_index_setup_sample", "main_index_draw_sample", "shadow_index_setup_sample", "shadow_index_draw_sample",
+    "main_lod_build", "main_lod_upload", "main_lod_submit", "main_visibility_wait", "shared_stream_upload"
 };
 
 struct Event
@@ -65,6 +68,7 @@ struct State
     bool enabled = false;
     bool atlasOnly = false;
     bool localElapsed = false;
+    bool submitProbe = false;
     bool gpu = false;
     bool inFrame = false;
     bool gpuEnded = false;
@@ -97,6 +101,8 @@ struct State
     std::array<unsigned, 32> mainVisuals{}, shadowVisuals{};
     unsigned detailInstances = 0;
     unsigned shadowDetailInstances = 0;
+    unsigned lodImpostors = 0, lodDraws = 0;
+    unsigned stripTrees = 0, adjacentStripTrees = 0;
     LocalDetailCullStats localDetails;
     std::array<std::uint64_t, StageCount> wallNs{};
     std::array<std::uint64_t, StageCount> threadNs{};
@@ -407,6 +413,7 @@ void Initialize()
         state.queryStride = 1;
     else if (state.atlasOnly)
         state.queryStride = 32;
+    state.submitProbe = !state.atlasOnly && Requested(Core.Params, "-gles_submit_probe");
     const unsigned stride = state.atlasOnly ? AtlasSampleStride : SampleStride;
     const unsigned eventCapacity = state.localElapsed ? 1 : state.queryStride / 2;
     const char* timer = state.localElapsed ? "time_elapsed_local_lights" : "timestamp_pairs";
@@ -481,6 +488,8 @@ void BeginFrame()
     state.start = start;
     state.threadStart = ThreadNow();
     state.draws = state.detailInstances = state.shadowDetailInstances = 0;
+    state.lodImpostors = state.lodDraws = 0;
+    state.stripTrees = state.adjacentStripTrees = 0;
     state.staticBatches = state.batchedDraws = state.batchBytes = 0;
     state.vertexBindings = state.legacyVertexBindings = 0;
     state.mainVisuals = {};
@@ -584,12 +593,12 @@ void FinishFrame()
         state.threadNs[unsigned(Stage::RenderTotal)] = cpu - state.threadStart;
     char row[8192];
     int used = std::snprintf(row, sizeof(row),
-        "{\"record\":\"cpu\",\"frame\":%llu,\"device_frame\":%u,\"width\":%u,\"height\":%u,\"camera\":[%.6f,%.6f,%.6f,%.6f,%.6f,%.6f],\"interval_ms\":%.6f,\"render_wall_ms\":%.6f,\"render_thread_cpu_ms\":%.6f,\"draw_calls\":%u,\"detail_instances_submitted\":%u,\"sun_detail_instances_submitted\":%u,\"vertex_binding_updates\":%u,\"legacy_vertex_pointer_batches\":%u,\"inclusive_wall_ms\":[",
+        "{\"record\":\"cpu\",\"frame\":%llu,\"device_frame\":%u,\"width\":%u,\"height\":%u,\"camera\":[%.6f,%.6f,%.6f,%.6f,%.6f,%.6f],\"interval_ms\":%.6f,\"render_wall_ms\":%.6f,\"render_thread_cpu_ms\":%.6f,\"draw_calls\":%u,\"detail_instances_submitted\":%u,\"sun_detail_instances_submitted\":%u,\"vertex_binding_updates\":%u,\"legacy_vertex_pointer_batches\":%u,\"main_lod_impostors\":%u,\"main_lod_draws\":%u,\"inclusive_wall_ms\":[",
         static_cast<unsigned long long>(state.frame), state.deviceFrame, Device.dwWidth, Device.dwHeight,
         double(Device.vCameraPosition.x), double(Device.vCameraPosition.y), double(Device.vCameraPosition.z),
         double(Device.vCameraDirection.x), double(Device.vCameraDirection.y), double(Device.vCameraDirection.z),
         state.intervalMs, wallMs, cpuMs, state.draws, state.detailInstances, state.shadowDetailInstances,
-        state.vertexBindings, state.legacyVertexBindings);
+        state.vertexBindings, state.legacyVertexBindings, state.lodImpostors, state.lodDraws);
     for (unsigned i = 0; i < StageCount; ++i)
         used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%.6f", i ? "," : "", double(state.wallNs[i]) * 1e-6);
     used += std::snprintf(row + used, sizeof(row) - size_t(used), "],\"inclusive_thread_cpu_ms\":[");
@@ -600,7 +609,8 @@ void FinishFrame()
     for (unsigned i = 0; i < StageCount; ++i)
         used += std::snprintf(row + used, sizeof(row) - size_t(used), "%s%u", i ? "," : "", state.invocations[i]);
     used += std::snprintf(row + used, sizeof(row) - size_t(used),
-        "],\"static_batches\":%u,\"batched_draws\":%u,\"batch_bytes\":%u,\"logical_draws\":%u,\"main_visual_submissions\":[",
+        "],\"strip_trees\":%u,\"adjacent_strip_tree_matches\":%u,\"static_batches\":%u,\"batched_draws\":%u,\"batch_bytes\":%u,\"logical_draws\":%u,\"main_visual_submissions\":[",
+        state.stripTrees, state.adjacentStripTrees,
         state.staticBatches, state.batchedDraws, state.batchBytes,
         state.draws + state.batchedDraws - state.staticBatches);
     for (unsigned i = 0; i < state.mainVisuals.size(); ++i)
@@ -694,6 +704,41 @@ bool Capturing()
     return state.inFrame;
 }
 
+bool InStage(Stage stage)
+{
+    return state.inFrame && state.depth[unsigned(stage)] != 0;
+}
+
+void RecordLods(unsigned impostors, unsigned draws)
+{
+    if (InStage(Stage::MainLods))
+    {
+        state.lodImpostors += impostors;
+        state.lodDraws += draws;
+    }
+}
+
+void RecordStripTrees(unsigned trees, unsigned adjacentMatches)
+{
+    state.stripTrees += trees;
+    state.adjacentStripTrees += adjacentMatches;
+}
+
+Stage SampleIndexedSubmission()
+{
+    // Rotate the draw offset between sampled frames to vary the materials
+    // and meshes observed even when the visibility set is unchanged.
+    constexpr unsigned DrawStride = 16;
+    if (!state.submitProbe || !state.inFrame ||
+        (state.draws + state.sequence / SampleStride) % DrawStride != 0)
+        return Stage::Count;
+    if (InStage(Stage::LocalShadowGeometry))
+        return Stage::ShadowIndexSetup;
+    if (InStage(Stage::MainGeometry))
+        return Stage::MainIndexSetup;
+    return Stage::Count;
+}
+
 void RecordDetails(unsigned instances)
 {
     if (!state.inFrame)
@@ -712,7 +757,8 @@ LocalDetailCullStats* SampleLocalDetailCull()
     return nullptr;
 }
 
-Scope::Scope(Stage phase, bool gpuTimer) : stage(phase), event(InvalidEvent), start(0), threadStart(0), active(state.inFrame)
+Scope::Scope(Stage phase, bool gpuTimer, bool enabled)
+    : stage(phase), event(InvalidEvent), start(0), threadStart(0), active(enabled && state.inFrame)
 {
     if (state.atlasOnly)
         active = active && (stage == Stage::LocalShadowAtlas || stage == Stage::LocalTaskWait ||

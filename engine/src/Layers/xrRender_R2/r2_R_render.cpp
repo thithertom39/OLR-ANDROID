@@ -186,7 +186,14 @@ void CRender::Render()
     BasicStats.WaitS.End();
     q_sync_point.End();
 
+#if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
+    {
+        GLGpuProfiler::Scope mainVisibility(GLGpuProfiler::Stage::MainVisibilityWait, false);
+        r_main.sync();
+    }
+#else
     r_main.sync();
+#endif
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     syncScope.Stop();
     GLGpuProfiler::Scope prepareScope(GLGpuProfiler::Stage::ScenePrepare);
