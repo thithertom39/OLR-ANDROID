@@ -10,8 +10,53 @@ struct Box { V vMin,vMax; };
 struct M { float _11,_12,_13,_21,_22,_23,_31,_32,_33,_41,_42,_43; };
 struct Plane { V n; float d; };
 struct Instance { Box box; M matrix; float scale; };
+
+void CheckGroupedBounds()
+{
+    constexpr std::size_t cellCount = D::CellsPerGroup + 2;
+    std::array<D::Bounds, cellCount> source{};
+    std::array<std::vector<const D::Bounds*>, cellCount> cells;
+    std::vector<const std::vector<const D::Bounds*>*> visible;
+    for (std::size_t i = 0; i < cellCount; ++i)
+    {
+        source[i] = {{double(i) * 3, -2, double(i)}, {1, 0.5, 2}, true};
+        cells[i].push_back(&source[i]);
+        visible.push_back(&cells[i]);
+    }
+
+    std::array<D::Bounds, cellCount> cellBounds;
+    const auto build = [](const D::Bounds& bound) { return bound; };
+    const auto model = D::BuildModelExtrema(visible, cellBounds.data(), build);
+    assert(model.valid);
+    std::array<D::Bounds, 2> groups;
+    D::BuildCellGroups(cellBounds.data(), cellBounds.size(), groups.data());
+    assert(groups[0].valid && groups[1].valid);
+
+    unsigned rejected = 0;
+    for (int edge = -4; edge < 40; ++edge)
+    {
+        const Plane plane{{1, 0.25f, -0.25f, 0}, -float(edge)};
+        const D::PlaneSet frustum(&plane, 1);
+        for (std::size_t i = 0; i < cellCount; ++i)
+        {
+            if (!frustum.Outside(model) && !frustum.Outside(groups[i / D::CellsPerGroup]))
+                continue;
+            assert(frustum.Outside(source[i]));
+            ++rejected;
+        }
+    }
+    assert(rejected);
+
+    cellBounds[1].valid = false;
+    D::BuildCellGroups(cellBounds.data(), cellBounds.size(), groups.data());
+    assert(!groups[0].valid && groups[1].valid);
+    source[1].valid = false;
+    assert(!D::BuildModelExtrema(visible, cellBounds.data(), build).valid);
+}
+
 int main()
 {
+    CheckGroupedBounds();
     assert(D::CellCacheEnabled(nullptr));
     assert(D::CellCacheEnabled("-gles_detail_cells"));
     assert(!D::CellCacheEnabled("-gles_no_detail_cells"));

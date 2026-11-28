@@ -238,7 +238,8 @@ void CRender::render_lights(light_Package& LP)
 #endif
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
     GLDetailShadowCull::BoundsBatch detailBoundsBatch(
-        Details, GLDetailShadowCull::CellCacheEnabled(Core.Params));
+        Details, GLDetailShadowCull::CellCacheEnabled(Core.Params),
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_group_bounds"));
 #endif
 #if defined(XR_PLATFORM_ANDROID) && defined(USE_OGL)
     const bool clipShadowVolumes = GLDetailShadowCull::HasOption(Core.Params, "-gles_shadow_volume_clip");

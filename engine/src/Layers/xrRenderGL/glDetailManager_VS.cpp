@@ -197,6 +197,8 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
     const bool eagerSetup = localShadow && GLDetailShadowCull::EagerSetupRequested(Core.Params);
     const bool coherentCells = localShadow &&
         GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_cell_coherence");
+    const bool groupedCells = localShadow &&
+        GLDetailShadowCull::HasOption(Core.Params, "-gles_detail_group_bounds");
 #endif
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES)) && defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
     auto* detailCullStats = detailLocalShadowPlanes ? GLGpuProfiler::SampleLocalDetailCull() : nullptr;
@@ -219,6 +221,7 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                 const bool cullThisPass = localShadow &&
                     detailPass->pp && GLDetailShadowCull::KnownProgram(detailPass->pp->cName.c_str(), var_id != 0);
                 const GLDetailShadowCull::Bounds* cellBounds = nullptr;
+                const GLDetailShadowCull::Bounds* groupBounds = nullptr;
                 // No shader/material/uniform work if this local shadow pass
                 // has no surviving detail instances. Retain the original draw
                 // and per-instance cull unchanged whenever any can survive.
@@ -238,11 +241,13 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 #endif
                         Fvector4 envelope;
                         envelope.set(windLimit, 0, windLimit, 0);
-                        const auto model = GLDetailShadowCull::BuildModelBounds(vis, cells, [&](const SlotItem& instance)
+                        const auto build = [&](const SlotItem& instance)
                         {
                             return GLDetailShadowCull::Build(Object.bv_bb, instance.mRotY,
                                 instance.scale_calculated, envelope, wave, var_id != 0);
-                        });
+                        };
+                        const auto model = groupedCells ? GLDetailShadowCull::BuildModelExtrema(vis, cells, build) :
+                            GLDetailShadowCull::BuildModelBounds(vis, cells, build);
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                         if (detailCullStats && cells && model.valid)
                             detailCullStats->cellBoundsBuilt += unsigned(vis.size());
@@ -264,57 +269,78 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
                         continue;
                     }
                     if (windCovered)
+                    {
                         cellBounds = aggregate.cells;
+                        groupBounds = aggregate.groups;
+                    }
                 }
                 std::size_t lastRejectingPlane = 0;
-                const auto rejectCell = [&](const SlotItemVec* items)
+                const auto rejectedCells = [&](auto cell) -> std::size_t
                 {
+                    const auto offset = static_cast<std::size_t>(cell - vis.begin());
                     bool rejected = false;
+                    std::size_t count = 1;
                     if (cellBounds)
                     {
-                        const auto& bounds = *cellBounds++;
-                        rejected = coherentCells
+                        const auto& bounds = cellBounds[offset];
+                        constexpr auto size = GLDetailShadowCull::CellsPerGroup;
+                        const bool rejectGroup = groupBounds && offset % size == 0 &&
+                            detailLocalShadowPlanes->Outside(groupBounds[offset / size]);
+                        if (rejectGroup)
+                            count = std::min(size, vis.size() - offset);
+                        rejected = rejectGroup || (coherentCells
                             ? detailLocalShadowPlanes->OutsideCoherent(bounds, lastRejectingPlane)
-                            : detailLocalShadowPlanes->Outside(bounds);
+                            : detailLocalShadowPlanes->Outside(bounds));
                     }
 #if defined(XRAY_GPU_PROFILE_DIAGNOSTICS) && XRAY_GPU_PROFILE_DIAGNOSTICS
                     if (rejected && verifyCells)
                     {
-                        for (const auto* instance : *items)
+                        for (std::size_t i = 0; i < count; ++i)
                         {
-                            ++detailCullStats->cellReferenceTests;
-                            const auto bounds = GLDetailShadowCull::Build(Object.bv_bb, instance->mRotY,
-                                instance->scale_calculated, wind, wave, var_id != 0);
-                            if (!detailLocalShadowPlanes->Outside(bounds))
+                            for (const auto* instance : *cell[i])
                             {
-                                ++detailCullStats->cellReferenceMismatches;
-                                rejected = false;
+                                ++detailCullStats->cellReferenceTests;
+                                const auto bounds = GLDetailShadowCull::Build(Object.bv_bb, instance->mRotY,
+                                    instance->scale_calculated, wind, wave, var_id != 0);
+                                if (!detailLocalShadowPlanes->Outside(bounds))
+                                {
+                                    ++detailCullStats->cellReferenceMismatches;
+                                    rejected = false;
+                                }
                             }
                         }
+                        if (!rejected)
+                            count = 1;
                     }
                     if (detailCullStats && cullThisPass)
                     {
-                        detailCullStats->instanceCandidates += unsigned(items->size());
-                        detailCullStats->cellsTested += cellBounds != nullptr;
+                        unsigned instances = 0;
+                        for (std::size_t i = 0; i < count; ++i)
+                            instances += unsigned(cell[i]->size());
+                        detailCullStats->instanceCandidates += instances;
+                        detailCullStats->cellsTested += cellBounds ? unsigned(count) : 0;
                         if (rejected)
                         {
-                            ++detailCullStats->cellsRejected;
-                            detailCullStats->instancesSkipped += unsigned(items->size());
+                            detailCullStats->cellsRejected += unsigned(count);
+                            detailCullStats->instancesSkipped += instances;
                         }
                     }
-#else
-                    (void)items;
 #endif
-                    return rejected;
+                    return rejected ? count : 0;
                 };
 
                 // A rejected prefix needs no shader or uniform setup. The
                 // first surviving cell has already been tested by this loop.
-                const bool pretestCells = coherentCells && cellBounds;
+                const bool pretestCells = (coherentCells || groupBounds) && cellBounds;
                 if (pretestCells)
                 {
-                    while (firstCell != vis.end() && rejectCell(*firstCell))
-                        ++firstCell;
+                    while (firstCell != vis.end())
+                    {
+                        const auto skipped = rejectedCells(firstCell);
+                        if (!skipped)
+                            break;
+                        firstCell += skipped;
+                    }
                     if (firstCell == vis.end())
                         continue;
                 }
@@ -362,13 +388,20 @@ void CDetailManager::hw_Render_dump(CBackend& cmd_list, const Fvector4& consts, 
 
                 u32 dwBatch = 0;
 
-                for (auto cell = firstCell; cell != vis.end(); ++cell)
+                for (auto cell = firstCell; cell != vis.end();)
                 {
-                    auto* items = *cell;
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
-                    if ((!pretestCells || cell != firstCell) && rejectCell(items))
-                        continue;
+                    if (!pretestCells || cell != firstCell)
+                    {
+                        const auto skipped = rejectedCells(cell);
+                        if (skipped)
+                        {
+                            cell += skipped;
+                            continue;
+                        }
+                    }
 #endif
+                    auto* items = *cell++;
                     for (auto& instance : *items)
                     {
 #if defined(USE_OGL) && (defined(XR_PLATFORM_ANDROID) || defined(XRAY_USE_GLES))
